@@ -1,0 +1,107 @@
+.game-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  user-select: none;
+}
+
+.score {
+  font-size: 2.5rem;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+  color: #ffd700;
+  text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+}
+
+.game-area {
+  position: relative;
+  background: linear-gradient(180deg, #0a0a2e 0%, #1a1a4e 100%);
+  border: 3px solid #444;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.letter {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  color: #fff;
+  background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
+  transition: none;
+}
+
+.letter:nth-child(2n) {
+  background: linear-gradient(135deg, #48dbfb, #0abde3);
+  box-shadow: 0 4px 15px rgba(72, 219, 251, 0.4);
+}
+
+.letter:nth-child(3n) {
+  background: linear-gradient(135deg, #feca57, #ff9f43);
+  box-shadow: 0 4px 15px rgba(254, 202, 87, 0.4);
+}
+
+.letter:nth-child(5n) {
+  background: linear-gradient(135deg, #a29bfe, #6c5ce7);
+  box-shadow: 0 4px 15px rgba(162, 155, 254, 0.4);
+}
+
+.letter:nth-child(7n) {
+  background: linear-gradient(135deg, #55efc4, #00b894);
+  box-shadow: 0 4px 15px rgba(85, 239, 196, 0.4);
+}
+
+.explosion {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3rem;
+  animation: explode 0.5s ease-out forwards;
+  pointer-events: none;
+}
+
+.poof {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  animation: fade-up 0.6s ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes explode {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(2);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(3);
+    opacity: 0;
+  }
+}
+
+@keyframes fade-up {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-40px) scale(0.5);
+    opacity: 0;
+  }
+}
+
+.hint {
+  margin-top: 1rem;
+  font-size: 1.2rem;
+  color: #aaa;
+}

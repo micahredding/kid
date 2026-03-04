@@ -3,10 +3,26 @@ import './App.css'
 
 const GAME_WIDTH = 600
 const GAME_HEIGHT = 500
-const LETTER_SIZE = 60
-const FALL_SPEED = 0.6
-const SPAWN_INTERVAL = 2500
 const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+const SHORT_WORDS = ['CAT', 'DOG', 'HAT']
+
+const MODES = {
+  LETTERS: 'letters',
+  WORDS: 'words',
+}
+
+const MODE_CONFIG = {
+  [MODES.LETTERS]: {
+    fallSpeed: 0.6,
+    spawnInterval: 2500,
+    hint: 'Type the letters to explode them!',
+  },
+  [MODES.WORDS]: {
+    fallSpeed: 0.3,
+    spawnInterval: 2800,
+    hint: 'Type the whole word before it hits the bottom!',
+  },
+}
 
 let nextId = 0
 
@@ -14,8 +30,25 @@ function randomLetter() {
   return LETTERS[Math.floor(Math.random() * LETTERS.length)]
 }
 
+function randomWord() {
+  return SHORT_WORDS[Math.floor(Math.random() * SHORT_WORDS.length)]
+}
+
+function invaderWidth(text) {
+  return Math.max(80, text.length * 28 + 28)
+}
+
+function createInvader(mode) {
+  const text = mode === MODES.WORDS ? randomWord() : randomLetter()
+  const width = invaderWidth(text)
+  const height = 60
+  const x = Math.random() * (GAME_WIDTH - width)
+  return { id: nextId++, text, typed: 0, x, y: -height, width, height }
+}
+
 function App() {
-  const [letters, setLetters] = useState([])
+  const [mode, setMode] = useState(MODES.LETTERS)
+  const [invaders, setInvaders] = useState([])
   const [score, setScore] = useState(0)
   const [explosions, setExplosions] = useState([])
   const [poofs, setPoofs] = useState([])
@@ -24,26 +57,28 @@ function App() {
 
   const gameLoop = useCallback(() => {
     const now = Date.now()
+    const { spawnInterval, fallSpeed } = MODE_CONFIG[mode]
 
-    if (now - lastSpawn.current > SPAWN_INTERVAL) {
+    if (now - lastSpawn.current > spawnInterval) {
       lastSpawn.current = now
-      const x = Math.random() * (GAME_WIDTH - LETTER_SIZE)
-      setLetters(prev => [...prev, { id: nextId++, letter: randomLetter(), x, y: -LETTER_SIZE }])
+      setInvaders(prev => [...prev, createInvader(mode)])
     }
 
-    setLetters(prev => {
+    setInvaders(prev => {
       const still = []
       const gone = []
-      for (const l of prev) {
-        const newY = l.y + FALL_SPEED
+      for (const invader of prev) {
+        const newY = invader.y + fallSpeed
         if (newY > GAME_HEIGHT) {
-          gone.push(l)
+          gone.push(invader)
         } else {
-          still.push({ ...l, y: newY })
+          still.push({ ...invader, y: newY })
         }
       }
       if (gone.length > 0) {
-        setPoofs(p => [...p, ...gone.map(g => ({ id: g.id, x: g.x, y: GAME_HEIGHT - LETTER_SIZE, time: Date.now() }))])
+        setPoofs(p =>
+          [...p, ...gone.map(g => ({ id: g.id, x: g.x, y: GAME_HEIGHT - g.height, width: g.width, height: g.height, time: Date.now() }))]
+        )
       }
       return still
     })
@@ -52,7 +87,7 @@ function App() {
     setPoofs(prev => prev.filter(p => Date.now() - p.time < 600))
 
     animRef.current = requestAnimationFrame(gameLoop)
-  }, [])
+  }, [mode])
 
   useEffect(() => {
     animRef.current = requestAnimationFrame(gameLoop)
@@ -60,22 +95,37 @@ function App() {
   }, [gameLoop])
 
   useEffect(() => {
+    lastSpawn.current = Date.now()
+    setInvaders([])
+    setExplosions([])
+    setPoofs([])
+    setScore(0)
+  }, [mode])
+
+  useEffect(() => {
     function handleKey(e) {
       const key = e.key.toUpperCase()
       if (!LETTERS.includes(key)) return
 
-      setLetters(prev => {
+      setInvaders(prev => {
         const idx = prev.reduce((best, l, i) => {
-          if (l.letter === key && (best === -1 || l.y > prev[best].y)) return i
+          const expected = l.text[l.typed]
+          if (expected === key && (best === -1 || l.y > prev[best].y)) return i
           return best
         }, -1)
 
         if (idx === -1) return prev
 
         const hit = prev[idx]
-        setScore(s => s + 1)
-        setExplosions(ex => [...ex, { id: hit.id, x: hit.x, y: hit.y, letter: hit.letter, time: Date.now() }])
-        return prev.filter((_, i) => i !== idx)
+        const typed = hit.typed + 1
+
+        if (typed >= hit.text.length) {
+          setScore(s => s + 1)
+          setExplosions(ex => [...ex, { id: hit.id, x: hit.x, y: hit.y, width: hit.width, height: hit.height, time: Date.now() }])
+          return prev.filter((_, i) => i !== idx)
+        }
+
+        return prev.map((invader, i) => (i === idx ? { ...invader, typed } : invader))
       })
     }
 
@@ -85,22 +135,42 @@ function App() {
 
   return (
     <div className="game-container">
+      <div className="mode-toggle">
+        <button
+          type="button"
+          className={`mode-button ${mode === MODES.LETTERS ? 'active' : ''}`}
+          onClick={() => setMode(MODES.LETTERS)}
+        >
+          Letter Mode
+        </button>
+        <button
+          type="button"
+          className={`mode-button ${mode === MODES.WORDS ? 'active' : ''}`}
+          onClick={() => setMode(MODES.WORDS)}
+        >
+          Word Mode
+        </button>
+      </div>
       <div className="score">Score: {score}</div>
       <div className="game-area" style={{ width: GAME_WIDTH, height: GAME_HEIGHT }}>
-        {letters.map(l => (
+        {invaders.map(l => (
           <div
             key={l.id}
-            className="letter"
-            style={{ left: l.x, top: l.y, width: LETTER_SIZE, height: LETTER_SIZE, fontSize: LETTER_SIZE * 0.7 }}
+            className={`letter ${mode === MODES.WORDS ? 'word' : ''}`}
+            style={{ left: l.x, top: l.y, width: l.width, height: l.height, fontSize: mode === MODES.WORDS ? 30 : 42 }}
           >
-            {l.letter}
+            {l.text.split('').map((char, i) => (
+              <span key={i} className={i < l.typed ? 'typed' : ''}>
+                {char}
+              </span>
+            ))}
           </div>
         ))}
         {explosions.map(e => (
           <div
             key={'ex-' + e.id}
             className="explosion"
-            style={{ left: e.x, top: e.y, width: LETTER_SIZE, height: LETTER_SIZE }}
+            style={{ left: e.x, top: e.y, width: e.width, height: e.height }}
           >
             💥
           </div>
@@ -109,13 +179,13 @@ function App() {
           <div
             key={'pf-' + p.id}
             className="poof"
-            style={{ left: p.x, top: GAME_HEIGHT - LETTER_SIZE, width: LETTER_SIZE, height: LETTER_SIZE }}
+            style={{ left: p.x, top: GAME_HEIGHT - p.height, width: p.width, height: p.height }}
           >
             💨
           </div>
         ))}
       </div>
-      <div className="hint">Type the letters to explode them!</div>
+      <div className="hint">{MODE_CONFIG[mode].hint}</div>
     </div>
   )
 }

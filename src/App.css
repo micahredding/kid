@@ -5,6 +5,28 @@
   user-select: none;
 }
 
+.mode-toggle {
+  display: flex;
+  gap: 0.6rem;
+  margin-bottom: 0.8rem;
+}
+
+.mode-button {
+  border: 2px solid #3a3a6b;
+  background: #11173a;
+  color: #ddd;
+  border-radius: 999px;
+  padding: 0.45rem 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.mode-button.active {
+  border-color: #ffd700;
+  color: #fff;
+  box-shadow: 0 0 12px rgba(255, 215, 0, 0.35);
+}
+
 .score {
   font-size: 2.5rem;
   font-weight: bold;
@@ -26,6 +48,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 0.06em;
   font-weight: bold;
   color: #fff;
   background: linear-gradient(135deg, #ff6b6b, #ee5a24);
@@ -52,6 +75,21 @@
 .letter:nth-child(7n) {
   background: linear-gradient(135deg, #55efc4, #00b894);
   box-shadow: 0 4px 15px rgba(85, 239, 196, 0.4);
+}
+
+.letter.word {
+  letter-spacing: 0.04em;
+  padding: 0 0.4rem;
+}
+
+.letter span {
+  opacity: 0.55;
+}
+
+.letter span.typed {
+  opacity: 1;
+  color: #fff9b0;
+  text-shadow: 0 0 10px rgba(255, 249, 176, 0.95);
 }
 
 .explosion {

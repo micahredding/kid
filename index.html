@@ -52,12 +52,14 @@
     align-items: flex-end;
     justify-content: center;
     gap: 20px;
+    min-width: 80vw;
   }
 
   .operand-wrapper {
     display: flex;
     flex-direction: column;
     align-items: center;
+    flex: 1;
     transition: transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.4s;
   }
 
@@ -372,7 +374,7 @@ function getBlockColorAndBorder(n, blockIndex) {
 // --- SHAPES ---
 function getShape(n) {
   if (n <= 0) return { rows: 0, cols: 0, lastRowCols: 0 };
-  if (n <= 5) return { rows: n, cols: 1, lastRowCols: 1 };
+  if (n <= 7) return { rows: n, cols: 1, lastRowCols: 1 };
 
   // Find the most square-like exact factorization (upright: rows >= cols)
   let cols = 1;
@@ -414,7 +416,7 @@ function renderNumberblock(n, animate = true, showLabel = true, walkDir = null) 
   const { rows, cols, lastRowCols } = getShape(n);
 
   // Dynamic cell size: fit within available space
-  const cellSize = Math.max(20, Math.min(60, Math.floor(280 / rows), Math.floor(300 / cols)));
+  const cellSize = Math.max(24, Math.min(64, Math.floor(380 / rows), Math.floor(400 / cols)));
   grid.style.gridTemplateColumns = `repeat(${cols}, ${cellSize}px)`;
   grid.style.gridTemplateRows = `repeat(${rows}, ${cellSize}px)`;
 
@@ -488,7 +490,7 @@ function renderMiniNumberblock(container, n) {
   if (n <= 0 || n > 100) return;
 
   const { rows, cols, lastRowCols } = getShape(n);
-  const cellSize = Math.max(15, Math.min(40, Math.floor(200 / rows), Math.floor(180 / cols)));
+  const cellSize = Math.max(18, Math.min(44, Math.floor(240 / rows), Math.floor(220 / cols)));
 
   container.style.gridTemplateColumns = `repeat(${cols}, ${cellSize}px)`;
   container.style.gridTemplateRows = `repeat(${rows}, ${cellSize}px)`;
@@ -650,7 +652,12 @@ function formatExpression(expr) {
 }
 
 function isExpression(str) {
-  return /[+\-*/]/.test(str);
+  return /[+\-*/x]/.test(str);
+}
+
+// Normalize 'x' to '*' for evaluation
+function normalizeExpr(str) {
+  return str.replace(/x/gi, '*');
 }
 
 // --- FIREWORKS ---
@@ -739,8 +746,10 @@ function randomInt(min, max) {
 
 function startQuizRound() {
   mode = 'quiz';
+  if (labelTimeoutId) { clearTimeout(labelTimeoutId); labelTimeoutId = null; }
   feedbackEl.textContent = '';
   equationEl.textContent = '';
+  labelEl.textContent = '';
   combineStage.innerHTML = '';
   combineStage.style.display = 'none';
   grid.style.display = '';
@@ -755,6 +764,7 @@ function startQuizRound() {
 
 function startFreePlayRound() {
   mode = 'freeplay';
+  if (labelTimeoutId) { clearTimeout(labelTimeoutId); labelTimeoutId = null; }
   feedbackEl.textContent = '';
   equationEl.textContent = '';
   combineStage.innerHTML = '';
@@ -799,7 +809,7 @@ function handleQuizInput(value) {
 }
 
 function handleFreePlayInput(value) {
-  const trimmed = value.trim();
+  const trimmed = normalizeExpr(value.trim());
   if (!trimmed) return;
 
   let result;

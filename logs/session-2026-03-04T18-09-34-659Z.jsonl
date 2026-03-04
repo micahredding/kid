@@ -1,0 +1,5 @@
+{"type":"start","version":"1.0.0","ts":"2026-03-04T18:09:34.660Z"}
+{"type":"input","raw":"red blue","output":{"type":"list","data":[{"type":"color","data":{"name":"red","rgb":[255,0,0]}},{"type":"color","data":{"name":"blue","rgb":[0,0,255]}}]},"display":"    ","ts":"2026-03-04T18:09:34.663Z"}
+{"type":"input","raw":"red blue green","output":{"type":"list","data":[{"type":"color","data":{"name":"red","rgb":[255,0,0]}},{"type":"color","data":{"name":"blue","rgb":[0,0,255]}},{"type":"color","data":{"name":"green","rgb":[0,160,0]}}]},"display":"      ","ts":"2026-03-04T18:09:34.664Z"}
+{"type":"input","raw":"3 red blue","output":{"type":"list","data":[{"type":"colored_blocks","data":{"count":3,"color":{"name":"red","rgb":[255,0,0]}}},{"type":"color","data":{"name":"blue","rgb":[0,0,255]}}]},"display":"        ","ts":"2026-03-04T18:09:34.664Z"}
+{"type":"input","raw":"red trex","output":{"type":"list","data":[{"type":"color","data":{"name":"red","rgb":[255,0,0]}},{"type":"emoji","data":"🦖"}]},"display":"  🦖","ts":"2026-03-04T18:09:34.664Z"}

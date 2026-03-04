@@ -159,6 +159,48 @@
     top: 0; left: 0; right: 50%; bottom: 50%;
     background: rgba(255,255,255,0.25);
     border-radius: 4px 0 0 0;
+    z-index: 0;
+  }
+
+  /* --- Face on top block --- */
+  .nb-face {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    z-index: 1;
+    pointer-events: none;
+  }
+  .nb-eye {
+    width: 24%;
+    height: 30%;
+    background: white;
+    border-radius: 50%;
+    position: absolute;
+    top: 12%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 1px rgba(0,0,0,0.3);
+  }
+  .nb-eye::after {
+    content: '';
+    width: 45%;
+    height: 45%;
+    background: #222;
+    border-radius: 50%;
+  }
+  .nb-eye-left { left: 14%; }
+  .nb-eye-right { right: 14%; }
+  .nb-mouth {
+    position: absolute;
+    bottom: 14%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 36%;
+    height: 18%;
+    border: 2px solid #333;
+    border-top: none;
+    border-radius: 0 0 50% 50%;
+    background: transparent;
   }
 
   #number-label {
@@ -251,40 +293,80 @@
 <canvas id="fireworks-canvas"></canvas>
 
 <script>
-// --- COLORS ---
-const COLORS = {
-  1:  '#E74C3C',  // red
-  2:  '#F39C12',  // orange
-  3:  '#F1C40F',  // yellow
-  4:  '#27AE60',  // green
-  5:  '#3498DB',  // blue
-  6:  '#8E44AD',  // purple
-  7:  'rainbow',
-  8:  '#E91E90',  // pink
-  9:  '#7F8C8D',  // grey
-  10: '#ECF0F1',  // white
+// --- COLORS (show-accurate) ---
+const BASE_COLORS = {
+  1: '#DE151D', // red
+  2: '#E89223', // orange
+  3: '#E6C40C', // yellow
+  4: '#38B500', // green
+  5: '#23B0DB', // cyan
+  6: '#5A35C3', // purple
+  7: 'rainbow',
+  8: '#FD40A4', // pink
+  9: 'grey3',   // 3-shade grey
+  10: '#EEEEEE', // white
 };
 
-const RAINBOW = ['#E74C3C','#F39C12','#F1C40F','#27AE60','#3498DB','#8E44AD','#E91E90'];
+// Lighter "tens" colors — cycle 1-10 pattern in lighter shades
+const TENS_COLORS = {
+  1: '#EEEEEE', // 10-19: white with red border
+  2: '#F4A0A0', // 20-29: light red
+  3: '#F5E6A0', // 30-39: light yellow
+  4: '#B8F0A0', // 40-49: light green
+  5: '#A0E4F0', // 50-59: light cyan
+  6: '#C4A0F0', // 60-69: light purple
+  7: 'rainbow-light',
+  8: '#F0A0D4', // 80-89: light pink
+  9: '#C4C8CB', // 90-99: light grey
+  10: '#F4A0A0', // 100: light red
+};
 
-// For 11+, cycle with modified shades
-const CYCLE_COLORS = [
-  '#C0392B', '#E67E22', '#D4AC0F', '#1E8449', '#2E86C1',
-  '#7D3C98', '#C471ED', '#D63384', '#5D6D7E', '#D5DBDB'
-];
+// Tens border colors
+const TENS_BORDERS = {
+  1: '#DE151D', // teens: red border
+  2: '#DE151D', // 20s: red border
+  3: '#C4A000', // 30s
+  4: '#2A8000', // 40s
+  5: '#1A8AAA', // 50s
+  6: '#4A2A9A', // 60s
+  7: '#AA77CC', // 70s
+  8: '#CC70A4', // 80s
+  9: '#999999', // 90s
+  10: '#DE151D', // 100
+};
 
-function getColor(n) {
-  if (n >= 1 && n <= 10) return COLORS[n];
-  // Cycle through darker shades for 11+
-  return CYCLE_COLORS[(n - 11) % CYCLE_COLORS.length];
-}
+const RAINBOW = ['#DE151D','#E89223','#E6C40C','#38B500','#23B0DB','#4B0082','#8B00FF'];
+const RAINBOW_LIGHT = ['#F4A0A0','#F5CCA0','#F5E6A0','#B8F0A0','#A0E4F0','#B0A0D0','#D0A0F0'];
+const GREY_SHADES = ['#8A8B8F','#A5A9AC','#C4C8CB'];
 
-function getBlockColor(n, blockIndex) {
-  if (n === 7 || (n > 10 && ((n - 1) % 10) === 6)) {
-    // Rainbow for 7, 17, 27, etc.
-    return RAINBOW[blockIndex % RAINBOW.length];
+function getBlockColorAndBorder(n, blockIndex) {
+  // 1-10: simple base colors
+  if (n <= 10) {
+    if (n === 7) return { bg: RAINBOW[blockIndex % RAINBOW.length], border: null };
+    if (n === 9) return { bg: GREY_SHADES[blockIndex % 3], border: null };
+    if (n === 10) return { bg: '#EEEEEE', border: '#DE151D' };
+    return { bg: BASE_COLORS[n], border: null };
   }
-  return getColor(n);
+
+  // 11-100: two-tone (tens portion + ones portion)
+  const tensDigit = Math.floor(n / 10);  // 1-10
+  const onesDigit = n % 10;              // 0-9
+  const tensCount = tensDigit * 10;       // how many blocks are "tens" colored
+
+  // Is this block in the tens portion or the ones portion?
+  if (onesDigit === 0 || blockIndex < tensCount) {
+    // Tens portion
+    const td = onesDigit === 0 ? tensDigit : tensDigit;
+    if (td === 7) return { bg: RAINBOW_LIGHT[blockIndex % RAINBOW_LIGHT.length], border: TENS_BORDERS[7] };
+    if (td === 9) return { bg: '#C4C8CB', border: TENS_BORDERS[9] };
+    return { bg: TENS_COLORS[td], border: TENS_BORDERS[td] };
+  } else {
+    // Ones portion
+    const onesIndex = blockIndex - tensCount;
+    if (onesDigit === 7) return { bg: RAINBOW[onesIndex % RAINBOW.length], border: null };
+    if (onesDigit === 9) return { bg: GREY_SHADES[onesIndex % 3], border: null };
+    return { bg: BASE_COLORS[onesDigit], border: null };
+  }
 }
 
 // --- SHAPES ---
@@ -334,8 +416,8 @@ function renderNumberblock(n, animate = true, showLabel = true, walkDir = null) 
   grid.style.gridTemplateColumns = `repeat(${cols}, ${cellSize}px)`;
   grid.style.gridTemplateRows = `repeat(${rows}, ${cellSize}px)`;
 
-  const isWhitish = (n === 10 || (n > 10 && ((n - 1) % 10) === 9));
   const walking = walkDir === 'left' || walkDir === 'right';
+  let topLeftCell = null;
 
   let blockIndex = 0;
   // Build from bottom row to top
@@ -346,14 +428,14 @@ function renderNumberblock(n, animate = true, showLabel = true, walkDir = null) 
       cell.className = 'block-cell';
       cell.style.width = cellSize + 'px';
       cell.style.height = cellSize + 'px';
-      const color = getBlockColor(n, blockIndex);
-      cell.style.background = color;
-      if (isWhitish) {
-        cell.style.borderColor = '#999';
-      }
+      const { bg, border } = getBlockColorAndBorder(n, blockIndex);
+      cell.style.background = bg;
+      if (border) cell.style.borderColor = border;
       // Place in grid: top-left is row 1, but we want to fill bottom-up
       cell.style.gridRow = rows - r;
       cell.style.gridColumn = c + 1;
+      // Track the top-left cell (row 1, col 1) for the face
+      if (rows - r === 1 && c === 0) topLeftCell = cell;
       grid.appendChild(cell);
 
       if (walking) {
@@ -367,6 +449,16 @@ function renderNumberblock(n, animate = true, showLabel = true, walkDir = null) 
       }
       blockIndex++;
     }
+  }
+
+  // Add face to the top-left block
+  if (topLeftCell) {
+    topLeftCell.style.overflow = 'visible';
+    topLeftCell.innerHTML = `<div class="nb-face">
+      <div class="nb-eye nb-eye-left"></div>
+      <div class="nb-eye nb-eye-right"></div>
+      <div class="nb-mouth"></div>
+    </div>`;
   }
 
   // Trigger walk animation on the grid container
@@ -398,7 +490,7 @@ function renderMiniNumberblock(container, n) {
   container.style.gridTemplateColumns = `repeat(${cols}, ${cellSize}px)`;
   container.style.gridTemplateRows = `repeat(${rows}, ${cellSize}px)`;
 
-  const isWhitish = (n === 10 || (n > 10 && ((n - 1) % 10) === 9));
+  let topLeftCell = null;
   let blockIndex = 0;
 
   for (let r = 0; r < rows; r++) {
@@ -408,13 +500,25 @@ function renderMiniNumberblock(container, n) {
       cell.className = 'block-cell visible'; // instantly visible, wrapper walks
       cell.style.width = cellSize + 'px';
       cell.style.height = cellSize + 'px';
-      cell.style.background = getBlockColor(n, blockIndex);
-      if (isWhitish) cell.style.borderColor = '#999';
+      const { bg, border } = getBlockColorAndBorder(n, blockIndex);
+      cell.style.background = bg;
+      if (border) cell.style.borderColor = border;
       cell.style.gridRow = rows - r;
       cell.style.gridColumn = c + 1;
+      if (rows - r === 1 && c === 0) topLeftCell = cell;
       container.appendChild(cell);
       blockIndex++;
     }
+  }
+
+  // Add face to top-left block
+  if (topLeftCell) {
+    topLeftCell.style.overflow = 'visible';
+    topLeftCell.innerHTML = `<div class="nb-face">
+      <div class="nb-eye nb-eye-left"></div>
+      <div class="nb-eye nb-eye-right"></div>
+      <div class="nb-mouth"></div>
+    </div>`;
   }
 }
 

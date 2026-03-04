@@ -35,7 +35,7 @@ function randomWord() {
 }
 
 function invaderWidth(text) {
-  return Math.max(80, text.length * 28 + 28)
+  return Math.max(80, text.length * 42 + 18)
 }
 
 function createInvader(mode) {
@@ -159,11 +159,17 @@ function App() {
             className={`letter ${mode === MODES.WORDS ? 'word' : ''}`}
             style={{ left: l.x, top: l.y, width: l.width, height: l.height, fontSize: mode === MODES.WORDS ? 30 : 42 }}
           >
-            {l.text.split('').map((char, i) => (
-              <span key={i} className={i < l.typed ? 'typed' : ''}>
-                {char}
-              </span>
-            ))}
+            {mode === MODES.WORDS ? (
+              <div className="word-tiles">
+                {l.text.split('').map((char, i) => (
+                  <span key={i} className={`word-tile ${i < l.typed ? 'typed' : ''}`}>
+                    {char}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              l.text
+            )}
           </div>
         ))}
         {explosions.map(e => (

@@ -97,6 +97,40 @@
     padding: 8px;
   }
 
+  .walk-in-left {
+    animation: walkLeft 1.8s ease-out forwards;
+  }
+
+  .walk-in-right {
+    animation: walkRight 1.8s ease-out forwards;
+  }
+
+  @keyframes walkLeft {
+    0%  { transform: translateX(-110vw) rotate(0deg); }
+    8%  { transform: translateX(-90vw) translateY(-12px) rotate(-10deg); }
+    16% { transform: translateX(-70vw) translateY(0px) rotate(8deg); }
+    24% { transform: translateX(-50vw) translateY(-12px) rotate(-10deg); }
+    32% { transform: translateX(-30vw) translateY(0px) rotate(8deg); }
+    40% { transform: translateX(-10vw) translateY(-12px) rotate(-10deg); }
+    48% { transform: translateX(0) translateY(0px) rotate(5deg); }
+    54% { transform: translateX(0) translateY(-4px) rotate(-3deg); }
+    60% { transform: translateX(0) translateY(0) rotate(0deg); }
+    100% { transform: translateX(0) translateY(0) rotate(0deg); }
+  }
+
+  @keyframes walkRight {
+    0%  { transform: translateX(110vw) rotate(0deg); }
+    8%  { transform: translateX(90vw) translateY(-12px) rotate(10deg); }
+    16% { transform: translateX(70vw) translateY(0px) rotate(-8deg); }
+    24% { transform: translateX(50vw) translateY(-12px) rotate(10deg); }
+    32% { transform: translateX(30vw) translateY(0px) rotate(-8deg); }
+    40% { transform: translateX(10vw) translateY(-12px) rotate(10deg); }
+    48% { transform: translateX(0) translateY(0px) rotate(-5deg); }
+    54% { transform: translateX(0) translateY(-4px) rotate(3deg); }
+    60% { transform: translateX(0) translateY(0) rotate(0deg); }
+    100% { transform: translateX(0) translateY(0) rotate(0deg); }
+  }
+
   .block-cell {
     border-radius: 6px;
     border: 2px solid rgba(0,0,0,0.2);
@@ -286,8 +320,10 @@ const labelEl = document.getElementById('number-label');
 const feedbackEl = document.getElementById('feedback');
 const input = document.getElementById('user-input');
 
-function renderNumberblock(n, animate = true, showLabel = true) {
+// walkDir: null (drop animation), 'left', 'right' (walk onto screen)
+function renderNumberblock(n, animate = true, showLabel = true, walkDir = null) {
   grid.innerHTML = '';
+  grid.classList.remove('walk-in-left', 'walk-in-right');
   labelEl.textContent = '';
   if (n <= 0 || n > 100) return;
 
@@ -299,6 +335,7 @@ function renderNumberblock(n, animate = true, showLabel = true) {
   grid.style.gridTemplateRows = `repeat(${rows}, ${cellSize}px)`;
 
   const isWhitish = (n === 10 || (n > 10 && ((n - 1) % 10) === 9));
+  const walking = walkDir === 'left' || walkDir === 'right';
 
   let blockIndex = 0;
   // Build from bottom row to top
@@ -319,7 +356,10 @@ function renderNumberblock(n, animate = true, showLabel = true) {
       cell.style.gridColumn = c + 1;
       grid.appendChild(cell);
 
-      if (animate) {
+      if (walking) {
+        // Blocks are instantly visible; the grid itself walks in
+        cell.classList.add('visible');
+      } else if (animate) {
         const delay = blockIndex * 60;
         setTimeout(() => cell.classList.add('visible'), delay + 50);
       } else {
@@ -329,19 +369,26 @@ function renderNumberblock(n, animate = true, showLabel = true) {
     }
   }
 
+  // Trigger walk animation on the grid container
+  if (walking) {
+    // Force reflow so re-adding the class restarts the animation
+    void grid.offsetWidth;
+    grid.classList.add(walkDir === 'right' ? 'walk-in-right' : 'walk-in-left');
+  }
+
   // Show number label after all blocks appear (unless hidden for quiz)
   if (showLabel) {
-    const totalDelay = animate ? (n * 60 + 200) : 0;
+    const totalDelay = walking ? 1200 : (animate ? (n * 60 + 200) : 0);
     setTimeout(() => {
       labelEl.textContent = n;
-      if (animate) labelEl.classList.add('celebrate');
+      if (animate || walking) labelEl.classList.add('celebrate');
       setTimeout(() => labelEl.classList.remove('celebrate'), 600);
     }, totalDelay);
   }
 }
 
 // --- MINI NUMBERBLOCK (for operands in combine animation) ---
-function renderMiniNumberblock(container, n, animate = true) {
+function renderMiniNumberblock(container, n) {
   container.innerHTML = '';
   if (n <= 0 || n > 100) return;
 
@@ -358,7 +405,7 @@ function renderMiniNumberblock(container, n, animate = true) {
     const colsInRow = (r === rows - 1) ? lastRowCols : cols;
     for (let c = 0; c < colsInRow; c++) {
       const cell = document.createElement('div');
-      cell.className = 'block-cell';
+      cell.className = 'block-cell visible'; // instantly visible, wrapper walks
       cell.style.width = cellSize + 'px';
       cell.style.height = cellSize + 'px';
       cell.style.background = getBlockColor(n, blockIndex);
@@ -366,13 +413,6 @@ function renderMiniNumberblock(container, n, animate = true) {
       cell.style.gridRow = rows - r;
       cell.style.gridColumn = c + 1;
       container.appendChild(cell);
-
-      if (animate) {
-        const delay = blockIndex * 50;
-        setTimeout(() => cell.classList.add('visible'), delay + 50);
-      } else {
-        cell.classList.add('visible');
-      }
       blockIndex++;
     }
   }
@@ -439,21 +479,22 @@ function runCombineAnimation(a, opSymbol, b, result, onDone) {
   combineStage.appendChild(opEl);
   combineStage.appendChild(rightWrapper);
 
-  // Step 1: Left operand drops in
-  renderMiniNumberblock(leftGrid, a, true);
-  const leftTime = a * 50 + 300;
+  // Step 1: Left operand walks in from left
+  renderMiniNumberblock(leftGrid, a);
+  leftWrapper.classList.add('walk-in-left');
 
-  // Step 2: Operator appears
+  // Step 2: Operator appears after left arrives
   setTimeout(() => {
     opEl.classList.add('visible');
-  }, leftTime);
+  }, 1400);
 
-  // Step 3: Right operand drops in
+  // Step 3: Right operand walks in from right
   setTimeout(() => {
-    renderMiniNumberblock(rightGrid, b, true);
-  }, leftTime + 300);
+    renderMiniNumberblock(rightGrid, b);
+    rightWrapper.classList.add('walk-in-right');
+  }, 1700);
 
-  const rightTime = leftTime + 300 + b * 50 + 300;
+  const meetTime = 3200; // both have arrived
 
   // Step 4: Slide together
   setTimeout(() => {
@@ -462,13 +503,13 @@ function runCombineAnimation(a, opSymbol, b, result, onDone) {
     opEl.style.opacity = '0';
     leftLabel.style.opacity = '0';
     rightLabel.style.opacity = '0';
-  }, rightTime + 500);
+  }, meetTime + 400);
 
   // Step 5: Fade out operands, show result
   setTimeout(() => {
     leftWrapper.style.opacity = '0';
     rightWrapper.style.opacity = '0';
-  }, rightTime + 1000);
+  }, meetTime + 900);
 
   setTimeout(() => {
     combineStage.style.display = 'none';
@@ -478,7 +519,7 @@ function runCombineAnimation(a, opSymbol, b, result, onDone) {
     equationEl.textContent = a + ' ' + opSymbol + ' ' + b + ' = ' + result + '!';
     runFireworks();
     if (onDone) onDone();
-  }, rightTime + 1400);
+  }, meetTime + 1300);
 }
 
 // --- MATH EXPRESSION EVALUATION ---
@@ -598,7 +639,8 @@ function startQuizRound() {
   grid.style.display = '';
   currentQuizNumber = randomInt(1, maxQuizRange);
   promptEl.textContent = 'What number is this?';
-  renderNumberblock(currentQuizNumber, true, false);
+  const walkSide = Math.random() < 0.5 ? 'left' : 'right';
+  renderNumberblock(currentQuizNumber, true, false, walkSide);
   input.value = '';
   input.placeholder = '???';
   input.focus();

@@ -40,11 +40,55 @@
 
   #numberblock-area {
     display: flex;
-    align-items: center;
+    align-items: flex-end;
     justify-content: center;
     min-height: 300px;
     padding: 20px;
     position: relative;
+  }
+
+  #combine-stage {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 20px;
+  }
+
+  .operand-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.4s;
+  }
+
+  .operand-grid {
+    display: inline-grid;
+    gap: 3px;
+    padding: 6px;
+  }
+
+  .operand-label {
+    font-size: clamp(20px, 5vw, 36px);
+    font-weight: 900;
+    color: white;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    text-align: center;
+    margin-top: 4px;
+  }
+
+  .operator-symbol {
+    font-size: clamp(30px, 7vw, 60px);
+    font-weight: 900;
+    color: #FFD700;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    padding: 0 5px;
+    align-self: center;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .operator-symbol.visible {
+    opacity: 1;
   }
 
   #numberblock-grid {
@@ -162,6 +206,7 @@
 <div id="prompt"></div>
 <div id="equation-display"></div>
 <div id="numberblock-area">
+  <div id="combine-stage"></div>
   <div id="numberblock-grid"></div>
 </div>
 <div id="number-label"></div>
@@ -234,6 +279,7 @@ function getShape(n) {
 
 // --- RENDERING ---
 const grid = document.getElementById('numberblock-grid');
+const combineStage = document.getElementById('combine-stage');
 const promptEl = document.getElementById('prompt');
 const equationEl = document.getElementById('equation-display');
 const labelEl = document.getElementById('number-label');
@@ -292,6 +338,147 @@ function renderNumberblock(n, animate = true, showLabel = true) {
       setTimeout(() => labelEl.classList.remove('celebrate'), 600);
     }, totalDelay);
   }
+}
+
+// --- MINI NUMBERBLOCK (for operands in combine animation) ---
+function renderMiniNumberblock(container, n, animate = true) {
+  container.innerHTML = '';
+  if (n <= 0 || n > 100) return;
+
+  const { rows, cols, lastRowCols } = getShape(n);
+  const cellSize = Math.max(15, Math.min(40, Math.floor(200 / rows), Math.floor(180 / cols)));
+
+  container.style.gridTemplateColumns = `repeat(${cols}, ${cellSize}px)`;
+  container.style.gridTemplateRows = `repeat(${rows}, ${cellSize}px)`;
+
+  const isWhitish = (n === 10 || (n > 10 && ((n - 1) % 10) === 9));
+  let blockIndex = 0;
+
+  for (let r = 0; r < rows; r++) {
+    const colsInRow = (r === rows - 1) ? lastRowCols : cols;
+    for (let c = 0; c < colsInRow; c++) {
+      const cell = document.createElement('div');
+      cell.className = 'block-cell';
+      cell.style.width = cellSize + 'px';
+      cell.style.height = cellSize + 'px';
+      cell.style.background = getBlockColor(n, blockIndex);
+      if (isWhitish) cell.style.borderColor = '#999';
+      cell.style.gridRow = rows - r;
+      cell.style.gridColumn = c + 1;
+      container.appendChild(cell);
+
+      if (animate) {
+        const delay = blockIndex * 50;
+        setTimeout(() => cell.classList.add('visible'), delay + 50);
+      } else {
+        cell.classList.add('visible');
+      }
+      blockIndex++;
+    }
+  }
+}
+
+// --- PARSE SIMPLE EXPRESSION ---
+function parseSimpleExpression(expr) {
+  // Match patterns like "4+4", "3*5", "10-2", "12/3"
+  const trimmed = expr.replace(/\s/g, '');
+  const match = trimmed.match(/^(\d+)([+\-*/])(\d+)$/);
+  if (!match) return null;
+  const a = parseInt(match[1], 10);
+  const op = match[2];
+  const b = parseInt(match[3], 10);
+  const opDisplay = op === '*' ? '\u00D7' : op === '/' ? '\u00F7' : op;
+  let result;
+  switch (op) {
+    case '+': result = a + b; break;
+    case '-': result = a - b; break;
+    case '*': result = a * b; break;
+    case '/': result = a / b; break;
+  }
+  if (!Number.isInteger(result) || result < 1 || result > 100) return null;
+  return { a, b, op: opDisplay, result };
+}
+
+// --- COMBINE ANIMATION ---
+function runCombineAnimation(a, opSymbol, b, result, onDone) {
+  // Clear everything
+  grid.innerHTML = '';
+  grid.style.display = 'none';
+  combineStage.innerHTML = '';
+  combineStage.style.display = 'flex';
+  labelEl.textContent = '';
+
+  // Build left operand
+  const leftWrapper = document.createElement('div');
+  leftWrapper.className = 'operand-wrapper';
+  const leftGrid = document.createElement('div');
+  leftGrid.className = 'operand-grid';
+  const leftLabel = document.createElement('div');
+  leftLabel.className = 'operand-label';
+  leftLabel.textContent = a;
+  leftWrapper.appendChild(leftGrid);
+  leftWrapper.appendChild(leftLabel);
+
+  // Build operator
+  const opEl = document.createElement('div');
+  opEl.className = 'operator-symbol';
+  opEl.textContent = opSymbol;
+
+  // Build right operand
+  const rightWrapper = document.createElement('div');
+  rightWrapper.className = 'operand-wrapper';
+  const rightGrid = document.createElement('div');
+  rightGrid.className = 'operand-grid';
+  const rightLabel = document.createElement('div');
+  rightLabel.className = 'operand-label';
+  rightLabel.textContent = b;
+  rightWrapper.appendChild(rightGrid);
+  rightWrapper.appendChild(rightLabel);
+
+  combineStage.appendChild(leftWrapper);
+  combineStage.appendChild(opEl);
+  combineStage.appendChild(rightWrapper);
+
+  // Step 1: Left operand drops in
+  renderMiniNumberblock(leftGrid, a, true);
+  const leftTime = a * 50 + 300;
+
+  // Step 2: Operator appears
+  setTimeout(() => {
+    opEl.classList.add('visible');
+  }, leftTime);
+
+  // Step 3: Right operand drops in
+  setTimeout(() => {
+    renderMiniNumberblock(rightGrid, b, true);
+  }, leftTime + 300);
+
+  const rightTime = leftTime + 300 + b * 50 + 300;
+
+  // Step 4: Slide together
+  setTimeout(() => {
+    leftWrapper.style.transform = 'translateX(60px) scale(0.8)';
+    rightWrapper.style.transform = 'translateX(-60px) scale(0.8)';
+    opEl.style.opacity = '0';
+    leftLabel.style.opacity = '0';
+    rightLabel.style.opacity = '0';
+  }, rightTime + 500);
+
+  // Step 5: Fade out operands, show result
+  setTimeout(() => {
+    leftWrapper.style.opacity = '0';
+    rightWrapper.style.opacity = '0';
+  }, rightTime + 1000);
+
+  setTimeout(() => {
+    combineStage.style.display = 'none';
+    combineStage.innerHTML = '';
+    grid.style.display = '';
+    renderNumberblock(result, true);
+    equationEl.textContent = a + ' ' + opSymbol + ' ' + b + ' = ' + result + '!';
+    runFireworks();
+    if (onDone) onDone();
+  }, rightTime + 1400);
 }
 
 // --- MATH EXPRESSION EVALUATION ---
@@ -406,6 +593,9 @@ function startQuizRound() {
   mode = 'quiz';
   feedbackEl.textContent = '';
   equationEl.textContent = '';
+  combineStage.innerHTML = '';
+  combineStage.style.display = 'none';
+  grid.style.display = '';
   currentQuizNumber = randomInt(1, maxQuizRange);
   promptEl.textContent = 'What number is this?';
   renderNumberblock(currentQuizNumber, true, false);
@@ -418,6 +608,9 @@ function startFreePlayRound() {
   mode = 'freeplay';
   feedbackEl.textContent = '';
   equationEl.textContent = '';
+  combineStage.innerHTML = '';
+  combineStage.style.display = 'none';
+  grid.style.display = '';
   grid.innerHTML = '';
   labelEl.textContent = '';
   promptEl.textContent = 'Type a number!';
@@ -487,17 +680,28 @@ function handleFreePlayInput(value) {
 
   input.disabled = true;
 
-  if (wasExpression) {
-    equationEl.textContent = formatExpression(trimmed) + ' = ' + result + '!';
+  // Try combine animation for simple "a op b" expressions
+  const parsed = wasExpression ? parseSimpleExpression(trimmed) : null;
+
+  if (parsed) {
+    runCombineAnimation(parsed.a, parsed.op, parsed.b, parsed.result, () => {
+      setTimeout(() => {
+        input.disabled = false;
+        startQuizRound();
+      }, 3000);
+    });
+  } else {
+    if (wasExpression) {
+      equationEl.textContent = formatExpression(trimmed) + ' = ' + result + '!';
+    }
+    renderNumberblock(result, true);
+    runFireworks();
+
+    setTimeout(() => {
+      input.disabled = false;
+      startQuizRound();
+    }, 4000);
   }
-
-  renderNumberblock(result, true);
-  runFireworks();
-
-  setTimeout(() => {
-    input.disabled = false;
-    startQuizRound();
-  }, 4000);
 }
 
 // --- INPUT HANDLING ---

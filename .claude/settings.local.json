@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(printf '4 x 4\\\\n4 trex\\\\n4 Asher\\\\nhello\\\\nrocket = 🚀\\\\n4 rocket\\\\n2 + 2 red\\\\nred + blue\\\\n')",
+      "Bash(node kid.mjs)"
+    ]
+  }
+}

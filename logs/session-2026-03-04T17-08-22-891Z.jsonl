@@ -1,0 +1,22 @@
+{"type":"start","version":"1.0.0","ts":"2026-03-04T17:08:22.891Z"}
+{"type":"input","raw":"red","output":{"type":"color","data":{"name":"red","rgb":[255,0,0]}},"display":"  ","ts":"2026-03-04T17:08:24.836Z"}
+{"type":"input","raw":"red blue","output":{"type":"text","data":"[red][blue]"},"display":"[red][blue]","ts":"2026-03-04T17:08:36.139Z"}
+{"type":"input","raw":"blue","output":{"type":"color","data":{"name":"blue","rgb":[0,0,255]}},"display":"  ","ts":"2026-03-04T17:08:43.129Z"}
+{"type":"input","raw":"blue + red =","output":{"type":"color","data":{"name":"purple","rgb":[128,0,128]}},"display":"  ","ts":"2026-03-04T17:09:00.644Z"}
+{"type":"input","raw":"green + orange","output":{"type":"color","data":{"name":null,"rgb":[104,171,0]}},"display":"  ","ts":"2026-03-04T17:09:24.857Z"}
+{"type":"input","raw":"blue + yellow","output":{"type":"color","data":{"name":"green","rgb":[0,160,0]}},"display":"  ","ts":"2026-03-04T17:09:42.977Z"}
+{"type":"input","raw":"red + yellow","output":{"type":"color","data":{"name":"orange","rgb":[255,165,0]}},"display":"  ","ts":"2026-03-04T17:10:46.122Z"}
+{"type":"input","raw":"green + red","output":{"type":"color","data":{"name":"brown","rgb":[139,69,19]}},"display":"  ","ts":"2026-03-04T17:11:33.894Z"}
+{"type":"input","raw":"violet+purple","output":{"type":"text","data":"violet[purple]"},"display":"violet[purple]","ts":"2026-03-04T17:15:01.073Z"}
+{"type":"input","raw":"violet + purple","output":{"type":"text","data":"violet[purple]"},"display":"violet[purple]","ts":"2026-03-04T17:15:14.009Z"}
+{"type":"input","raw":"violet","output":{"type":"text","data":"violet"},"display":"violet","ts":"2026-03-04T17:15:22.645Z"}
+{"type":"input","raw":"purple","output":{"type":"color","data":{"name":"purple","rgb":[128,0,128]}},"display":"  ","ts":"2026-03-04T17:15:32.607Z"}
+{"type":"input","raw":"purple+red","output":{"type":"color","data":{"name":null,"rgb":[192,0,96]}},"display":"  ","ts":"2026-03-04T17:15:51.058Z"}
+{"type":"input","raw":"set violet purple+red","output":{"type":"color","data":{"name":null,"rgb":[192,0,96]}},"display":"  ","ts":"2026-03-04T17:16:09.969Z"}
+{"type":"input","raw":"violet","output":{"type":"color","data":{"name":null,"rgb":[192,0,96]}},"display":"  ","ts":"2026-03-04T17:16:12.448Z"}
+{"type":"input","raw":"violet + purple","output":{"type":"color","data":{"name":null,"rgb":[160,0,120]}},"display":"  ","ts":"2026-03-04T17:16:35.105Z"}
+{"type":"input","raw":"xcvbwerrr+hyttt6t6666665","output":{"type":"text","data":"xcvbwerrrhyttt6t6666665"},"display":"xcvbwerrrhyttt6t6666665","ts":"2026-03-04T17:17:33.116Z"}
+{"type":"input","raw":"cat","output":{"type":"emoji","data":"🐱"},"display":"🐱","ts":"2026-03-04T17:18:10.010Z"}
+{"type":"input","raw":"smile","output":{"type":"emoji","data":"😊"},"display":"😊","ts":"2026-03-04T17:18:44.757Z"}
+{"type":"input","raw":"dog","output":{"type":"emoji","data":"🐶"},"display":"🐶","ts":"2026-03-04T17:19:18.473Z"}
+{"type":"end","ts":"2026-03-04T17:55:47.530Z"}

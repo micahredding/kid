@@ -1,0 +1,8 @@
+{"type":"start","version":"1.0.0","ts":"2026-03-04T16:02:14.118Z"}
+{"type":"input","raw":"4+4","output":{"type":"number","data":8},"display":"8","ts":"2026-03-04T16:02:14.125Z"}
+{"type":"input","raw":"4x4","output":{"type":"number","data":16},"display":"16","ts":"2026-03-04T16:02:14.125Z"}
+{"type":"input","raw":"10-3","output":{"type":"number","data":7},"display":"7","ts":"2026-03-04T16:02:14.125Z"}
+{"type":"input","raw":"10/2","output":{"type":"number","data":5},"display":"5","ts":"2026-03-04T16:02:14.125Z"}
+{"type":"input","raw":"trex","output":{"type":"emoji","data":"🦖"},"display":"🦖","ts":"2026-03-04T16:02:14.125Z"}
+{"type":"input","raw":"4+4 red+blue","output":{"type":"colored_blocks","data":{"count":8,"color":{"name":"purple","rgb":[128,0,128]}}},"display":"                ","ts":"2026-03-04T16:02:14.125Z"}
+{"type":"end","ts":"2026-03-04T16:02:14.126Z"}

@@ -1,0 +1,21 @@
+{"type":"start","version":"1.0.0","ts":"2026-03-04T15:53:09.830Z"}
+{"type":"input","raw":"red","output":{"type":"color","data":{"name":"red","rgb":[255,0,0]}},"display":"█","ts":"2026-03-04T15:53:39.564Z"}
+{"type":"input","raw":"","display":"","ts":"2026-03-04T15:53:39.676Z"}
+{"type":"input","raw":"blue","output":{"type":"color","data":{"name":"blue","rgb":[0,0,255]}},"display":"█","ts":"2026-03-04T15:53:48.962Z"}
+{"type":"input","raw":"4+4","output":{"type":"text","data":"4+4"},"display":"4+4","ts":"2026-03-04T15:53:54.287Z"}
+{"type":"input","raw":"4 + 4","output":{"type":"number","data":8},"display":"8","ts":"2026-03-04T15:53:57.254Z"}
+{"type":"input","raw":"trex","output":{"type":"emoji","data":"🦖"},"display":"🦖","ts":"2026-03-04T15:54:29.468Z"}
+{"type":"input","raw":"cat","output":{"type":"emoji","data":"🐱"},"display":"🐱","ts":"2026-03-04T15:55:38.798Z"}
+{"type":"input","raw":"dog","output":{"type":"emoji","data":"🐶"},"display":"🐶","ts":"2026-03-04T15:56:15.978Z"}
+{"type":"input","raw":"","display":"","ts":"2026-03-04T15:56:16.228Z"}
+{"type":"input","raw":"bear","output":{"type":"emoji","data":"🐻"},"display":"🐻","ts":"2026-03-04T15:56:43.893Z"}
+{"type":"input","raw":"","display":"","ts":"2026-03-04T15:56:44.143Z"}
+{"type":"input","raw":"","display":"","ts":"2026-03-04T15:56:44.177Z"}
+{"type":"input","raw":"","display":"","ts":"2026-03-04T15:56:44.209Z"}
+{"type":"input","raw":"","display":"","ts":"2026-03-04T15:56:44.242Z"}
+{"type":"input","raw":"paw patrol","output":{"type":"text","data":"🐾patrol"},"display":"🐾patrol","ts":"2026-03-04T15:57:45.122Z"}
+{"type":"input","raw":"asher","output":{"type":"text","data":"asher"},"display":"asher","ts":"2026-03-04T15:58:56.653Z"}
+{"type":"input","raw":"16","output":{"type":"number","data":16},"display":"16","ts":"2026-03-04T16:00:22.126Z"}
+{"type":"input","raw":"4 4","output":{"type":"text","data":"4 4"},"display":"4 4","ts":"2026-03-04T16:00:33.316Z"}
+{"type":"input","raw":"4 + 4","output":{"type":"number","data":8},"display":"8","ts":"2026-03-04T16:01:07.068Z"}
+{"type":"end","ts":"2026-03-04T16:05:03.036Z"}

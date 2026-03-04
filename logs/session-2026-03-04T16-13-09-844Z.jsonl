@@ -1,0 +1,5 @@
+{"type":"start","version":"1.0.0","ts":"2026-03-04T16:13:09.851Z"}
+{"type":"input","raw":"red","output":{"type":"color","data":{"name":"red","rgb":[255,0,0]}},"display":"  ","ts":"2026-03-04T16:13:09.860Z"}
+{"type":"input","raw":"4 blue","output":{"type":"colored_blocks","data":{"count":4,"color":{"name":"blue","rgb":[0,0,255]}}},"display":"        ","ts":"2026-03-04T16:13:09.860Z"}
+{"type":"input","raw":"red + blue","output":{"type":"color","data":{"name":"purple","rgb":[128,0,128]}},"display":"  ","ts":"2026-03-04T16:13:09.861Z"}
+{"type":"end","ts":"2026-03-04T16:13:09.861Z"}

@@ -401,11 +401,13 @@ const equationEl = document.getElementById('equation-display');
 const labelEl = document.getElementById('number-label');
 const feedbackEl = document.getElementById('feedback');
 const input = document.getElementById('user-input');
+let labelTimeoutId = null; // track pending label display
 
 // walkDir: null (drop animation), 'left', 'right' (walk onto screen)
 function renderNumberblock(n, animate = true, showLabel = true, walkDir = null) {
   grid.innerHTML = '';
   grid.classList.remove('walk-in-left', 'walk-in-right');
+  if (labelTimeoutId) { clearTimeout(labelTimeoutId); labelTimeoutId = null; }
   labelEl.textContent = '';
   if (n <= 0 || n > 100) return;
 
@@ -471,7 +473,8 @@ function renderNumberblock(n, animate = true, showLabel = true, walkDir = null) 
   // Show number label after all blocks appear (unless hidden for quiz)
   if (showLabel) {
     const totalDelay = walking ? 1200 : (animate ? (n * 60 + 200) : 0);
-    setTimeout(() => {
+    labelTimeoutId = setTimeout(() => {
+      labelTimeoutId = null;
       labelEl.textContent = n;
       if (animate || walking) labelEl.classList.add('celebrate');
       setTimeout(() => labelEl.classList.remove('celebrate'), 600);

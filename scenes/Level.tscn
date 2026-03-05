@@ -1,0 +1,31 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/level.gd" id="1_ep8ce"]
+[ext_resource type="PackedScene" path="res://scenes/Player.tscn" id="2_2q0c1"]
+[ext_resource type="PackedScene" path="res://scenes/Follower.tscn" id="3_w4ghf"]
+[ext_resource type="PackedScene" path="res://scenes/HUD.tscn" id="4_4c6x6"]
+
+[node name="Level" type="Node2D"]
+script = ExtResource("1_ep8ce")
+
+[node name="Ground" type="Polygon2D" parent="."]
+color = Color(0.22, 0.46, 0.26, 1)
+polygon = PackedVector2Array(-560, -320, 560, -320, 560, 320, -560, 320)
+
+[node name="Decorations" type="Node2D" parent="."]
+
+[node name="Collectibles" type="Node2D" parent="."]
+
+[node name="Player" parent="." instance=ExtResource("2_2q0c1")]
+
+[node name="Mommy" parent="." instance=ExtResource("3_w4ghf")]
+position = Vector2(-70, 40)
+display_name = "Mommy"
+body_color = Color(1, 0.65, 0.8, 1)
+
+[node name="Daddy" parent="." instance=ExtResource("3_w4ghf")]
+position = Vector2(-120, -20)
+display_name = "Daddy"
+body_color = Color(0.55, 0.75, 1, 1)
+
+[node name="HUD" parent="." instance=ExtResource("4_4c6x6")]

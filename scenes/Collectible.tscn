@@ -1,0 +1,25 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/collectible.gd" id="1_qssj1"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_hulvn"]
+radius = 24.0
+
+[node name="Collectible" type="Area2D"]
+script = ExtResource("1_qssj1")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_hulvn")
+
+[node name="Body" type="Polygon2D" parent="."]
+color = Color(1, 1, 0.5, 1)
+polygon = PackedVector2Array(0, -24, 20, 0, 0, 24, -20, 0)
+
+[node name="Label" type="Label" parent="."]
+offset_left = -40.0
+offset_top = -20.0
+offset_right = 40.0
+offset_bottom = 20.0
+horizontal_alignment = 1
+vertical_alignment = 1
+text = "A"

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Planet Explorer</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #000; overflow: hidden; font-family: Arial, sans-serif; }
+  canvas { display: block; }
+  #ui {
+    position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+    color: white; text-align: center; pointer-events: none;
+    text-shadow: 0 0 10px rgba(255,255,255,0.8);
+  }
+  #planet-name { font-size: 28px; font-weight: bold; margin-bottom: 4px; }
+  #instructions { font-size: 16px; opacity: 0.8; }
+  #solar-system {
+    position: fixed; inset: 0; background: rgba(0,0,8,0.97);
+    display: none; align-items: center; justify-content: center;
+  }
+  #solar-system canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="ui">
+  <div id="planet-name"></div>
+  <div id="instructions">Use arrow keys to find your name!</div>
+</div>
+<div id="solar-system">
+  <canvas id="ss-canvas"></canvas>
+</div>
+<script src="game.js"></script>
+</body>
+</html>

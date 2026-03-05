@@ -3,7 +3,7 @@ const PLANETS = [
   {
     name: 'Mercury',
     color: '#b5b5b5',
-    radius: 36,
+    radius: 72,
     draw(cx, cy, r, t) {
       // Grey cratered world
       ctx.fillStyle = '#b5b5b5';
@@ -17,7 +17,7 @@ const PLANETS = [
   {
     name: 'Venus',
     color: '#e8c97e',
-    radius: 48,
+    radius: 96,
     draw(cx, cy, r, t) {
       // Yellowish cloudy
       const g = ctx.createRadialGradient(cx-r*0.3, cy-r*0.3, r*0.1, cx, cy, r);
@@ -34,7 +34,7 @@ const PLANETS = [
   {
     name: 'Earth',
     color: '#4fa3e0',
-    radius: 52,
+    radius: 104,
     draw(cx, cy, r, t) {
       ctx.fillStyle = '#2255aa';
       ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill();
@@ -49,7 +49,7 @@ const PLANETS = [
   {
     name: 'Mars',
     color: '#c1440e',
-    radius: 44,
+    radius: 88,
     draw(cx, cy, r, t) {
       const g = ctx.createRadialGradient(cx-r*0.3, cy-r*0.3, r*0.1, cx, cy, r);
       g.addColorStop(0, '#e06030'); g.addColorStop(1, '#8b2500');
@@ -63,7 +63,7 @@ const PLANETS = [
   {
     name: 'Jupiter',
     color: '#c88b3a',
-    radius: 80,
+    radius: 160,
     draw(cx, cy, r, t) {
       const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
       g.addColorStop(0, '#e8c080'); g.addColorStop(1, '#a06020');
@@ -90,7 +90,7 @@ const PLANETS = [
   {
     name: 'Saturn',
     color: '#e4d19a',
-    radius: 68,
+    radius: 136,
     draw(cx, cy, r, t) {
       // Rings first (behind)
       ctx.strokeStyle = 'rgba(210,190,130,0.7)';
@@ -116,7 +116,7 @@ const PLANETS = [
   {
     name: 'Uranus',
     color: '#7de8e8',
-    radius: 60,
+    radius: 120,
     draw(cx, cy, r, t) {
       const g = ctx.createRadialGradient(cx-r*0.3, cy-r*0.3, r*0.1, cx, cy, r);
       g.addColorStop(0, '#b0f8f8'); g.addColorStop(1, '#4ab8c8');
@@ -131,7 +131,7 @@ const PLANETS = [
   {
     name: 'Neptune',
     color: '#3f54ba',
-    radius: 56,
+    radius: 112,
     draw(cx, cy, r, t) {
       const g = ctx.createRadialGradient(cx-r*0.3, cy-r*0.3, r*0.1, cx, cy, r);
       g.addColorStop(0, '#6080e0'); g.addColorStop(1, '#1a2880');
@@ -148,7 +148,7 @@ const PLANETS = [
   {
     name: 'Pluto',
     color: '#c8a882',
-    radius: 28,
+    radius: 56,
     draw(cx, cy, r, t) {
       ctx.fillStyle = '#b89870';
       ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill();
@@ -158,6 +158,82 @@ const PLANETS = [
       for (const [ox,oy,cr] of [[-2,5,2],[5,2,1.5],[0,-2,1.5]]) {
         ctx.beginPath(); ctx.arc(cx+ox, cy+oy, cr, 0, Math.PI*2); ctx.fill();
       }
+    }
+  },
+  {
+    name: 'Ceres',
+    color: '#a0a0b0',
+    radius: 44,
+    draw(cx, cy, r, t) {
+      // Grey rocky dwarf planet with bright white spots
+      const g = ctx.createRadialGradient(cx-r*0.3, cy-r*0.3, r*0.1, cx, cy, r);
+      g.addColorStop(0, '#c0c0cc'); g.addColorStop(1, '#606070');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill();
+      // Bright Occator crater spots
+      ctx.fillStyle = 'rgba(255,255,255,0.9)';
+      ctx.beginPath(); ctx.arc(cx+r*0.2, cy-r*0.1, r*0.12, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(cx+r*0.28, cy-r*0.05, r*0.07, 0, Math.PI*2); ctx.fill();
+      // Craters
+      ctx.strokeStyle = 'rgba(80,80,90,0.6)';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(cx-r*0.3, cy+r*0.2, r*0.2, 0, Math.PI*2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(cx-r*0.1, cy-r*0.3, r*0.15, 0, Math.PI*2); ctx.stroke();
+    }
+  },
+  {
+    name: 'Haumea',
+    color: '#d4c8b0',
+    radius: 44,
+    draw(cx, cy, r, t) {
+      // Egg-shaped (elongated ellipsoid) with a ring
+      ctx.strokeStyle = 'rgba(200,180,140,0.5)';
+      ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.ellipse(cx, cy, r*1.8, r*0.3, 0, 0, Math.PI*2); ctx.stroke();
+      // Elongated body
+      const g = ctx.createRadialGradient(cx-r*0.3, cy-r*0.2, r*0.1, cx, cy, r);
+      g.addColorStop(0, '#ede0c8'); g.addColorStop(1, '#8c7860');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.ellipse(cx, cy, r*1.4, r*0.8, 0, 0, Math.PI*2); ctx.fill();
+      // Surface detail
+      ctx.strokeStyle = 'rgba(100,85,65,0.4)';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.ellipse(cx, cy, r*1.0, r*0.55, 0, 0, Math.PI*2); ctx.stroke();
+    }
+  },
+  {
+    name: 'Makemake',
+    color: '#c87840',
+    radius: 44,
+    draw(cx, cy, r, t) {
+      // Reddish-brown icy world
+      const g = ctx.createRadialGradient(cx-r*0.3, cy-r*0.3, r*0.1, cx, cy, r);
+      g.addColorStop(0, '#e09060'); g.addColorStop(1, '#803010');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill();
+      // Dark patches
+      ctx.fillStyle = 'rgba(60,20,5,0.4)';
+      ctx.beginPath(); ctx.ellipse(cx+r*0.2, cy+r*0.2, r*0.3, r*0.2, 0.5, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(cx-r*0.25, cy-r*0.15, r*0.2, r*0.15, -0.3, 0, Math.PI*2); ctx.fill();
+    }
+  },
+  {
+    name: 'Eris',
+    color: '#d8d8e0',
+    radius: 50,
+    draw(cx, cy, r, t) {
+      // Pale icy distant world
+      const g = ctx.createRadialGradient(cx-r*0.35, cy-r*0.35, r*0.05, cx, cy, r);
+      g.addColorStop(0, '#f0f0f8'); g.addColorStop(0.6, '#d0d0dc'); g.addColorStop(1, '#8888a0');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill();
+      // Subtle icy sheen
+      ctx.fillStyle = 'rgba(255,255,255,0.25)';
+      ctx.beginPath(); ctx.ellipse(cx-r*0.2, cy-r*0.25, r*0.5, r*0.25, -0.4, 0, Math.PI*2); ctx.fill();
+      // A few faint surface marks
+      ctx.strokeStyle = 'rgba(140,140,160,0.35)';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(cx+r*0.2, cy+r*0.1, r*0.25, 0, Math.PI*2); ctx.stroke();
     }
   }
 ];
@@ -275,7 +351,7 @@ function spawnBigFireworks() {
 
 // ─── Solar system layout ──────────────────────────────────────────────────────
 // Orbital radii for display (just visual, not accurate)
-const ORBIT_RADII = [80, 115, 155, 195, 260, 330, 390, 440, 475];
+const ORBIT_RADII = [80, 115, 155, 195, 260, 330, 390, 440, 475, 505, 535, 565, 600];
 
 function getSolarPos(index, cx, cy) {
   const r = ORBIT_RADII[index];
@@ -568,6 +644,18 @@ function drawPlanetOnContext(c, planet, px, py, r, t) {
     c.fillStyle = '#3f54ba'; c.beginPath(); c.arc(px, py, r, 0, Math.PI*2); c.fill();
   } else if (p.name === 'Pluto') {
     c.fillStyle = '#c8a882'; c.beginPath(); c.arc(px, py, r, 0, Math.PI*2); c.fill();
+  } else if (p.name === 'Ceres') {
+    c.fillStyle = '#a0a0b0'; c.beginPath(); c.arc(px, py, r, 0, Math.PI*2); c.fill();
+    c.fillStyle = 'rgba(255,255,255,0.9)'; c.beginPath(); c.arc(px+r*0.2, py-r*0.1, r*0.12, 0, Math.PI*2); c.fill();
+  } else if (p.name === 'Haumea') {
+    c.fillStyle = '#d4c8b0'; c.beginPath(); c.ellipse(px, py, r*1.4, r*0.8, 0, 0, Math.PI*2); c.fill();
+    c.strokeStyle = 'rgba(200,180,140,0.5)'; c.lineWidth = 2;
+    c.beginPath(); c.ellipse(px, py, r*1.8, r*0.3, 0, 0, Math.PI*2); c.stroke();
+  } else if (p.name === 'Makemake') {
+    c.fillStyle = '#c87840'; c.beginPath(); c.arc(px, py, r, 0, Math.PI*2); c.fill();
+  } else if (p.name === 'Eris') {
+    c.fillStyle = '#d8d8e0'; c.beginPath(); c.arc(px, py, r, 0, Math.PI*2); c.fill();
+    c.fillStyle = 'rgba(255,255,255,0.3)'; c.beginPath(); c.ellipse(px-r*0.2, py-r*0.2, r*0.5, r*0.25, -0.4, 0, Math.PI*2); c.fill();
   }
 }
 

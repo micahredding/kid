@@ -1,13 +1,306 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Letter Invaders!</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Letter Invaders!</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #1a1a2e;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      user-select: none;
+    }
+
+    #ui {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.6rem;
+    }
+
+    #mode-toggle {
+      display: flex;
+      gap: 0.6rem;
+    }
+
+    .mode-btn {
+      border: 2px solid #3a3a6b;
+      background: #11173a;
+      color: #ddd;
+      border-radius: 999px;
+      padding: 0.4rem 1.1rem;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .mode-btn.active {
+      border-color: #ffd700;
+      color: #fff;
+      box-shadow: 0 0 12px rgba(255,215,0,0.35);
+    }
+
+    #score {
+      font-size: 2.4rem;
+      font-weight: bold;
+      color: #ffd700;
+      text-shadow: 0 0 10px rgba(255,215,0,0.5);
+    }
+
+    #canvas-wrap {
+      position: relative;
+      width: 600px;
+      height: 500px;
+      background: linear-gradient(180deg, #0a0a2e 0%, #1a1a4e 100%);
+      border: 3px solid #444;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .invader {
+      position: absolute;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 12px;
+      font-weight: 900;
+      pointer-events: none;
+    }
+
+    /* Letter invader colors */
+    .inv-letter { box-shadow: 0 4px 15px rgba(0,0,0,0.4); }
+    .inv-letter.c0 { background: linear-gradient(135deg, #ff6b6b, #ee5a24); }
+    .inv-letter.c1 { background: linear-gradient(135deg, #48dbfb, #0abde3); }
+    .inv-letter.c2 { background: linear-gradient(135deg, #feca57, #ff9f43); }
+    .inv-letter.c3 { background: linear-gradient(135deg, #a29bfe, #6c5ce7); }
+    .inv-letter.c4 { background: linear-gradient(135deg, #55efc4, #00b894); }
+    .inv-letter .char { font-size: 2.4rem; color: #fff; }
+
+    /* Word invader */
+    .inv-word {
+      background: linear-gradient(180deg, #1d214a, #0f1231);
+      border: 2px solid #4b4f83;
+      box-shadow: 0 6px 18px rgba(8,11,35,0.6);
+      padding: 0 0.5rem;
+      gap: 5px;
+    }
+
+    .tile {
+      width: 38px;
+      height: 46px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.7rem;
+      font-weight: 900;
+      color: #aab;
+      background: linear-gradient(180deg, #2c3164, #1a1f4c);
+      border: 2px solid #5c629e;
+      box-shadow: inset 0 -3px 0 rgba(0,0,0,0.3);
+      transition: color 0.1s, border-color 0.1s, box-shadow 0.1s, transform 0.1s;
+    }
+    .tile.lit {
+      color: #fff;
+      border-color: #ffe57a;
+      box-shadow: 0 0 14px rgba(255,229,122,0.7), inset 0 -3px 0 rgba(0,0,0,0.2);
+      text-shadow: 0 0 10px rgba(255,229,122,0.9);
+      transform: translateY(-2px);
+    }
+
+    .fx {
+      position: absolute;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      font-size: 2.5rem;
+    }
+    .fx.explode { animation: explode 0.5s ease-out forwards; }
+    .fx.poof    { animation: poof 0.7s ease-out forwards; }
+
+    @keyframes explode {
+      0%   { transform: scale(1);   opacity: 1; }
+      50%  { transform: scale(2.2); opacity: 0.9; }
+      100% { transform: scale(3.5); opacity: 0; }
+    }
+    @keyframes poof {
+      0%   { transform: translateY(0)     scale(1);   opacity: 0.9; }
+      100% { transform: translateY(-50px) scale(0.4); opacity: 0; }
+    }
+
+    #hint {
+      margin-top: 0.8rem;
+      font-size: 1.1rem;
+      color: #aaa;
+    }
+  </style>
+</head>
+<body>
+
+<div id="ui">
+  <div id="mode-toggle">
+    <button class="mode-btn active" data-mode="letters">Letters</button>
+    <button class="mode-btn" data-mode="words">Words</button>
+  </div>
+  <div id="score">⭐ 0</div>
+</div>
+
+<div id="canvas-wrap"></div>
+<div id="hint">Type the letters to explode them!</div>
+
+<script>
+const GAME_W = 600, GAME_H = 500
+const WORDS = ['CAT', 'DOG', 'HAT']
+const ALPHA = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+
+const MODES = {
+  letters: { fallSpeed: 0.6, spawnMs: 2500, hint: 'Type the letters to explode them!' },
+  words:   { fallSpeed: 0.3, spawnMs: 3500, hint: 'Type the whole word to explode it!' },
+}
+
+let mode = 'letters'
+let score = 0
+let invaders = []
+let lastSpawn = Date.now()
+let idCounter = 0
+
+const wrap = document.getElementById('canvas-wrap')
+const scoreEl = document.getElementById('score')
+const hintEl = document.getElementById('hint')
+
+// --- DOM helpers ---
+function makeLetterEl(inv) {
+  const el = document.createElement('div')
+  el.className = `invader inv-letter c${inv.id % 5}`
+  el.style.cssText = `left:${inv.x}px;top:${inv.y}px;width:${inv.w}px;height:${inv.h}px`
+  const span = document.createElement('span')
+  span.className = 'char'
+  span.textContent = inv.text
+  el.appendChild(span)
+  return el
+}
+
+function makeWordEl(inv) {
+  const el = document.createElement('div')
+  el.className = 'invader inv-word'
+  el.style.cssText = `left:${inv.x}px;top:${inv.y}px;width:${inv.w}px;height:${inv.h}px`
+  inv.tiles = []
+  for (const ch of inv.text) {
+    const tile = document.createElement('div')
+    tile.className = 'tile'
+    tile.textContent = ch
+    el.appendChild(tile)
+    inv.tiles.push(tile)
+  }
+  return el
+}
+
+function spawnInvader() {
+  const text = mode === 'words'
+    ? WORDS[Math.random() * WORDS.length | 0]
+    : ALPHA[Math.random() * ALPHA.length | 0]
+  const w = mode === 'words' ? Math.max(70, text.length * 52 + 24) : 70
+  const h = 64
+  const x = Math.random() * (GAME_W - w)
+  const inv = { id: idCounter++, text, typed: 0, x, y: -h, w, h }
+  inv.el = mode === 'words' ? makeWordEl(inv) : makeLetterEl(inv)
+  wrap.appendChild(inv.el)
+  invaders.push(inv)
+}
+
+function removeInvader(inv) {
+  inv.el.remove()
+  invaders = invaders.filter(i => i !== inv)
+}
+
+function showFx(inv, type) {
+  const el = document.createElement('div')
+  el.className = `fx ${type}`
+  el.textContent = type === 'explode' ? '💥' : '💨'
+  el.style.cssText = `left:${inv.x}px;top:${Math.min(inv.y, GAME_H - inv.h)}px;width:${inv.w}px;height:${inv.h}px`
+  wrap.appendChild(el)
+  el.addEventListener('animationend', () => el.remove())
+}
+
+// --- Game loop ---
+function loop() {
+  const now = Date.now()
+  const cfg = MODES[mode]
+
+  // Spawn
+  if (now - lastSpawn > cfg.spawnMs) {
+    lastSpawn = now
+    spawnInvader()
+  }
+
+  // Move
+  for (const inv of [...invaders]) {
+    inv.y += cfg.fallSpeed
+    inv.el.style.top = inv.y + 'px'
+    if (inv.y > GAME_H) {
+      showFx(inv, 'poof')
+      removeInvader(inv)
+    }
+  }
+
+  requestAnimationFrame(loop)
+}
+
+// --- Input ---
+document.addEventListener('keydown', e => {
+  const key = e.key.toUpperCase()
+  if (!ALPHA.includes(key)) return
+
+  // Find lowest invader whose next expected letter matches
+  let best = null
+  for (const inv of invaders) {
+    const expected = inv.text[inv.typed]
+    if (expected === key && (!best || inv.y > best.y)) best = inv
+  }
+  if (!best) return
+
+  best.typed++
+
+  if (best.typed >= best.text.length) {
+    // Complete!
+    score++
+    scoreEl.textContent = '⭐ ' + score
+    showFx(best, 'explode')
+    removeInvader(best)
+  } else if (best.tiles) {
+    // Light up typed tiles in word mode
+    best.tiles[best.typed - 1].classList.add('lit')
+  }
+})
+
+// --- Mode switching ---
+document.getElementById('mode-toggle').addEventListener('click', e => {
+  const btn = e.target.closest('.mode-btn')
+  if (!btn) return
+  const newMode = btn.dataset.mode
+  if (newMode === mode) return
+  mode = newMode
+
+  // Reset
+  for (const inv of [...invaders]) removeInvader(inv)
+  score = 0
+  scoreEl.textContent = '⭐ 0'
+  lastSpawn = Date.now()
+  hintEl.textContent = MODES[mode].hint
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode))
+})
+
+// --- Start ---
+requestAnimationFrame(loop)
+</script>
+</body>
 </html>

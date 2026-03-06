@@ -4,11 +4,14 @@ import './App.css'
 const GAME_WIDTH = 600
 const GAME_HEIGHT = 500
 const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+const DIGITS = '0123456789'
 const SHORT_WORDS = ['CAT', 'DOG', 'HAT']
+const NUMBERS = Array.from({ length: 12 }, (_, i) => String(i + 1))
 
 const MODES = {
   LETTERS: 'letters',
   WORDS: 'words',
+  NUMBERS: 'numbers',
 }
 
 const MODE_CONFIG = {
@@ -22,6 +25,11 @@ const MODE_CONFIG = {
     spawnInterval: 2800,
     hint: 'Type the whole word before it hits the bottom!',
   },
+  [MODES.NUMBERS]: {
+    fallSpeed: 0.45,
+    spawnInterval: 2500,
+    hint: 'Type the full number before it hits the bottom!',
+  },
 }
 
 let nextId = 0
@@ -34,12 +42,17 @@ function randomWord() {
   return SHORT_WORDS[Math.floor(Math.random() * SHORT_WORDS.length)]
 }
 
+function randomNumber() {
+  return NUMBERS[Math.floor(Math.random() * NUMBERS.length)]
+}
+
 function invaderWidth(text) {
   return Math.max(80, text.length * 42 + 18)
 }
 
 function createInvader(mode) {
-  const text = mode === MODES.WORDS ? randomWord() : randomLetter()
+  const text =
+    mode === MODES.WORDS ? randomWord() : mode === MODES.NUMBERS ? randomNumber() : randomLetter()
   const width = invaderWidth(text)
   const height = 60
   const x = Math.random() * (GAME_WIDTH - width)
@@ -105,7 +118,8 @@ function App() {
   useEffect(() => {
     function handleKey(e) {
       const key = e.key.toUpperCase()
-      if (!LETTERS.includes(key)) return
+      const validKey = mode === MODES.NUMBERS ? DIGITS.includes(key) : LETTERS.includes(key)
+      if (!validKey) return
 
       setInvaders(prev => {
         const idx = prev.reduce((best, l, i) => {
@@ -131,7 +145,7 @@ function App() {
 
     window.addEventListener('keydown', handleKey)
     return () => window.removeEventListener('keydown', handleKey)
-  }, [])
+  }, [mode])
 
   return (
     <div className="game-container">
@@ -150,16 +164,25 @@ function App() {
         >
           Word Mode
         </button>
+        <button
+          type="button"
+          className={`mode-button ${mode === MODES.NUMBERS ? 'active' : ''}`}
+          onClick={() => setMode(MODES.NUMBERS)}
+        >
+          Number Mode
+        </button>
       </div>
       <div className="score">Score: {score}</div>
       <div className="game-area" style={{ width: GAME_WIDTH, height: GAME_HEIGHT }}>
         {invaders.map(l => (
           <div
             key={l.id}
-            className={`letter ${mode === MODES.WORDS ? 'word' : ''}`}
-            style={{ left: l.x, top: l.y, width: l.width, height: l.height, fontSize: mode === MODES.WORDS ? 30 : 42 }}
+            className={`letter ${mode === MODES.LETTERS ? '' : 'word'}`}
+            style={{ left: l.x, top: l.y, width: l.width, height: l.height, fontSize: mode === MODES.LETTERS ? 42 : 30 }}
           >
-            {mode === MODES.WORDS ? (
+            {mode === MODES.LETTERS ? (
+              l.text
+            ) : (
               <div className="word-tiles">
                 {l.text.split('').map((char, i) => (
                   <span key={i} className={`word-tile ${i < l.typed ? 'typed' : ''}`}>
@@ -167,8 +190,6 @@ function App() {
                   </span>
                 ))}
               </div>
-            ) : (
-              l.text
             )}
           </div>
         ))}

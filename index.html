@@ -84,6 +84,15 @@
     .inv-letter.c4 { background: linear-gradient(135deg, #55efc4, #00b894); }
     .inv-letter .char { font-size: 2.4rem; color: #fff; }
 
+    /* Number invader colors */
+    .inv-number { box-shadow: 0 4px 15px rgba(0,0,0,0.4); font-family: 'Courier New', monospace; }
+    .inv-number.c0 { background: linear-gradient(135deg, #fd79a8, #e84393); }
+    .inv-number.c1 { background: linear-gradient(135deg, #74b9ff, #0984e3); }
+    .inv-number.c2 { background: linear-gradient(135deg, #81ecec, #00cec9); }
+    .inv-number.c3 { background: linear-gradient(135deg, #fdcb6e, #e17055); }
+    .inv-number.c4 { background: linear-gradient(135deg, #dfe6e9, #636e72); }
+    .inv-number .char { font-size: 2.4rem; color: #fff; font-family: 'Courier New', monospace; font-weight: 900; }
+
     /* Word invader */
     .inv-word {
       background: linear-gradient(180deg, #1d214a, #0f1231);
@@ -150,6 +159,7 @@
   <div id="mode-toggle">
     <button class="mode-btn active" data-mode="letters">Letters</button>
     <button class="mode-btn" data-mode="words">Words</button>
+    <button class="mode-btn" data-mode="numbers">Numbers</button>
   </div>
   <div id="score">⭐ 0</div>
 </div>
@@ -161,10 +171,12 @@
 const GAME_W = 600, GAME_H = 500
 const WORDS = ['CAT', 'DOG', 'HAT']
 const ALPHA = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+const DIGITS = '0123456789'
 
 const MODES = {
   letters: { fallSpeed: 0.6, spawnMs: 2500, hint: 'Type the letters to explode them!' },
   words:   { fallSpeed: 0.3, spawnMs: 3500, hint: 'Type the whole word to explode it!' },
+  numbers: { fallSpeed: 0.6, spawnMs: 2500, hint: 'Type the numbers to explode them!' },
 }
 
 let mode = 'letters'
@@ -204,15 +216,28 @@ function makeWordEl(inv) {
   return el
 }
 
+function makeNumberEl(inv) {
+  const el = document.createElement('div')
+  el.className = `invader inv-number c${inv.id % 5}`
+  el.style.cssText = `left:${inv.x}px;top:${inv.y}px;width:${inv.w}px;height:${inv.h}px`
+  const span = document.createElement('span')
+  span.className = 'char'
+  span.textContent = inv.text
+  el.appendChild(span)
+  return el
+}
+
 function spawnInvader() {
   const text = mode === 'words'
     ? WORDS[Math.random() * WORDS.length | 0]
+    : mode === 'numbers'
+    ? DIGITS[Math.random() * DIGITS.length | 0]
     : ALPHA[Math.random() * ALPHA.length | 0]
   const w = mode === 'words' ? Math.max(70, text.length * 52 + 24) : 70
   const h = 64
   const x = Math.random() * (GAME_W - w)
   const inv = { id: idCounter++, text, typed: 0, x, y: -h, w, h }
-  inv.el = mode === 'words' ? makeWordEl(inv) : makeLetterEl(inv)
+  inv.el = mode === 'words' ? makeWordEl(inv) : mode === 'numbers' ? makeNumberEl(inv) : makeLetterEl(inv)
   wrap.appendChild(inv.el)
   invaders.push(inv)
 }
@@ -258,7 +283,7 @@ function loop() {
 // --- Input ---
 document.addEventListener('keydown', e => {
   const key = e.key.toUpperCase()
-  if (!ALPHA.includes(key)) return
+  if (!ALPHA.includes(key) && !DIGITS.includes(key)) return
 
   // Find lowest invader whose next expected letter matches
   let best = null

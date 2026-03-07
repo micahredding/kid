@@ -69,6 +69,25 @@
 .invader-letter.color-3 { background: linear-gradient(135deg, #a29bfe, #6c5ce7); }
 .invader-letter.color-4 { background: linear-gradient(135deg, #55efc4, #00b894); }
 
+/* Number invaders */
+.invader-number {
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+  font-family: 'Courier New', monospace;
+}
+
+.invader-number .letter-char {
+  font-size: 2.4rem;
+  color: #fff;
+  font-family: 'Courier New', monospace;
+  font-weight: 900;
+}
+
+.invader-number.color-0 { background: linear-gradient(135deg, #fd79a8, #e84393); }
+.invader-number.color-1 { background: linear-gradient(135deg, #74b9ff, #0984e3); }
+.invader-number.color-2 { background: linear-gradient(135deg, #81ecec, #00cec9); }
+.invader-number.color-3 { background: linear-gradient(135deg, #fdcb6e, #e17055); }
+.invader-number.color-4 { background: linear-gradient(135deg, #dfe6e9, #636e72); }
+
 /* Word invaders */
 .invader-word {
   background: linear-gradient(180deg, #1d214a, #0f1231);

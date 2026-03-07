@@ -8,11 +8,13 @@ const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
 let nextId = 0
 
-const MODES = { LETTERS: 'letters', WORDS: 'words' }
+const MODES = { LETTERS: 'letters', WORDS: 'words', NUMBERS: 'numbers' }
+const NUMBERS = '0123456789'
 
 const MODE_CONFIG = {
   [MODES.LETTERS]: { fallSpeed: 0.6, spawnInterval: 2500, hint: 'Type the letters to explode them!' },
   [MODES.WORDS]: { fallSpeed: 0.3, spawnInterval: 3500, hint: 'Type the whole word to explode it!' },
+  [MODES.NUMBERS]: { fallSpeed: 0.6, spawnInterval: 2500, hint: 'Type the numbers to explode them!' },
 }
 
 function randomWord() {
@@ -23,12 +25,16 @@ function randomLetter() {
   return LETTERS[Math.floor(Math.random() * LETTERS.length)]
 }
 
+function randomNumber() {
+  return NUMBERS[Math.floor(Math.random() * NUMBERS.length)]
+}
+
 function invaderWidth(text) {
   return Math.max(70, text.length * 46 + 24)
 }
 
 function createInvader(mode) {
-  const text = mode === MODES.WORDS ? randomWord() : randomLetter()
+  const text = mode === MODES.WORDS ? randomWord() : mode === MODES.NUMBERS ? randomNumber() : randomLetter()
   const width = invaderWidth(text)
   const height = 64
   const x = Math.random() * (GAME_WIDTH - width)
@@ -117,7 +123,7 @@ function App() {
   useEffect(() => {
     function handleKey(e) {
       const key = e.key.toUpperCase()
-      if (!LETTERS.includes(key)) return
+      if (!LETTERS.includes(key) && !NUMBERS.includes(key)) return
 
       const prev = invadersRef.current
       // Find the lowest (most dangerous) invader whose next expected letter matches
@@ -168,6 +174,13 @@ function App() {
         >
           Words
         </button>
+        <button
+          type="button"
+          className={`mode-button ${mode === MODES.NUMBERS ? 'active' : ''}`}
+          onClick={() => setMode(MODES.NUMBERS)}
+        >
+          Numbers
+        </button>
       </div>
 
       <div className="score">⭐ {score}</div>
@@ -176,10 +189,10 @@ function App() {
         {invaders.map(inv => (
           <div
             key={inv.id}
-            className={`invader ${mode === MODES.WORDS ? 'invader-word' : 'invader-letter'} color-${inv.id % 5}`}
+            className={`invader ${mode === MODES.WORDS ? 'invader-word' : mode === MODES.NUMBERS ? 'invader-number' : 'invader-letter'} color-${inv.id % 5}`}
             style={{ left: inv.x, top: inv.y, width: inv.width, height: inv.height }}
           >
-            {mode === MODES.LETTERS ? (
+            {mode === MODES.LETTERS || mode === MODES.NUMBERS ? (
               <span className="letter-char">{inv.text}</span>
             ) : (
               <div className="word-tiles">

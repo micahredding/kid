@@ -157,6 +157,34 @@
 </div>
 
 <script>
+// ===================== SERVER BRIDGE =====================
+// Fire-and-forget: works whether or not the server is running.
+
+const SERVER = 'http://localhost:3131';
+
+function serverLog(entry) {
+  fetch(`${SERVER}/log`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(entry),
+  }).catch(() => { /* server not running — silently skip */ });
+}
+
+async function serverSaveDrawing(dataUrl) {
+  try {
+    const res = await fetch(`${SERVER}/save-drawing`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dataUrl }),
+    });
+    if (res.ok) {
+      const { filepath } = await res.json();
+      return filepath;
+    }
+  } catch { /* server not running */ }
+  return null;
+}
+
 // ===================== COLORS =====================
 
 const COLORS = {
@@ -441,6 +469,11 @@ function renderToNode(value) {
   }
 }
 
+function renderToDisplay(value) {
+  // Plain-text version for logging (strips color blocks to names)
+  return valueToPlainString(value);
+}
+
 // ===================== REPL =====================
 
 const outputEl  = document.getElementById('output');
@@ -459,6 +492,9 @@ function addLine(content, cls = 'result') {
   outputEl.scrollTop = outputEl.scrollHeight;
 }
 
+// Log session start
+serverLog({ type: 'start', version: '1.0.0' });
+
 inputEl.addEventListener('keydown', (e) => {
   if (e.key !== 'Enter') return;
   const raw = inputEl.value;
@@ -467,9 +503,15 @@ inputEl.addEventListener('keydown', (e) => {
   addLine(`> ${raw}`, 'input-echo');
 
   const trimmed = raw.trim();
-  if (trimmed === '') { addLine(''); return; }
+
+  if (trimmed === '') {
+    addLine('');
+    serverLog({ type: 'input', raw: '', display: '' });
+    return;
+  }
 
   if (trimmed.toLowerCase() === 'draw') {
+    serverLog({ type: 'input', raw: trimmed, display: '[entering drawing mode]' });
     enterDrawMode();
     return;
   }
@@ -477,6 +519,7 @@ inputEl.addEventListener('keydown', (e) => {
   if (trimmed.toLowerCase() === 'print') {
     if (!lastDrawing) {
       addLine('No drawing yet! Type "draw" first.');
+      serverLog({ type: 'input', raw: trimmed, display: '[no drawing]' });
     } else {
       saveDrawing();
     }
@@ -485,13 +528,18 @@ inputEl.addEventListener('keydown', (e) => {
 
   try {
     const result = evaluate(trimmed);
+    const display = renderToDisplay(result);
+
     const div = document.createElement('div');
     div.className = 'output-line result';
     div.appendChild(renderToNode(result));
     outputEl.appendChild(div);
     outputEl.scrollTop = outputEl.scrollHeight;
+
+    serverLog({ type: 'input', raw: trimmed, output: result, display });
   } catch {
     addLine(raw);
+    serverLog({ type: 'input', raw, display: raw });
   }
 });
 
@@ -561,7 +609,7 @@ function renderCanvas() {
   ctx.lineWidth = 2;
   ctx.strokeRect(cursorX * CELL_W + 1, cursorY * CELL_H + 1, CELL_W - 2, CELL_H - 2);
 
-  // Status
+  // Status bar
   elPen.textContent = penDown ? 'PEN DOWN' : 'pen up';
   elPen.classList.toggle('down', penDown);
   elSwatch.style.backgroundColor = rgbStr(col.rgb);
@@ -579,11 +627,23 @@ function enterDrawMode() {
 
 function exitDrawMode() {
   document.removeEventListener('keydown', onDrawKey, true);
-  lastDrawing = { grid: grid.map(r => r.map(c => ({ ...c }))), cols: COLS, rows: ROWS };
+
+  // Snapshot grid for later use
+  lastDrawing = {
+    grid: grid.map(r => r.map(c => ({ ...c }))),
+    cols: COLS,
+    rows: ROWS,
+    canvas,       // keep live canvas reference for quick re-render
+  };
+
+  // Log the drawing (canvas data, same format as TUI)
+  const canvasData = grid.map(row => row.map(cell => ({ char: cell.char, color: cell.color })));
+  serverLog({ type: 'drawing', canvas: canvasData });
+
   drawMode.style.display = 'none';
   replMode.style.display = 'flex';
   inputEl.focus();
-  addLine('[drawing saved — type "print" to download it]', 'system');
+  saveDrawing();
 }
 
 const DRAW_PREVENT = new Set(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' ','Tab']);
@@ -624,8 +684,10 @@ function onDrawKey(e) {
   }
 }
 
-function saveDrawing() {
+async function saveDrawing() {
   const d = lastDrawing;
+
+  // Render to an off-screen canvas (cursor-free)
   const off = document.createElement('canvas');
   off.width  = d.cols * CELL_W;
   off.height = d.rows * CELL_H;
@@ -647,11 +709,25 @@ function saveDrawing() {
       }
     }
   }
-  const a = document.createElement('a');
-  a.href = off.toDataURL('image/png');
-  a.download = `drawing-${new Date().toISOString().replace(/[:.]/g, '-')}.png`;
-  a.click();
-  addLine('Drawing downloaded!', 'system');
+
+  const dataUrl = off.toDataURL('image/png');
+
+  // Try to save via server (writes to prints/ directory)
+  const filepath = await serverSaveDrawing(dataUrl);
+
+  if (filepath) {
+    // Server saved it — show path, no forced download needed
+    addLine(`Saved! ${filepath}`, 'system');
+  } else {
+    // Server not available — fall back to browser download
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = `drawing-${new Date().toISOString().replace(/[:.]/g, '-')}.png`;
+    a.click();
+    addLine('Drawing downloaded!', 'system');
+  }
+
+  serverLog({ type: 'input', raw: 'print', display: '[print]' });
 }
 </script>
 </body>

@@ -8,6 +8,7 @@
     "kid": "./kid.mjs"
   },
   "scripts": {
-    "start": "node kid.mjs"
+    "start": "node kid.mjs",
+    "serve": "node server.mjs"
   }
 }

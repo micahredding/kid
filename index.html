@@ -1,0 +1,1013 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Run Around</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: #0f0f1a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  font-family: system-ui, -apple-system, sans-serif;
+  color: white;
+  overflow: hidden;
+}
+#wrapper {
+  position: relative;
+  width: 1120px;
+  height: 640px;
+  max-width: 100vw;
+}
+canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
+/* ── MENU ── */
+#menu {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(8, 8, 22, 0.88);
+  z-index: 20;
+}
+#menu-box {
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 18px;
+  padding: 32px 44px;
+  text-align: center;
+  min-width: 300px;
+}
+#menu h1 { font-size: 2rem; margin-bottom: 6px; letter-spacing: -0.5px; }
+#menu p  { opacity: 0.65; margin-bottom: 22px; font-size: 0.95rem; }
+#level-buttons { display: flex; flex-direction: column; gap: 9px; }
+.level-btn {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 10px;
+  color: white;
+  font-size: 1.05rem;
+  padding: 11px 22px;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.level-btn:hover { background: rgba(255,255,255,0.22); }
+/* ── HUD ── */
+#hud {
+  position: absolute;
+  top: 0; right: 0;
+  width: 236px;
+  height: 100%;
+  background: rgba(0,0,0,0.52);
+  padding: 12px 10px;
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 10;
+  overflow-y: auto;
+  pointer-events: none;
+}
+#hud-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.2;
+}
+#hud-progress {
+  font-size: 0.82rem;
+  text-align: center;
+  opacity: 0.75;
+}
+#rainbow-canvas { display: none; align-self: center; }
+#hud-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  justify-content: center;
+}
+.chip {
+  border: 2px solid rgba(255,255,255,0.6);
+  border-radius: 8px;
+  padding: 3px 7px;
+  font-size: 0.8rem;
+  text-align: center;
+  opacity: 0.38;
+  min-width: 36px;
+  line-height: 1.3;
+  transition: opacity 0.2s;
+}
+.chip.found { opacity: 1; }
+#hud-complete {
+  text-align: center;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #ffd700;
+  display: none;
+}
+#back-btn {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 8px;
+  color: white;
+  padding: 7px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  margin-top: auto;
+  pointer-events: all;
+}
+#back-btn:hover { background: rgba(255,255,255,0.2); }
+/* Mobile/small-screen scaling */
+@media (max-width: 1140px) {
+  #wrapper { width: 100vw; height: calc(100vw * 640 / 1120); }
+}
+@media (max-height: 660px) {
+  #wrapper { height: 100vh; width: calc(100vh * 1120 / 640); }
+}
+</style>
+</head>
+<body>
+<div id="wrapper">
+  <canvas id="canvas" width="1120" height="640"></canvas>
+
+  <div id="menu">
+    <div id="menu-box">
+      <h1>Run Around</h1>
+      <p>Run to collect everything! (Arrow keys or WASD)</p>
+      <div id="level-buttons"></div>
+    </div>
+  </div>
+
+  <div id="hud">
+    <div id="hud-title"></div>
+    <div id="hud-progress"></div>
+    <canvas id="rainbow-canvas" width="210" height="210"></canvas>
+    <div id="hud-chips"></div>
+    <div id="hud-complete">You did it!</div>
+    <button id="back-btn">Back to Menu</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════════
+// LEVEL DATA
+// ═══════════════════════════════════════════════════════════════════════════════
+const LEVEL_ORDER = [
+  'alphabet','rainbow','numbers','simple_words','shapes','animals','halloween'
+];
+const LEVELS = {
+  alphabet: {
+    title: 'Alphabet Hunt', mode: 'letters', map_theme: 'forest',
+    items: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
+  },
+  rainbow: {
+    title: 'Rainbow Run', mode: 'rainbow', map_theme: 'island_chain',
+    items: ['Red','Orange','Yellow','Green','Blue','Indigo','Violet']
+  },
+  numbers: {
+    title: 'Count to 10', mode: 'numbers', map_theme: 'mountains',
+    items: ['1','2','3','4','5','6','7','8','9','10']
+  },
+  simple_words: {
+    title: 'Simple Words', mode: 'words_emoji', map_theme: 'house',
+    items: ['cat','hat','dog','sun','car','tree','book','ball'],
+    emoji_map: { cat:'🐱', hat:'🧢', dog:'🐶', sun:'☀️', car:'🚗', tree:'🌳', book:'📘', ball:'⚽' }
+  },
+  shapes: {
+    title: 'Shape Hunt', mode: 'shapes', map_theme: 'desert',
+    items: ['Circle','Square','Triangle','Star','Heart','Diamond','Oval','Rectangle'],
+    symbol_map: { Circle:'●', Square:'■', Triangle:'▲', Star:'★', Heart:'♥', Diamond:'◆', Oval:'⬭', Rectangle:'▭' }
+  },
+  animals: {
+    title: 'Animal Hunt', mode: 'animals', map_theme: 'cave',
+    items: ['Cat','Dog','Bird','Fish','Duck','Horse','Frog','Cow'],
+    emoji_map: { Cat:'🐱', Dog:'🐶', Bird:'🐦', Fish:'🐟', Duck:'🦆', Horse:'🐴', Frog:'🐸', Cow:'🐮' }
+  },
+  halloween: {
+    title: 'Halloween Trick-or-Treat', mode: 'words_emoji', map_theme: 'trick_or_treat',
+    char_styles: { asher:'ghost', mommy:'bat', daddy:'skeleton' },
+    items: ['candy','pumpkin','ghost','bat','spider','hat','moon','house'],
+    emoji_map: { candy:'🍬', pumpkin:'🎃', ghost:'👻', bat:'🦇', spider:'🕷️', hat:'🧙', moon:'🌙', house:'🏠' }
+  }
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SEEDED RNG  (mulberry32)
+// ═══════════════════════════════════════════════════════════════════════════════
+function strHash(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (Math.imul(31, h) + s.charCodeAt(i)) | 0;
+  return h >>> 0;
+}
+function makeRng(seed) {
+  let s = seed >>> 0;
+  return {
+    next() {
+      s += 0x6D2B79F5;
+      let t = Math.imul(s ^ (s >>> 15), 1 | s);
+      t ^= t + Math.imul(t ^ (t >>> 7), 61 | t);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    },
+    randf(lo, hi) { return lo + this.next() * (hi - lo); },
+    randi(lo, hi)  { return Math.floor(lo + this.next() * (hi - lo + 1)); }
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CANVAS / COORDINATE SYSTEM
+// World space: x ∈ [-560, +560], y ∈ [-320, +320]
+// Canvas origin is top-left; OX/OY offset shifts world→canvas.
+// ═══════════════════════════════════════════════════════════════════════════════
+const canvas = document.getElementById('canvas');
+const ctx    = canvas.getContext('2d');
+const CW = 1120, CH = 640;
+const OX = CW / 2, OY = CH / 2;   // world→canvas offset
+
+// Convert flat world-coord array to canvas coords: [wx,wy,...] → [cx,cy,...]
+function w2c(pts) {
+  const out = [];
+  for (let i = 0; i < pts.length; i += 2) out.push(pts[i] + OX, pts[i+1] + OY);
+  return out;
+}
+
+// Pre-translate a list of local pts to world pts
+function localToWorld(pts, wx, wy, scale = 1) {
+  const out = [];
+  for (let i = 0; i < pts.length; i += 2)
+    out.push(pts[i] * scale + wx, pts[i+1] * scale + wy);
+  return out;
+}
+
+function ovalPts(rx, ry, segs = 12) {
+  const pts = [];
+  for (let i = 0; i < segs; i++) {
+    const t = (Math.PI * 2 * i) / segs;
+    pts.push(Math.cos(t) * rx, Math.sin(t) * ry);
+  }
+  return pts;
+}
+
+// Draw a polygon from canvas-coord pts array
+function ctxPoly(canvasPts, color) {
+  ctx.beginPath();
+  ctx.moveTo(canvasPts[0], canvasPts[1]);
+  for (let i = 2; i < canvasPts.length; i += 2) ctx.lineTo(canvasPts[i], canvasPts[i+1]);
+  ctx.closePath();
+  ctx.fillStyle = color;
+  ctx.fill();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// BACKGROUND ELEMENT SYSTEM
+// bgElems: array of { canvasPts, color, isShimmer?, swayGroup? }
+// swayGroups: array of { elemIndices[], pivotCX, pivotCY, phase, speed, amp, rot }
+// ═══════════════════════════════════════════════════════════════════════════════
+let bgElems     = [];
+let swayGroups  = [];
+let shimmerIdx  = -1;
+let shimmerBase = null;   // [r,g,b,a] 0..255 / 0..1
+
+function bgAddPoly(worldPts, color, shimmer = false) {
+  const idx = bgElems.length;
+  bgElems.push({ canvasPts: w2c(worldPts), color, isShimmer: shimmer });
+  if (shimmer) shimmerIdx = idx;
+  return idx;
+}
+
+function bgAddOval(wx, wy, rx, ry, color, segs = 12, shimmer = false) {
+  return bgAddPoly(localToWorld(ovalPts(rx, ry, segs), wx, wy), color, shimmer);
+}
+
+function bgAddSwayGroup(indices, pivotWX, pivotWY, rng, minAmp = 0.01, maxAmp = 0.028) {
+  swayGroups.push({
+    indices,
+    pivotCX: pivotWX + OX,
+    pivotCY: pivotWY + OY,
+    phase: rng.randf(0, Math.PI * 2),
+    speed: rng.randf(0.75, 1.3),
+    amp:   rng.randf(minAmp, maxAmp),
+    rot: 0
+  });
+}
+
+// Map each elem index → sway group index (for fast lookup while drawing)
+let elemSwayGroup = [];   // elemSwayGroup[elemIdx] = swayGroup ref or null
+
+function buildSwayLookup() {
+  elemSwayGroup = new Array(bgElems.length).fill(null);
+  for (const sg of swayGroups) {
+    for (const i of sg.indices) elemSwayGroup[i] = sg;
+  }
+}
+
+function updateSway(ambientTime) {
+  for (const sg of swayGroups) {
+    sg.rot = Math.sin(ambientTime * sg.speed + sg.phase) * sg.amp;
+  }
+}
+
+function drawBackground(ambientTime) {
+  for (let i = 0; i < bgElems.length; i++) {
+    const el = bgElems[i];
+    let color = el.color;
+
+    if (el.isShimmer && shimmerBase) {
+      const shimmer = Math.sin(ambientTime * 2.2) * 0.12;
+      const [r,g,b,a] = shimmerBase;
+      const na = Math.max(0.08, Math.min(0.9, a + shimmer));
+      color = `rgba(${r},${g},${b},${na.toFixed(3)})`;
+    }
+
+    const sg = elemSwayGroup[i];
+    if (sg && sg.rot !== 0) {
+      ctx.save();
+      ctx.translate(sg.pivotCX, sg.pivotCY);
+      ctx.rotate(sg.rot);
+      ctx.translate(-sg.pivotCX, -sg.pivotCY);
+      ctxPoly(el.canvasPts, color);
+      ctx.restore();
+    } else {
+      ctxPoly(el.canvasPts, color);
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// BACKGROUND HELPERS
+// ═══════════════════════════════════════════════════════════════════════════════
+const BX = -560, BY = -320, BW = 1120, BH = 640;
+
+function edgePos(rng, eMin, eMax) {
+  const side = rng.randi(0, 3);
+  if (side === 0) return [rng.randf(BX+20, BX+BW-20), BY + rng.randf(eMin, eMax)];
+  if (side === 1) return [rng.randf(BX+20, BX+BW-20), BY+BH - rng.randf(eMin, eMax)];
+  if (side === 2) return [BX + rng.randf(eMin, eMax), rng.randf(BY+20, BY+BH-20)];
+  return [BX+BW - rng.randf(eMin, eMax), rng.randf(BY+20, BY+BH-20)];
+}
+
+function makeTree(wx, wy, rng) {
+  const sc = rng.randf(0.8, 1.25);
+  const i0 = bgElems.length;
+  bgAddPoly(localToWorld([-4,-2, 4,-2, 5,16, -5,16], wx, wy, sc), '#765236');
+  bgAddOval(wx, wy - 12*sc, 17*sc, 14*sc, '#28683a', 12);
+  bgAddOval(wx, wy - 15*sc, 14*sc, 12*sc, '#358746', 12);
+  bgAddSwayGroup([i0, i0+1, i0+2], wx, wy + 16*sc, rng);
+}
+
+function makeCactus(wx, wy, rng) {
+  const sc = rng.randf(0.8, 1.3);
+  const i0 = bgElems.length;
+  bgAddPoly(localToWorld([-7,-18, 7,-18, 7,18, -7,18],   wx, wy, sc), 'rgba(51,138,87,1)');
+  bgAddPoly(localToWorld([7,-8, 16,-8, 16,0, 7,0],        wx, wy, sc), 'rgba(51,138,87,1)');
+  bgAddPoly(localToWorld([-16,2, -7,2, -7,10, -16,10],    wx, wy, sc), 'rgba(51,138,87,1)');
+  bgAddSwayGroup([i0, i0+1, i0+2], wx, wy + 18*sc, rng, 0.006, 0.014);
+}
+
+function makePalmTree(wx, wy, rng) {
+  const sc = rng.randf(0.75, 1.15);
+  const i0 = bgElems.length;
+  // trunk
+  bgAddPoly(localToWorld([-3,-2, 3,-2, 7,22, -7,22], wx, wy, sc), 'rgba(158,117,66,1)');
+  // fronds – each stored individually so all rotate around trunk base
+  const frondLocal = [0,-8, 26,-2, 18,8, 0,1];
+  for (let i = 0; i < 6; i++) {
+    const ang = ((-70 + i * 28) * Math.PI) / 180;
+    const rotPts = [];
+    for (let j = 0; j < frondLocal.length; j += 2) {
+      const lx = frondLocal[j] * sc, ly = frondLocal[j+1] * sc;
+      rotPts.push(lx*Math.cos(ang) - ly*Math.sin(ang) + wx,
+                  lx*Math.sin(ang) + ly*Math.cos(ang) + wy);
+    }
+    bgAddPoly(rotPts, 'rgba(61,168,92,1)');
+  }
+  const indices = Array.from({length: 7}, (_, k) => i0 + k);
+  bgAddSwayGroup(indices, wx, wy + 22*sc, rng, 0.015, 0.03);
+}
+
+function makeBat(wx, wy, rng) {
+  const i0 = bgElems.length;
+  bgAddPoly(localToWorld([-16,0,-28,-6,-20,7,-8,2,0,-5,8,2,20,7,28,-6,16,0,0,8], wx, wy),
+            'rgba(20,20,31,0.9)');
+  bgAddSwayGroup([i0], wx, wy, rng, 0.008, 0.02);
+}
+
+function addNeighborhoodHouse(hx, hy, rng) {
+  bgAddPoly([hx-46,hy-22, hx+46,hy-22, hx+46,hy+46, hx-46,hy+46], 'rgba(133,107,102,1)');
+  bgAddPoly([hx-58,hy-22, hx,hy-64, hx+58,hy-22], 'rgba(79,48,48,1)');
+  bgAddPoly([hx-10,hy+8, hx+10,hy+8, hx+10,hy+46, hx-10,hy+46], 'rgba(61,41,31,1)');
+  const v = Math.round((0.76 + rng.randf(-0.08, 0.08)) * 255);
+  const wc = `rgba(255,${v},87,0.82)`;
+  bgAddPoly([hx-36,hy-10, hx-18,hy-10, hx-18,hy+8, hx-36,hy+8], wc);
+  bgAddPoly([hx+18,hy-10, hx+36,hy-10, hx+36,hy+8, hx+18,hy+8], wc);
+}
+
+// River / highlight polygons (world coords)
+function riverPoly(key) {
+  if (key === 'rainbow')
+    return [-560,-190,-360,-120,-120,-155,120,-95,360,-135,560,-80,560,10,360,-35,110,15,-120,-35,-360,0,-560,-65];
+  if (key === 'numbers')
+    return [-560,40,-340,95,-110,70,130,120,360,85,560,150,560,245,360,185,140,225,-120,175,-350,200,-560,140];
+  return [-560,-10,-320,55,-110,15,120,75,350,20,560,85,560,180,350,120,130,170,-100,110,-340,150,-560,90];
+}
+function riverHighPoly(key) {
+  if (key === 'rainbow')
+    return [-560,-145,-360,-90,-120,-125,120,-65,360,-105,560,-55,560,-30,360,-75,120,-35,-120,-95,-360,-55,-560,-95];
+  if (key === 'numbers')
+    return [-560,95,-340,145,-120,120,130,165,360,130,560,195,560,210,360,155,130,195,-120,145,-350,170,-560,115];
+  return [-560,35,-320,100,-110,60,120,115,350,65,560,130,560,145,350,90,130,140,-100,80,-340,120,-560,65];
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// BACKGROUND BUILDERS
+// ═══════════════════════════════════════════════════════════════════════════════
+function buildBackground(levelKey, theme) {
+  bgElems    = [];
+  swayGroups = [];
+  shimmerIdx = -1;
+  shimmerBase = null;
+
+  switch (theme) {
+    case 'forest':       buildForest(levelKey);        break;
+    case 'desert':       buildDesert(levelKey);         break;
+    case 'mountains':    buildMountains(levelKey);      break;
+    case 'island_chain': buildIslandChain(levelKey);    break;
+    case 'cave':         buildCave(levelKey);            break;
+    case 'house':        buildHouse(levelKey);           break;
+    case 'trick_or_treat': buildTrickOrTreat(levelKey); break;
+    default:             buildForest(levelKey);
+  }
+
+  buildSwayLookup();
+}
+
+const GROUND_COLORS = {
+  forest:'#2b5f30', desert:'#d8bd73', mountains:'#4f6a3f',
+  island_chain:'#3e9ccf', cave:'#1f2127', house:'#4f8f4a', trick_or_treat:'#1b2535'
+};
+
+function buildForest(key) {
+  const rng = makeRng(strHash(key + ':forest'));
+  bgAddPoly(riverPoly(key), '#419cd4');
+  bgAddPoly(riverHighPoly(key), 'rgba(191,237,255,0.4)', true);
+  shimmerBase = [191, 237, 255, 0.4];
+  for (let i = 0; i < 24; i++) {
+    bgAddOval(rng.randf(BX+50, BX+BW-50), rng.randf(BY+50, BY+BH-50),
+              rng.randf(22,54), rng.randf(14,30), 'rgba(89,184,87,0.4)');
+  }
+  for (let i = 0; i < 28; i++) {
+    const [ex, ey] = edgePos(rng, 18, 60);
+    makeTree(ex, ey, rng);
+  }
+}
+
+function buildDesert(key) {
+  const rng = makeRng(strHash(key + ':desert'));
+  for (let i = 0; i < 16; i++) {
+    bgAddOval(rng.randf(BX, BX+BW), rng.randf(BY, BY+BH),
+              rng.randf(50,120), rng.randf(18,40), 'rgba(235,204,127,0.45)', 14);
+  }
+  bgAddPoly([-560,-35, 560,-55, 560,35, -560,15], 'rgba(255,245,217,0.2)', true);
+  shimmerBase = [255, 245, 217, 0.2];
+  for (let i = 0; i < 22; i++) {
+    const [ex, ey] = edgePos(rng, 28, 90);
+    makeCactus(ex, ey, rng);
+  }
+}
+
+function buildMountains(key) {
+  const rng = makeRng(strHash(key + ':mountains'));
+  for (let i = 0; i < 5; i++) {
+    const bx = BX+80 + (BW-160)*i/4;
+    const w = rng.randf(170,250), h = rng.randf(140,220);
+    bgAddPoly([bx-w*0.5, BY+130, bx, BY+130-h, bx+w*0.5, BY+130], 'rgba(107,115,122,1)');
+    bgAddPoly([bx-36, BY+130-h+52, bx, BY+130-h, bx+36, BY+130-h+52], 'rgba(237,245,255,0.95)');
+  }
+  bgAddPoly([-240,150,-80,178,90,156,220,185,250,240,110,250,-70,265,-250,220], 'rgba(79,156,219,0.78)');
+  bgAddPoly([-220,185,-80,205,80,190,190,210,115,224,-40,232,-200,214], 'rgba(214,242,255,0.3)', true);
+  shimmerBase = [214, 242, 255, 0.3];
+  for (let i = 0; i < 10; i++) {
+    bgAddOval(rng.randf(BX+60, BX+BW-60), rng.randf(90, BY+BH-30),
+              rng.randf(24,44), rng.randf(14,24), 'rgba(87,146,79,0.8)');
+  }
+}
+
+function buildIslandChain(key) {
+  const rng = makeRng(strHash(key + ':island_chain'));
+  bgAddPoly([-560,-15, 560,-35, 560,45, -560,25], 'rgba(214,247,255,0.2)', true);
+  shimmerBase = [214, 247, 255, 0.2];
+  for (let i = 0; i < 8; i++) {
+    const ix = rng.randf(BX+120, BX+BW-120);
+    const iy = rng.randf(BY+80, BY+BH-70);
+    const srx = rng.randf(58,96), sry = rng.randf(34,52);
+    bgAddOval(ix, iy, srx, sry, 'rgba(242,222,158,1)');
+    bgAddOval(ix, iy-3, srx*0.62, sry*0.62, 'rgba(71,168,89,1)');
+    makePalmTree(ix + rng.randf(-18,18), iy + rng.randf(-10,12), rng);
+  }
+}
+
+function buildCave(key) {
+  const rng = makeRng(strHash(key + ':cave'));
+  for (let i = 0; i < 20; i++) {
+    bgAddOval(rng.randf(BX, BX+BW), rng.randf(BY, BY+BH),
+              rng.randf(22,66), rng.randf(12,30), 'rgba(71,74,84,0.65)');
+  }
+  for (let i = 0; i < 16; i++) {
+    const x = BX+30 + (BW-60)*i/15;
+    bgAddPoly([x-16,BY, x+16,BY, x,BY+rng.randf(28,78)],   'rgba(89,92,102,0.9)');
+    bgAddPoly([x-14,BY+BH, x+14,BY+BH, x,BY+BH-rng.randf(24,72)], 'rgba(77,79,92,0.95)');
+  }
+  const i0 = bgElems.length;
+  for (let i = 0; i < 8; i++) {
+    const cx = rng.randf(BX+80, BX+BW-80);
+    const cy = rng.randf(BY+80, BY+BH-70);
+    bgAddPoly(localToWorld([0,-24, 16,-8, 10,18, -10,18, -16,-8], cx, cy), 'rgba(115,217,255,0.65)');
+  }
+  shimmerIdx  = i0;
+  shimmerBase = [115, 217, 255, 0.65];
+  bgElems[i0].isShimmer = true;
+}
+
+function buildHouse(key) {
+  const rng = makeRng(strHash(key + ':house'));
+  bgAddPoly([-45,BY+BH, 45,BY+BH, 92,160, -92,160], 'rgba(199,184,158,0.95)');
+  bgAddPoly([220,-90, 470,-90, 470,100, 220,100], 'rgba(242,217,184,1)');
+  bgAddPoly([190,-90, 345,-215, 500,-90], 'rgba(184,71,56,1)');
+  bgAddPoly([325,8, 370,8, 370,100, 325,100], 'rgba(120,79,56,1)');
+  bgAddPoly([248,-35, 292,-35, 292,10, 248,10], 'rgba(166,222,255,0.9)');
+  bgAddPoly([395,-35, 439,-35, 439,10, 395,10], 'rgba(166,222,255,0.9)');
+  bgAddOval(390, -245, 20, 13, 'rgba(235,242,255,0.3)', 12, true);
+  shimmerBase = [235, 242, 255, 0.3];
+  for (let i = 0; i < 10; i++) {
+    const [ex,ey] = edgePos(rng,18,56);
+    bgAddOval(ex, ey, rng.randf(22,44), rng.randf(14,22), 'rgba(59,148,74,0.9)');
+  }
+  for (let i = 0; i < 6; i++) {
+    bgAddOval(rng.randf(-240,180), rng.randf(70,240), 8, 8, 'rgba(247,133,158,0.95)');
+  }
+}
+
+function buildTrickOrTreat(key) {
+  const rng = makeRng(strHash(key + ':trick_or_treat'));
+  bgAddOval(-420, -235, 42, 42, 'rgba(242,237,184,0.8)', 20, true);
+  shimmerBase = [242, 237, 184, 0.8];
+  bgAddPoly([-560,45, 560,45, 560,210, -560,210], 'rgba(46,51,61,0.95)');
+  bgAddPoly([-560,122, 560,122, 560,132, -560,132], 'rgba(225,199,97,0.65)');
+  for (let i = 0; i < 6; i++) addNeighborhoodHouse(-510 + i*190, -50, rng);
+  for (let i = 0; i < 10; i++) {
+    const px = rng.randf(BX+40, BX+BW-40);
+    const py = rng.randf(220, BY+BH-18);
+    bgAddOval(px, py, 12, 10, 'rgba(242,117,36,0.95)');
+    bgAddPoly([px-2,py-13, px+2,py-13, px+2,py-8, px-2,py-8], 'rgba(87,143,56,0.95)');
+  }
+  for (let i = 0; i < 10; i++) {
+    const fx = rng.randf(BX+20, BX+BW-20);
+    const fy = 198 + (i%2)*28;
+    bgAddPoly([fx-14,fy, fx+14,fy, fx+14,fy+18, fx-14,fy+18], 'rgba(153,158,168,0.8)');
+  }
+  for (let i = 0; i < 5; i++) {
+    const bx = rng.randf(BX+80, BX+BW-80);
+    const by = rng.randf(BY+30, -120);
+    makeBat(bx, by, rng);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CHARACTER DRAWING
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Helper: fill a polygon given local pts + canvas anchor
+function fillLocalPoly(acx, acy, localPts, color) {
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(acx + localPts[0], acy + localPts[1]);
+  for (let i = 2; i < localPts.length; i += 2) ctx.lineTo(acx + localPts[i], acy + localPts[i+1]);
+  ctx.closePath();
+  ctx.fill();
+}
+function fillR(cx, cy, x, y, w, h, color) {
+  ctx.fillStyle = color;
+  ctx.fillRect(cx+x, cy+y, w, h);
+}
+
+function drawPlayer(wx, wy, lookType) {
+  const cx = wx + OX, cy = wy + OY;
+  if (lookType === 'ghost') {
+    fillLocalPoly(cx, cy, [-15,-24, 15,-24, 15,10, 9,16, 3,10, -2,16, -9,10, -15,16],
+                  'rgba(242,247,255,0.95)');
+    ctx.fillStyle = '#141414';
+    ctx.fillRect(cx-8, cy-12, 4, 4);
+    ctx.fillRect(cx+4, cy-12, 4, 4);
+  } else {
+    // torso
+    fillR(cx, cy, -14,-2, 28,22, 'rgba(51,140,255,1)');
+    // head
+    fillR(cx, cy, -13,-26, 26,24, 'rgba(255,224,189,1)');
+    // hair
+    fillLocalPoly(cx, cy, [-14,-30, 14,-30, 11,-18, -11,-18], 'rgba(250,219,56,1)');
+    // eyes
+    ctx.fillStyle = '#141414';
+    ctx.fillRect(cx-8, cy-16, 4, 4);
+    ctx.fillRect(cx+4, cy-16, 4, 4);
+  }
+  ctx.fillStyle = 'rgba(255,255,255,0.9)';
+  ctx.font = 'bold 12px system-ui';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillText('Asher', cx, cy - 34);
+}
+
+function drawFollower(wx, wy, lookType, bodyColorArr, name) {
+  const cx = wx + OX, cy = wy + OY;
+  const [r,g,b] = bodyColorArr;
+  const bc = `rgb(${Math.round(r*255)},${Math.round(g*255)},${Math.round(b*255)})`;
+
+  if (lookType === 'bat') {
+    ctx.fillStyle = 'rgba(36,36,51,1)';
+    fillLocalPoly(cx, cy, [-12,-4,-36,-16,-28,2,-36,16,-12,8], 'rgba(36,36,51,1)');
+    fillLocalPoly(cx, cy, [12,-4,36,-16,28,2,36,16,12,8],       'rgba(36,36,51,1)');
+    fillR(cx, cy, -13,-2, 26,21, bc);
+    fillR(cx, cy, -12,-24, 24,22, bc);
+    ctx.fillStyle = 'rgba(255,56,56,1)';
+    ctx.fillRect(cx-7, cy-15, 4, 4);
+    ctx.fillRect(cx+3, cy-15, 4, 4);
+
+  } else if (lookType === 'skeleton') {
+    fillR(cx, cy, -13,-2, 26,21, bc);
+    fillR(cx, cy, -12,-24, 24,22, 'rgba(230,230,230,1)');
+    ctx.fillStyle = 'rgba(235,235,235,1)';
+    ctx.fillRect(cx-10, cy+0,  20, 3);
+    ctx.fillRect(cx-10, cy+5,  20, 3);
+    ctx.fillRect(cx-10, cy+10, 20, 3);
+    ctx.fillRect(cx-17, cy+6,  4, 15);
+    ctx.fillRect(cx+13, cy+6,  4, 15);
+    ctx.fillStyle = '#141414';
+    ctx.fillRect(cx-7, cy-15, 4, 4);
+    ctx.fillRect(cx+3, cy-15, 4, 4);
+
+  } else {
+    fillR(cx, cy, -13,-2, 26,21, bc);
+    fillR(cx, cy, -12,-24, 24,22, 'rgba(255,224,189,1)');
+    const hairColor = lookType === 'daddy' ? 'rgba(112,71,41,1)' : 'rgba(242,107,56,1)';
+    fillLocalPoly(cx, cy, [-13,-28, 13,-28, 10,-17, -10,-17], hairColor);
+    if (lookType === 'daddy') {
+      ctx.fillStyle = 'rgba(31,31,31,1)';
+      ctx.fillRect(cx-9, cy-17, 7, 7);
+      ctx.fillRect(cx+2, cy-17, 7, 7);
+      ctx.fillRect(cx-2, cy-14, 4, 2);
+    }
+    ctx.fillStyle = '#141414';
+    ctx.fillRect(cx-7, cy-15, 4, 4);
+    ctx.fillRect(cx+3, cy-15, 4, 4);
+  }
+  ctx.fillStyle = 'rgba(255,255,255,0.85)';
+  ctx.font = 'bold 11px system-ui';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillText(name, cx, cy - 32);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// COLLECTIBLES
+// ═══════════════════════════════════════════════════════════════════════════════
+const RAINBOW_COLORS = {
+  Red:'#ff4d4d', Orange:'#ff9f40', Yellow:'#ffe066',
+  Green:'#6bd66b', Blue:'#5ba8ff', Indigo:'#7a6bff', Violet:'#b46bff'
+};
+function colorForItem(item) {
+  if (RAINBOW_COLORS[item]) return RAINBOW_COLORS[item];
+  if (/^\d+$/.test(item))   return 'rgb(191,255,191)';
+  return 'rgb(255,242,153)';
+}
+function lumaFromRgb(r,g,b) { return (0.299*r + 0.587*g + 0.114*b) / 255; }
+function parseCssColor(c) {
+  let m = c.match(/rgb\((\d+),(\d+),(\d+)\)/);
+  if (m) return [+m[1],+m[2],+m[3]];
+  m = c.match(/^#([0-9a-f]{6})/i);
+  if (m) return [parseInt(m[1].slice(0,2),16),parseInt(m[1].slice(2,4),16),parseInt(m[1].slice(4,6),16)];
+  return [128,128,128];
+}
+
+let collectibles = [];
+
+function spawnCollectibles(data, key) {
+  collectibles = [];
+  const rng = makeRng(strHash(key + ':collectibles'));
+  const xMax = BX + BW - 240 - 40;  // leave HUD room
+  for (const item of data.items) {
+    const wx = rng.randf(BX + 40, xMax);
+    const wy = rng.randf(BY + 40, BY + BH - 40);
+    collectibles.push({ wx, wy, value: item, color: colorForItem(item), alive: true });
+  }
+}
+
+function drawCollectibles() {
+  for (const c of collectibles) {
+    if (!c.alive) continue;
+    const cx = c.wx + OX, cy = c.wy + OY;
+    // diamond body
+    ctx.beginPath();
+    ctx.moveTo(cx,    cy-24);
+    ctx.lineTo(cx+20, cy);
+    ctx.lineTo(cx,    cy+24);
+    ctx.lineTo(cx-20, cy);
+    ctx.closePath();
+    ctx.fillStyle = c.color;
+    ctx.fill();
+    // label
+    const [r,g,b] = parseCssColor(c.color);
+    ctx.fillStyle = lumaFromRgb(r,g,b) > 0.62 ? '#141414' : '#ffffff';
+    const fs = c.value.length > 2 ? 13 : 17;
+    ctx.font = `bold ${fs}px system-ui`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.shadowColor = 'rgba(0,0,0,0.55)';
+    ctx.shadowBlur = 3;
+    ctx.fillText(c.value, cx, cy);
+    ctx.shadowBlur = 0;
+    ctx.textBaseline = 'alphabetic';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// HUD
+// ═══════════════════════════════════════════════════════════════════════════════
+const hudEl      = document.getElementById('hud');
+const hudTitle   = document.getElementById('hud-title');
+const hudProg    = document.getElementById('hud-progress');
+const hudChips   = document.getElementById('hud-chips');
+const hudDone    = document.getElementById('hud-complete');
+const rcvs       = document.getElementById('rainbow-canvas');
+const rctx       = rcvs.getContext('2d');
+
+let chipMap  = {};
+let foundSet = new Set();
+
+function chipBg(mode) {
+  const map = { words_emoji:'rgba(66,87,158,0.9)', animals:'rgba(48,122,97,0.9)',
+                shapes:'rgba(135,87,48,0.9)', numbers:'rgba(56,117,158,0.9)' };
+  return map[mode] || 'rgba(88,88,88,0.9)';
+}
+function chipLabel(mode, item, data) {
+  if (mode === 'words_emoji' && data.emoji_map) return data.emoji_map[item] || item;
+  if (mode === 'animals' && data.emoji_map)     return `${data.emoji_map[item] || ''} ${item}`;
+  if (mode === 'shapes' && data.symbol_map)     return `${data.symbol_map[item] || ''} ${item}`;
+  return item;
+}
+
+function setupHud(data) {
+  hudTitle.textContent = data.title;
+  hudProg.textContent  = `0 / ${data.items.length}`;
+  hudDone.style.display = 'none';
+  hudChips.innerHTML = '';
+  chipMap  = {};
+  foundSet = new Set();
+
+  if (data.mode === 'rainbow') {
+    rcvs.style.display = 'block';
+    drawRainbowArcs(data.items);
+  } else {
+    rcvs.style.display = 'none';
+  }
+
+  const bg = chipBg(data.mode);
+  for (const item of data.items) {
+    const chip = document.createElement('div');
+    chip.className = 'chip';
+    chip.style.background = data.mode === 'rainbow' ? RAINBOW_COLORS[item] || '#999' : bg;
+    chip.textContent = chipLabel(data.mode, item, data);
+    hudChips.appendChild(chip);
+    chipMap[item] = chip;
+  }
+
+  hudEl.style.display = 'flex';
+}
+
+function markCollected(item) {
+  foundSet.add(item);
+  hudProg.textContent = `${foundSet.size} / ${currentItems.length}`;
+  const chip = chipMap[item];
+  if (chip) chip.classList.add('found');
+  if (currentLevel && currentLevel.mode === 'rainbow') drawRainbowArcs(currentItems);
+  if (foundSet.size === currentItems.length) hudDone.style.display = 'block';
+}
+
+function drawRainbowArcs(items) {
+  const w = rcvs.width, h = rcvs.height;
+  rctx.clearRect(0, 0, w, h);
+  const cx = w * 0.5, cy = h * 0.95;
+  const baseR = Math.min(w * 0.42, h * 0.88);
+  const ringW = 12, ringGap = 4;
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    const r = baseR - i * (ringW + ringGap);
+    if (r <= ringW) continue;
+    rctx.beginPath();
+    rctx.arc(cx, cy, r, Math.PI, Math.PI * 2);
+    rctx.strokeStyle = foundSet.has(item) ? (RAINBOW_COLORS[item] || '#fff') : 'rgba(120,120,120,0.3)';
+    rctx.lineWidth = ringW;
+    rctx.stroke();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// GAME STATE
+// ═══════════════════════════════════════════════════════════════════════════════
+const SPEED          = 230;
+const FOLLOWER_SPEED = 180;
+const MOMMY_DELAY    = 28;
+const DADDY_DELAY    = 48;
+const PATH_LIMIT     = 1200;
+const SAMPLE_INT     = 0.05;
+const COLLECT_RADIUS = 28;  // slightly larger than Godot's 24 for feel
+
+let gameState    = 'menu';
+let currentLevel = null;
+let currentItems = [];
+
+let player = { wx: 0, wy: 0 };
+let mommy  = { wx:-70, wy: 40, vx:0, vy:0, lookType:'mommy', color:[1,0.65,0.8] };
+let daddy  = { wx:-120, wy:-20, vx:0, vy:0, lookType:'daddy', color:[0.55,0.75,1] };
+
+let playerPath  = [];
+let sampleTimer = 0;
+let ambientTime = 0;
+
+// Keyboard input
+const keys = {};
+document.addEventListener('keydown', e => {
+  keys[e.code] = true;
+  if (gameState === 'playing' && (e.code === 'Escape' || e.code === 'Backspace')) showMenu();
+});
+document.addEventListener('keyup', e => { keys[e.code] = false; });
+
+function inputDir() {
+  let dx = 0, dy = 0;
+  if (keys['ArrowLeft']  || keys['KeyA']) dx -= 1;
+  if (keys['ArrowRight'] || keys['KeyD']) dx += 1;
+  if (keys['ArrowUp']    || keys['KeyW']) dy -= 1;
+  if (keys['ArrowDown']  || keys['KeyS']) dy += 1;
+  const len = Math.hypot(dx, dy);
+  return len > 0 ? [dx/len, dy/len] : [0, 0];
+}
+
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+function followerColor(look, isMommy) {
+  if (look === 'bat')      return [0.22, 0.2,  0.32];
+  if (look === 'skeleton') return [0.88, 0.88, 0.88];
+  if (look === 'daddy')    return [0.55, 0.75, 1.0];
+  return isMommy ? [1.0, 0.65, 0.8] : [0.55, 0.75, 1.0];
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MENU
+// ═══════════════════════════════════════════════════════════════════════════════
+const menuEl   = document.getElementById('menu');
+const levelBtns = document.getElementById('level-buttons');
+
+for (const key of LEVEL_ORDER) {
+  const btn = document.createElement('button');
+  btn.className = 'level-btn';
+  btn.textContent = LEVELS[key].title;
+  btn.addEventListener('click', () => startLevel(key));
+  levelBtns.appendChild(btn);
+}
+document.getElementById('back-btn').addEventListener('click', showMenu);
+
+function showMenu() {
+  gameState = 'menu';
+  menuEl.style.display = 'flex';
+  hudEl.style.display  = 'none';
+  collectibles = [];
+  playerPath   = [];
+  bgElems      = [];
+  swayGroups   = [];
+  elemSwayGroup = [];
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// LEVEL START
+// ═══════════════════════════════════════════════════════════════════════════════
+function startLevel(key) {
+  const data   = LEVELS[key];
+  currentLevel = data;
+  currentItems = [...data.items];
+  ambientTime  = 0;
+  sampleTimer  = 0;
+  playerPath   = [];
+
+  player.wx = 0; player.wy = 0;
+
+  mommy.wx = -70;  mommy.wy =  40; mommy.vx = 0; mommy.vy = 0;
+  mommy.lookType = data.char_styles?.mommy || 'mommy';
+  mommy.color    = followerColor(mommy.lookType, true);
+
+  daddy.wx = -120; daddy.wy = -20; daddy.vx = 0; daddy.vy = 0;
+  daddy.lookType = data.char_styles?.daddy || 'daddy';
+  daddy.color    = followerColor(daddy.lookType, false);
+
+  player.lookType = data.char_styles?.asher || 'normal';
+
+  buildBackground(key, data.map_theme);
+  spawnCollectibles(data, key);
+  setupHud(data);
+
+  menuEl.style.display = 'none';
+  gameState = 'playing';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PHYSICS + UPDATE
+// ═══════════════════════════════════════════════════════════════════════════════
+const RIGHT_BOUND = BX + BW - 240;  // HUD takes right 236px
+
+function updateFollower(f, delay, delta) {
+  if (playerPath.length <= delay) return;
+  const t  = playerPath[playerPath.length - 1 - delay];
+  const dx = t[0] - f.wx, dy = t[1] - f.wy;
+  const dist = Math.hypot(dx, dy);
+  if (Math.hypot(f.wx - player.wx, f.wy - player.wy) > 700) {
+    f.wx = player.wx + (Math.random()-0.5)*180;
+    f.wy = player.wy + (Math.random()-0.5)*180;
+  }
+  if (dist < 6) { f.vx = 0; f.vy = 0; }
+  else          { f.vx = (dx/dist)*FOLLOWER_SPEED; f.vy = (dy/dist)*FOLLOWER_SPEED; }
+  f.wx += f.vx * delta;
+  f.wy += f.vy * delta;
+  f.wx = clamp(f.wx, BX, BX+BW);
+  f.wy = clamp(f.wy, BY, BY+BH);
+}
+
+function checkCollections() {
+  for (const c of collectibles) {
+    if (!c.alive) continue;
+    const dx = c.wx - player.wx, dy = c.wy - player.wy;
+    if (dx*dx + dy*dy < COLLECT_RADIUS*COLLECT_RADIUS) {
+      c.alive = false;
+      markCollected(c.value);
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// GAME LOOP
+// ═══════════════════════════════════════════════════════════════════════════════
+let lastTs = null;
+
+function frame(ts) {
+  requestAnimationFrame(frame);
+
+  if (gameState !== 'playing') {
+    // Draw a subtle idle background so the menu doesn't sit over black
+    ctx.fillStyle = '#0f0f1a';
+    ctx.fillRect(0, 0, CW, CH);
+    return;
+  }
+
+  const delta = lastTs ? Math.min((ts - lastTs) / 1000, 0.05) : 0.016;
+  lastTs = ts;
+  ambientTime += delta;
+
+  // Player movement
+  const [dx, dy] = inputDir();
+  player.wx += dx * SPEED * delta;
+  player.wy += dy * SPEED * delta;
+  player.wx = clamp(player.wx, BX, RIGHT_BOUND);
+  player.wy = clamp(player.wy, BY, BY+BH);
+
+  // Path sampling
+  sampleTimer += delta;
+  if (sampleTimer >= SAMPLE_INT) {
+    sampleTimer = 0;
+    playerPath.push([player.wx, player.wy]);
+    if (playerPath.length > PATH_LIMIT) playerPath.shift();
+  }
+
+  updateFollower(mommy, MOMMY_DELAY, delta);
+  updateFollower(daddy, DADDY_DELAY, delta);
+  checkCollections();
+  updateSway(ambientTime);
+
+  // ── RENDER ──
+  // Ground
+  ctx.fillStyle = GROUND_COLORS[currentLevel.map_theme] || '#2b5f30';
+  ctx.fillRect(0, 0, CW, CH);
+
+  drawBackground(ambientTime);
+  drawCollectibles();
+  drawFollower(daddy.wx, daddy.wy, daddy.lookType, daddy.color, 'Daddy');
+  drawFollower(mommy.wx, mommy.wy, mommy.lookType, mommy.color, 'Mommy');
+  drawPlayer(player.wx, player.wy, player.lookType);
+}
+
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

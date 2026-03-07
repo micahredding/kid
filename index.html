@@ -599,16 +599,29 @@ function fillR(cx, cy, x, y, w, h, color) {
 function drawPlayer(wx, wy, lookType) {
   const cx = wx + OX, cy = wy + OY;
   if (lookType === 'ghost') {
+    // ghost glow aura
+    ctx.shadowColor = 'rgba(160,210,255,0.9)';
+    ctx.shadowBlur = 16;
     fillLocalPoly(cx, cy, [-15,-24, 15,-24, 15,10, 9,16, 3,10, -2,16, -9,10, -15,16],
                   'rgba(242,247,255,0.95)');
+    ctx.shadowBlur = 0;
+    // subtle shine on ghost body
+    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    ctx.beginPath();
+    ctx.ellipse(cx - 3, cy - 14, 5, 7, -0.3, 0, Math.PI * 2);
+    ctx.fill();
     ctx.fillStyle = '#141414';
     ctx.fillRect(cx-8, cy-12, 4, 4);
     ctx.fillRect(cx+4, cy-12, 4, 4);
   } else {
+    drawCharShadow(cx, cy);
     // torso
     fillR(cx, cy, -14,-2, 28,22, 'rgba(51,140,255,1)');
-    // head
-    fillR(cx, cy, -13,-26, 26,24, 'rgba(255,224,189,1)');
+    // rounded head
+    ctx.fillStyle = 'rgba(255,224,189,1)';
+    ctx.beginPath();
+    ctx.roundRect(cx-13, cy-26, 26, 24, [10, 10, 4, 4]);
+    ctx.fill();
     // hair
     fillLocalPoly(cx, cy, [-14,-30, 14,-30, 11,-18, -11,-18], 'rgba(250,219,56,1)');
     // eyes
@@ -616,11 +629,7 @@ function drawPlayer(wx, wy, lookType) {
     ctx.fillRect(cx-8, cy-16, 4, 4);
     ctx.fillRect(cx+4, cy-16, 4, 4);
   }
-  ctx.fillStyle = 'rgba(255,255,255,0.9)';
-  ctx.font = 'bold 12px system-ui';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'alphabetic';
-  ctx.fillText('Asher', cx, cy - 34);
+  drawLabel(cx, cy - 38, 'Asher');
 }
 
 function drawFollower(wx, wy, lookType, bodyColorArr, name) {
@@ -628,19 +637,27 @@ function drawFollower(wx, wy, lookType, bodyColorArr, name) {
   const [r,g,b] = bodyColorArr;
   const bc = `rgb(${Math.round(r*255)},${Math.round(g*255)},${Math.round(b*255)})`;
 
+  drawCharShadow(cx, cy);
+
   if (lookType === 'bat') {
-    ctx.fillStyle = 'rgba(36,36,51,1)';
     fillLocalPoly(cx, cy, [-12,-4,-36,-16,-28,2,-36,16,-12,8], 'rgba(36,36,51,1)');
     fillLocalPoly(cx, cy, [12,-4,36,-16,28,2,36,16,12,8],       'rgba(36,36,51,1)');
     fillR(cx, cy, -13,-2, 26,21, bc);
-    fillR(cx, cy, -12,-24, 24,22, bc);
+    // rounded head
+    ctx.fillStyle = bc;
+    ctx.beginPath();
+    ctx.roundRect(cx-12, cy-24, 24, 22, [9, 9, 3, 3]);
+    ctx.fill();
     ctx.fillStyle = 'rgba(255,56,56,1)';
     ctx.fillRect(cx-7, cy-15, 4, 4);
     ctx.fillRect(cx+3, cy-15, 4, 4);
 
   } else if (lookType === 'skeleton') {
     fillR(cx, cy, -13,-2, 26,21, bc);
-    fillR(cx, cy, -12,-24, 24,22, 'rgba(230,230,230,1)');
+    ctx.fillStyle = 'rgba(230,230,230,1)';
+    ctx.beginPath();
+    ctx.roundRect(cx-12, cy-24, 24, 22, [9, 9, 3, 3]);
+    ctx.fill();
     ctx.fillStyle = 'rgba(235,235,235,1)';
     ctx.fillRect(cx-10, cy+0,  20, 3);
     ctx.fillRect(cx-10, cy+5,  20, 3);
@@ -653,7 +670,11 @@ function drawFollower(wx, wy, lookType, bodyColorArr, name) {
 
   } else {
     fillR(cx, cy, -13,-2, 26,21, bc);
-    fillR(cx, cy, -12,-24, 24,22, 'rgba(255,224,189,1)');
+    // rounded head
+    ctx.fillStyle = 'rgba(255,224,189,1)';
+    ctx.beginPath();
+    ctx.roundRect(cx-12, cy-24, 24, 22, [9, 9, 3, 3]);
+    ctx.fill();
     const hairColor = lookType === 'daddy' ? 'rgba(112,71,41,1)' : 'rgba(242,107,56,1)';
     fillLocalPoly(cx, cy, [-13,-28, 13,-28, 10,-17, -10,-17], hairColor);
     if (lookType === 'daddy') {
@@ -666,11 +687,29 @@ function drawFollower(wx, wy, lookType, bodyColorArr, name) {
     ctx.fillRect(cx-7, cy-15, 4, 4);
     ctx.fillRect(cx+3, cy-15, 4, 4);
   }
-  ctx.fillStyle = 'rgba(255,255,255,0.85)';
-  ctx.font = 'bold 11px system-ui';
+  drawLabel(cx, cy - 36, name);
+}
+
+// Character helpers
+function drawCharShadow(cx, cy) {
+  ctx.fillStyle = 'rgba(0,0,0,0.18)';
+  ctx.beginPath();
+  ctx.ellipse(cx, cy + 20, 15, 5, 0, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawLabel(cx, cy, text) {
+  ctx.font = 'bold 12px system-ui';
   ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  const w = ctx.measureText(text).width + 12;
+  ctx.fillStyle = 'rgba(0,0,0,0.42)';
+  ctx.beginPath();
+  ctx.roundRect(cx - w/2, cy - 8, w, 16, 6);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.95)';
+  ctx.fillText(text, cx, cy);
   ctx.textBaseline = 'alphabetic';
-  ctx.fillText(name, cx, cy - 32);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -700,17 +739,26 @@ function spawnCollectibles(data, key) {
   collectibles = [];
   const rng = makeRng(strHash(key + ':collectibles'));
   const xMax = BX + BW - 240 - 40;  // leave HUD room
-  for (const item of data.items) {
+  for (let i = 0; i < data.items.length; i++) {
+    const item = data.items[i];
     const wx = rng.randf(BX + 40, xMax);
     const wy = rng.randf(BY + 40, BY + BH - 40);
-    collectibles.push({ wx, wy, value: item, color: colorForItem(item), alive: true });
+    collectibles.push({ wx, wy, value: item, color: colorForItem(item), alive: true, phase: i * 0.71 });
   }
 }
 
 function drawCollectibles() {
   for (const c of collectibles) {
     if (!c.alive) continue;
-    const cx = c.wx + OX, cy = c.wy + OY;
+    const cx = c.wx + OX;
+    // bob: gentle vertical oscillation, unique phase per item
+    const bob = Math.sin(ambientTime * 2.5 + c.phase) * 5;
+    const cy = c.wy + OY + bob;
+
+    // glow
+    ctx.shadowColor = c.color;
+    ctx.shadowBlur = 18;
+
     // diamond body
     ctx.beginPath();
     ctx.moveTo(cx,    cy-24);
@@ -720,15 +768,31 @@ function drawCollectibles() {
     ctx.closePath();
     ctx.fillStyle = c.color;
     ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // white stroke border
+    ctx.strokeStyle = 'rgba(255,255,255,0.65)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // facet shine — brighter upper-left triangle
+    ctx.fillStyle = 'rgba(255,255,255,0.32)';
+    ctx.beginPath();
+    ctx.moveTo(cx,    cy-24);
+    ctx.lineTo(cx+20, cy);
+    ctx.lineTo(cx,    cy);
+    ctx.closePath();
+    ctx.fill();
+
     // label
     const [r,g,b] = parseCssColor(c.color);
-    ctx.fillStyle = lumaFromRgb(r,g,b) > 0.62 ? '#141414' : '#ffffff';
     const fs = c.value.length > 2 ? 13 : 17;
     ctx.font = `bold ${fs}px system-ui`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.shadowColor = 'rgba(0,0,0,0.55)';
-    ctx.shadowBlur = 3;
+    ctx.fillStyle = lumaFromRgb(r,g,b) > 0.62 ? '#141414' : '#ffffff';
+    ctx.shadowColor = 'rgba(0,0,0,0.6)';
+    ctx.shadowBlur = 4;
     ctx.fillText(c.value, cx, cy);
     ctx.shadowBlur = 0;
     ctx.textBaseline = 'alphabetic';

@@ -6,12 +6,20 @@
 <title>Run Around</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
+html {
+  height: 100%;
+  height: -webkit-fill-available;
+}
 body {
   background: #0f0f1a;
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100vh;
+  height: -webkit-fill-available;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 100vh;
   font-family: system-ui, -apple-system, sans-serif;
   color: white;
   overflow: hidden;
@@ -21,6 +29,8 @@ body {
   width: 1120px;
   height: 640px;
   max-width: 100vw;
+  max-height: 100vh;
+  max-height: -webkit-fill-available;
 }
 canvas {
   display: block;
@@ -31,12 +41,18 @@ canvas {
 /* ── MENU ── */
 #menu {
   position: absolute;
-  inset: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   background: rgba(8, 8, 22, 0.88);
   z-index: 20;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 12px 0;
 }
 #menu-box {
   background: rgba(255,255,255,0.07);
@@ -45,6 +61,10 @@ canvas {
   padding: 32px 44px;
   text-align: center;
   min-width: 300px;
+  max-width: 520px;
+  width: 92vw;
+  max-height: calc(100% - 24px);
+  overflow: auto;
 }
 #menu h1 { font-size: 2rem; margin-bottom: 6px; letter-spacing: -0.5px; }
 #menu p  { opacity: 0.65; margin-bottom: 22px; font-size: 0.95rem; }
@@ -129,7 +149,7 @@ canvas {
   #wrapper { width: 100vw; height: calc(100vw * 640 / 1120); }
 }
 @media (max-height: 660px) {
-  #wrapper { height: 100vh; width: calc(100vh * 1120 / 640); }
+  #wrapper { height: 100vh; height: -webkit-fill-available; width: calc(100vh * 1120 / 640); }
 }
 </style>
 </head>
@@ -301,10 +321,36 @@ function makeRng(seed) {
 // World space: origin at (0,0). Camera transform maps world→canvas each frame.
 // OX/OY is the canvas center, used only for the camera transform in frame().
 // ═══════════════════════════════════════════════════════════════════════════════
+const wrapper = document.getElementById('wrapper');
 const canvas = document.getElementById('canvas');
 const ctx    = canvas.getContext('2d');
 const CW = 1120, CH = 640;
 const OX = CW / 2, OY = CH / 2;   // canvas center
+
+function getViewportSize() {
+  const vv = window.visualViewport;
+  if (vv && vv.width && vv.height) return { width: vv.width, height: vv.height };
+  return {
+    width: window.innerWidth || document.documentElement.clientWidth || CW,
+    height: window.innerHeight || document.documentElement.clientHeight || CH
+  };
+}
+
+function sizeWrapperToViewport() {
+  const viewport = getViewportSize();
+  const gutter = 12;
+  const maxWidth = Math.max(320, viewport.width - gutter * 2);
+  const maxHeight = Math.max(240, viewport.height - gutter * 2);
+  const scale = Math.min(maxWidth / CW, maxHeight / CH, 1);
+  wrapper.style.width = Math.round(CW * scale) + 'px';
+  wrapper.style.height = Math.round(CH * scale) + 'px';
+}
+
+sizeWrapperToViewport();
+window.addEventListener('resize', sizeWrapperToViewport);
+window.addEventListener('orientationchange', sizeWrapperToViewport);
+window.addEventListener('pageshow', sizeWrapperToViewport);
+if (window.visualViewport) window.visualViewport.addEventListener('resize', sizeWrapperToViewport);
 
 // bgElems store raw world coords — the camera transform handles viewport mapping.
 function w2c(pts) { return pts.slice(); }
@@ -334,6 +380,38 @@ function ctxPoly(canvasPts, color) {
   ctx.closePath();
   ctx.fillStyle = color;
   ctx.fill();
+}
+
+function ctxRoundedRect(x, y, w, h, radius) {
+  if (typeof ctx.roundRect === 'function') {
+    ctx.beginPath();
+    ctx.roundRect(x, y, w, h, radius);
+    return;
+  }
+
+  const defaultRadius = radius == null ? 0 : radius;
+  const radii = Array.isArray(radius)
+    ? [
+        radius[0] == null ? 0 : radius[0],
+        radius[1] == null ? (radius[0] == null ? 0 : radius[0]) : radius[1],
+        radius[2] == null ? (radius[0] == null ? 0 : radius[0]) : radius[2],
+        radius[3] == null ? (radius[1] == null ? (radius[0] == null ? 0 : radius[0]) : radius[1]) : radius[3]
+      ]
+    : [defaultRadius, defaultRadius, defaultRadius, defaultRadius];
+  const maxR = Math.min(w / 2, h / 2);
+  const [rtl, rtr, rbr, rbl] = radii.map(r => Math.max(0, Math.min(r, maxR)));
+
+  ctx.beginPath();
+  ctx.moveTo(x + rtl, y);
+  ctx.lineTo(x + w - rtr, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + rtr);
+  ctx.lineTo(x + w, y + h - rbr);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - rbr, y + h);
+  ctx.lineTo(x + rbl, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - rbl);
+  ctx.lineTo(x, y + rtl);
+  ctx.quadraticCurveTo(x, y, x + rtl, y);
+  ctx.closePath();
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -691,8 +769,7 @@ function drawPlayer(wx, wy, lookType) {
     fillR(cx, cy, -14,-2, 28,22, 'rgba(51,140,255,1)');
     // rounded head
     ctx.fillStyle = 'rgba(255,224,189,1)';
-    ctx.beginPath();
-    ctx.roundRect(cx-13, cy-26, 26, 24, [10, 10, 4, 4]);
+    ctxRoundedRect(cx-13, cy-26, 26, 24, [10, 10, 4, 4]);
     ctx.fill();
     // hair
     fillLocalPoly(cx, cy, [-14,-30, 14,-30, 11,-18, -11,-18], 'rgba(250,219,56,1)');
@@ -717,8 +794,7 @@ function drawFollower(wx, wy, lookType, bodyColorArr, name) {
     fillR(cx, cy, -13,-2, 26,21, bc);
     // rounded head
     ctx.fillStyle = bc;
-    ctx.beginPath();
-    ctx.roundRect(cx-12, cy-24, 24, 22, [9, 9, 3, 3]);
+    ctxRoundedRect(cx-12, cy-24, 24, 22, [9, 9, 3, 3]);
     ctx.fill();
     ctx.fillStyle = 'rgba(255,56,56,1)';
     ctx.fillRect(cx-7, cy-15, 4, 4);
@@ -727,8 +803,7 @@ function drawFollower(wx, wy, lookType, bodyColorArr, name) {
   } else if (lookType === 'skeleton') {
     fillR(cx, cy, -13,-2, 26,21, bc);
     ctx.fillStyle = 'rgba(230,230,230,1)';
-    ctx.beginPath();
-    ctx.roundRect(cx-12, cy-24, 24, 22, [9, 9, 3, 3]);
+    ctxRoundedRect(cx-12, cy-24, 24, 22, [9, 9, 3, 3]);
     ctx.fill();
     ctx.fillStyle = 'rgba(235,235,235,1)';
     ctx.fillRect(cx-10, cy+0,  20, 3);
@@ -744,8 +819,7 @@ function drawFollower(wx, wy, lookType, bodyColorArr, name) {
     fillR(cx, cy, -13,-2, 26,21, bc);
     // rounded head
     ctx.fillStyle = 'rgba(255,224,189,1)';
-    ctx.beginPath();
-    ctx.roundRect(cx-12, cy-24, 24, 22, [9, 9, 3, 3]);
+    ctxRoundedRect(cx-12, cy-24, 24, 22, [9, 9, 3, 3]);
     ctx.fill();
     const hairColor = lookType === 'daddy' ? 'rgba(112,71,41,1)' : 'rgba(242,107,56,1)';
     fillLocalPoly(cx, cy, [-13,-28, 13,-28, 10,-17, -10,-17], hairColor);
@@ -776,8 +850,7 @@ function drawLabel(cx, cy, text) {
   ctx.textBaseline = 'middle';
   const w = ctx.measureText(text).width + 12;
   ctx.fillStyle = 'rgba(0,0,0,0.42)';
-  ctx.beginPath();
-  ctx.roundRect(cx - w/2, cy - 8, w, 16, 6);
+  ctxRoundedRect(cx - w/2, cy - 8, w, 16, 6);
   ctx.fill();
   ctx.fillStyle = 'rgba(255,255,255,0.95)';
   ctx.fillText(text, cx, cy);
@@ -1203,14 +1276,14 @@ function startLevel(key) {
   // Player/follower start positions
   const sp = data.start_pos || { wx: 0, wy: 0 };
   player.wx = sp.wx; player.wy = sp.wy;
-  player.lookType = data.char_styles?.asher || 'normal';
+  player.lookType = (data.char_styles && data.char_styles.asher) || 'normal';
 
   mommy.wx = sp.wx - 70; mommy.wy = sp.wy + 40; mommy.vx = 0; mommy.vy = 0;
-  mommy.lookType = data.char_styles?.mommy || 'mommy';
+  mommy.lookType = (data.char_styles && data.char_styles.mommy) || 'mommy';
   mommy.color    = followerColor(mommy.lookType, true);
 
   daddy.wx = sp.wx - 120; daddy.wy = sp.wy - 20; daddy.vx = 0; daddy.vy = 0;
-  daddy.lookType = data.char_styles?.daddy || 'daddy';
+  daddy.lookType = (data.char_styles && data.char_styles.daddy) || 'daddy';
   daddy.color    = followerColor(daddy.lookType, false);
 
   // Camera starts on player
@@ -1340,8 +1413,7 @@ function drawMinimap() {
   ctx.save();
   ctx.globalAlpha = 0.75;
   ctx.fillStyle = 'rgba(0,0,0,0.6)';
-  ctx.beginPath();
-  ctx.roundRect(mx-3, my-3, mw+6, mh+6, 4);
+  ctxRoundedRect(mx-3, my-3, mw+6, mh+6, 4);
   ctx.fill();
 
   for (const r of levelRooms) {

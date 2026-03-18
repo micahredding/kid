@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "side-scroller",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["serve", "side-scroller", "-p", "3000", "--no-clipboard"],
+      "port": 3000
+    }
+  ]
+}

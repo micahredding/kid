@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Side-Scroller Engine</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #111;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      font-family: monospace;
+    }
+    canvas {
+      border: 2px solid #333;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      max-width: 100vw;
+      max-height: 100vh;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="game"></canvas>
+  <script type="module">
+    import { Engine } from './js/engine.js';
+    const canvas = document.getElementById('game');
+    const engine = new Engine(canvas);
+    window._engine = engine;
+  </script>
+</body>
+</html>

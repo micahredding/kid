@@ -90,6 +90,9 @@ export class Engine {
     this.player.gems = prevGems;
     this.player.keys = [...prevKeys];
 
+    // Count total foods in this level for caterpillar transformation
+    this.player.totalFoodsInLevel = this.entities.filter(e => e.type === 'food').length;
+
     this.player.onDeath = () => {
       if (this.player.lives <= 0) {
         this.gameState = GAME_STATES.GAME_OVER;
@@ -363,6 +366,19 @@ export class Engine {
     for (const food of p.foods) {
       this.drawFoodIcon(ctx, foodX, 18, food);
       foodX += 16;
+    }
+
+    // Caterpillar transformation progress
+    if (p.character === 'caterpillar' && !p.isButterfly && p.totalFoodsInLevel > 0) {
+      ctx.font = '10px monospace';
+      ctx.textAlign = 'left';
+      if (p.foods.length >= p.totalFoodsInLevel) {
+        ctx.fillStyle = '#FFD700';
+        ctx.fillText('PRESS C/E!', foodX + 4, 24);
+      } else {
+        ctx.fillStyle = '#AAA';
+        ctx.fillText(`${p.foods.length}/${p.totalFoodsInLevel}`, foodX + 4, 24);
+      }
     }
 
     // Gems count

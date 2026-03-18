@@ -896,6 +896,178 @@ export class Player {
     }
   }
 
+  drawCocoon(ctx) {
+    const x = Math.round(this.x);
+    const y = Math.round(this.y);
+    const cx = x + this.width / 2;
+    const cy = y + this.height / 2;
+
+    // Pulsing cocoon shape
+    const pulse = Math.sin(this.transformTimer * 0.3) * 3;
+    const progress = 1 - (this.transformTimer / 60);
+
+    // Cocoon body — shifts from green to rainbow
+    ctx.save();
+    ctx.translate(cx, cy);
+
+    // Glowing aura
+    ctx.fillStyle = `rgba(255,255,100,${0.2 + progress * 0.3})`;
+    ctx.beginPath();
+    ctx.arc(0, 0, 18 + pulse, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Cocoon shape
+    ctx.fillStyle = `hsl(${120 - progress * 120}, 60%, ${30 + progress * 20}%)`;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 10 + pulse * 0.5, 14, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Sparkle particles
+    for (let i = 0; i < 5; i++) {
+      const angle = (i / 5) * Math.PI * 2 + this.transformTimer * 0.2;
+      const dist = 12 + pulse;
+      const sx = Math.cos(angle) * dist;
+      const sy = Math.sin(angle) * dist;
+      ctx.fillStyle = this.caterpillarColors[i % 7];
+      ctx.globalAlpha = 0.5 + progress * 0.5;
+      ctx.beginPath();
+      ctx.arc(sx, sy, 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    ctx.restore();
+  }
+
+  drawButterfly(ctx) {
+    const x = Math.round(this.x);
+    const y = Math.round(this.y);
+    const cx = x + this.width / 2;
+    const cy = y + this.height / 2;
+
+    this.butterflyTimer++;
+    const wingFlap = Math.sin(this.butterflyTimer * 0.2) * 0.6;
+
+    ctx.save();
+    ctx.translate(cx, cy);
+
+    // Wings — rainbow colored, symmetrical
+    const colors = this.caterpillarColors;
+
+    // Left wings
+    ctx.save();
+    ctx.scale(1 - Math.abs(wingFlap) * 0.3, 1);
+
+    // Upper left wing
+    ctx.fillStyle = colors[0]; // red
+    ctx.beginPath();
+    ctx.ellipse(-10, -6, 12, 8, -0.3, 0, Math.PI * 2);
+    ctx.fill();
+    // Inner pattern
+    ctx.fillStyle = colors[1]; // orange
+    ctx.beginPath();
+    ctx.ellipse(-10, -6, 8, 5, -0.3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = colors[2]; // yellow
+    ctx.beginPath();
+    ctx.ellipse(-10, -6, 4, 3, -0.3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Lower left wing
+    ctx.fillStyle = colors[4]; // blue
+    ctx.beginPath();
+    ctx.ellipse(-8, 6, 9, 6, 0.3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = colors[5]; // indigo
+    ctx.beginPath();
+    ctx.ellipse(-8, 6, 5, 3, 0.3, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+
+    // Right wings
+    ctx.save();
+    ctx.scale(1 - Math.abs(wingFlap) * 0.3, 1);
+
+    // Upper right wing
+    ctx.fillStyle = colors[0];
+    ctx.beginPath();
+    ctx.ellipse(10, -6, 12, 8, 0.3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = colors[1];
+    ctx.beginPath();
+    ctx.ellipse(10, -6, 8, 5, 0.3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = colors[2];
+    ctx.beginPath();
+    ctx.ellipse(10, -6, 4, 3, 0.3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Lower right wing
+    ctx.fillStyle = colors[4];
+    ctx.beginPath();
+    ctx.ellipse(8, 6, 9, 6, -0.3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = colors[5];
+    ctx.beginPath();
+    ctx.ellipse(8, 6, 5, 3, -0.3, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+
+    // Body
+    ctx.fillStyle = colors[3]; // green
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 3, 10, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Head
+    ctx.fillStyle = '#333';
+    ctx.beginPath();
+    ctx.arc(0, -10, 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Eyes
+    ctx.fillStyle = '#FFF';
+    ctx.beginPath();
+    ctx.arc(-2 + this.facing, -11, 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(2 + this.facing, -11, 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#000';
+    ctx.beginPath();
+    ctx.arc(-1.5 + this.facing, -10.5, 1, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(2.5 + this.facing, -10.5, 1, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Antennae — curled
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 1;
+    const antBob = Math.sin(this.butterflyTimer * 0.1) * 2;
+    ctx.beginPath();
+    ctx.moveTo(-2, -13);
+    ctx.quadraticCurveTo(-6, -20 + antBob, -8, -18 + antBob);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(2, -13);
+    ctx.quadraticCurveTo(6, -20 - antBob, 8, -18 - antBob);
+    ctx.stroke();
+
+    // Antenna tips
+    ctx.fillStyle = colors[6]; // violet
+    ctx.beginPath();
+    ctx.arc(-8, -18 + antBob, 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(8, -18 - antBob, 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+  }
+
   // Static method for drawing character previews (used by title screen)
   static drawPreview(ctx, character, x, y, size, timer) {
     ctx.save();

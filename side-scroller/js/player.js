@@ -58,6 +58,11 @@ export class Player {
     // Animation
     this.animFrame = 0;
     this.animTimer = 0;
+
+    // Character type
+    this.character = 'classic'; // set externally
+    this.rotation = 0;         // rolling rotation for block character
+    this.spinSpeed = 0;        // spin velocity for airborne block
   }
 
   update(input, level) {
@@ -238,6 +243,26 @@ export class Player {
       this.animTimer = 0;
     }
 
+    // --- Character-specific animation ---
+    if (this.character === 'block') {
+      if (this.onGround) {
+        // Roll based on horizontal movement
+        this.spinSpeed = this.vx * 0.06;
+        this.rotation += this.spinSpeed;
+        // Snap to nearest 90° when stopped
+        if (Math.abs(this.vx) < 0.3) {
+          const target = Math.round(this.rotation / (Math.PI / 2)) * (Math.PI / 2);
+          this.rotation += (target - this.rotation) * 0.2;
+          this.spinSpeed = 0;
+        }
+      } else {
+        // Spin in the air only if we had momentum
+        if (Math.abs(this.spinSpeed) > 0.01) {
+          this.rotation += this.spinSpeed;
+        }
+      }
+    }
+
     // --- Invincibility ---
     if (this.invincibleTimer > 0) {
       this.invincibleTimer--;
@@ -327,6 +352,14 @@ export class Player {
       return;
     }
 
+    if (this.character === 'block') {
+      this.drawBlock(ctx, theme);
+    } else {
+      this.drawClassic(ctx, theme);
+    }
+  }
+
+  drawClassic(ctx, theme) {
     const colors = theme.player;
     const x = Math.round(this.x);
     const y = Math.round(this.y);
@@ -393,6 +426,120 @@ export class Player {
       ctx.fillRect(w - 6, -4, 4, 8);    // right arm up
     }
 
+    ctx.restore();
+  }
+
+  drawBlock(ctx, theme) {
+    const x = Math.round(this.x);
+    const y = Math.round(this.y);
+    const w = this.width;
+    const h = this.height;
+    const size = Math.min(w, h);
+    const cx = x + w / 2;
+    const cy = y + h / 2;
+
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(this.rotation);
+
+    const half = size / 2;
+
+    // Main body
+    ctx.fillStyle = '#4488CC';
+    ctx.fillRect(-half, -half, size, size);
+
+    // Lighter top-left edge
+    ctx.fillStyle = '#66AAEE';
+    ctx.fillRect(-half, -half, size, 3);
+    ctx.fillRect(-half, -half, 3, size);
+
+    // Darker bottom-right edge
+    ctx.fillStyle = '#2266AA';
+    ctx.fillRect(-half, half - 3, size, 3);
+    ctx.fillRect(half - 3, -half, 3, size);
+
+    // Face — eyes and mouth that rotate with the block
+    // Eyes
+    ctx.fillStyle = '#FFF';
+    ctx.fillRect(-half + 5, -half + 5, 7, 7);
+    ctx.fillRect(half - 12, -half + 5, 7, 7);
+
+    // Pupils — look in movement direction
+    const pupilOffset = this.facing * 2;
+    ctx.fillStyle = '#000';
+    ctx.fillRect(-half + 7 + pupilOffset, -half + 7, 3, 4);
+    ctx.fillRect(half - 10 + pupilOffset, -half + 7, 3, 4);
+
+    // Mouth — changes based on state
+    ctx.fillStyle = '#000';
+    if (this.state === STATES.JUMPING || this.state === STATES.FALLING) {
+      // Open mouth (surprise/excitement)
+      ctx.beginPath();
+      ctx.arc(0, half - 8, 4, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (Math.abs(this.vx) > 2) {
+      // Wide grin when moving fast
+      ctx.fillRect(-5, half - 10, 10, 3);
+    } else {
+      // Slight smile
+      ctx.fillRect(-3, half - 9, 6, 2);
+    }
+
+    ctx.restore();
+
+    // Carried block drawn above (no rotation needed)
+    if (this.carriedBlock) {
+      // Small lines showing "holding" above the block
+      ctx.strokeStyle = '#4488CC';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(cx - 4, y - 2);
+      ctx.lineTo(cx - 4, y - 6);
+      ctx.moveTo(cx + 4, y - 2);
+      ctx.lineTo(cx + 4, y - 6);
+      ctx.stroke();
+    }
+  }
+
+  // Static method for drawing character previews (used by title screen)
+  static drawPreview(ctx, character, x, y, size, timer) {
+    ctx.save();
+    if (character === 'classic') {
+      ctx.translate(x, y);
+      const s = size;
+      // Simplified classic character preview
+      ctx.fillStyle = '#0000CC';
+      ctx.fillRect(2, s * 0.45, s - 4, s * 0.55);
+      ctx.fillStyle = '#FF0000';
+      ctx.fillRect(2, s * 0.25, s - 4, s * 0.35);
+      ctx.fillStyle = '#FFB366';
+      ctx.fillRect(4, 0, s - 8, s * 0.3);
+      ctx.fillStyle = '#FF0000';
+      ctx.fillRect(2, 0, s - 2, s * 0.12);
+      ctx.fillStyle = '#000';
+      ctx.fillRect(s - 8, s * 0.12, 3, 4);
+    } else if (character === 'block') {
+      const cx = x + size / 2;
+      const cy = y + size / 2;
+      const half = size / 2;
+      ctx.translate(cx, cy);
+      ctx.rotate(Math.sin(timer * 0.03) * 0.3);
+      ctx.fillStyle = '#4488CC';
+      ctx.fillRect(-half, -half, size, size);
+      ctx.fillStyle = '#66AAEE';
+      ctx.fillRect(-half, -half, size, 3);
+      ctx.fillRect(-half, -half, 3, size);
+      ctx.fillStyle = '#2266AA';
+      ctx.fillRect(-half, half - 3, size, 3);
+      ctx.fillRect(half - 3, -half, 3, size);
+      ctx.fillStyle = '#FFF';
+      ctx.fillRect(-half + 4, -half + 4, 6, 6);
+      ctx.fillRect(half - 10, -half + 4, 6, 6);
+      ctx.fillStyle = '#000';
+      ctx.fillRect(-half + 6, -half + 6, 3, 3);
+      ctx.fillRect(half - 8, -half + 6, 3, 3);
+      ctx.fillRect(-3, half - 8, 6, 2);
+    }
     ctx.restore();
   }
 }

@@ -37,6 +37,12 @@ export class Engine {
     this.particles = [];
     this.transitionTimer = 0;
 
+    // Character selection
+    this.characters = ['classic', 'block'];
+    this.characterNames = { classic: 'CLASSIC', block: 'ROLLER' };
+    this.selectedCharacter = 0;
+    this.titleTimer = 0;
+
     // Start game loop
     this.lastTime = performance.now();
     this.accumulator = 0;
@@ -72,6 +78,7 @@ export class Engine {
     const prevCoins = this.player ? this.player.coins : 0;
 
     this.player = new Player(this.level.playerX, this.level.playerY);
+    this.player.character = this.characters[this.selectedCharacter];
     this.player.score = prevScore;
     this.player.lives = prevLives;
     this.player.coins = prevCoins;
@@ -135,6 +142,13 @@ export class Engine {
   update() {
     switch (this.gameState) {
       case GAME_STATES.TITLE:
+        this.titleTimer++;
+        if (this.input.wasPressed('ArrowLeft') || this.input.wasPressed('a')) {
+          this.selectedCharacter = (this.selectedCharacter - 1 + this.characters.length) % this.characters.length;
+        }
+        if (this.input.wasPressed('ArrowRight') || this.input.wasPressed('d')) {
+          this.selectedCharacter = (this.selectedCharacter + 1) % this.characters.length;
+        }
         if (this.input.jumpPressed || this.input.wasPressed('Enter')) {
           this.startLevel(0);
         }
@@ -337,28 +351,73 @@ export class Engine {
 
   drawTitle() {
     const ctx = this.ctx;
+    const cx = this.canvas.width / 2;
     ctx.fillStyle = '#5c94fc';
     ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
     ctx.fillStyle = '#FFF';
     ctx.font = 'bold 48px monospace';
     ctx.textAlign = 'center';
-    ctx.fillText('SIDE-SCROLLER', this.canvas.width / 2, this.canvas.height / 2 - 60);
+    ctx.fillText('SIDE-SCROLLER', cx, 100);
 
     ctx.font = 'bold 24px monospace';
-    ctx.fillText('ENGINE', this.canvas.width / 2, this.canvas.height / 2 - 20);
+    ctx.fillText('ENGINE', cx, 135);
 
-    ctx.font = '18px monospace';
-    const blink = Math.floor(Date.now() / 500) % 2;
-    if (blink) {
-      ctx.fillText('PRESS SPACE OR ENTER TO START', this.canvas.width / 2, this.canvas.height / 2 + 40);
+    // Character selection
+    ctx.font = '16px monospace';
+    ctx.fillStyle = '#AAD';
+    ctx.fillText('< SELECT CHARACTER >', cx, 200);
+
+    const charCount = this.characters.length;
+    const previewSize = 48;
+    const spacing = 120;
+    const startX = cx - ((charCount - 1) * spacing) / 2;
+
+    for (let i = 0; i < charCount; i++) {
+      const px = startX + i * spacing - previewSize / 2;
+      const py = 220;
+      const charId = this.characters[i];
+      const selected = i === this.selectedCharacter;
+
+      // Selection highlight
+      if (selected) {
+        ctx.strokeStyle = '#FFD700';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(px - 8, py - 8, previewSize + 16, previewSize + 28);
+
+        // Bouncing arrow above
+        const bounce = Math.sin(this.titleTimer * 0.1) * 4;
+        ctx.fillStyle = '#FFD700';
+        ctx.beginPath();
+        ctx.moveTo(px + previewSize / 2, py - 16 + bounce);
+        ctx.lineTo(px + previewSize / 2 - 6, py - 24 + bounce);
+        ctx.lineTo(px + previewSize / 2 + 6, py - 24 + bounce);
+        ctx.fill();
+      }
+
+      // Character preview
+      Player.drawPreview(ctx, charId, px, py, previewSize, this.titleTimer);
+
+      // Name
+      ctx.fillStyle = selected ? '#FFD700' : '#AAD';
+      ctx.font = selected ? 'bold 14px monospace' : '12px monospace';
+      ctx.fillText(this.characterNames[charId], px + previewSize / 2, py + previewSize + 14);
     }
 
+    // Start prompt
+    ctx.font = '18px monospace';
+    ctx.fillStyle = '#FFF';
+    const blink = Math.floor(Date.now() / 500) % 2;
+    if (blink) {
+      ctx.fillText('PRESS SPACE OR ENTER TO START', cx, 340);
+    }
+
+    // Controls
     ctx.font = '14px monospace';
     ctx.fillStyle = '#AAD';
-    ctx.fillText('Arrow Keys / WASD — Move & Jump', this.canvas.width / 2, this.canvas.height / 2 + 80);
-    ctx.fillText('Space — Jump    Shift — Sprint', this.canvas.width / 2, this.canvas.height / 2 + 100);
-    ctx.fillText('Down/S/X — Pick up & Place blocks', this.canvas.width / 2, this.canvas.height / 2 + 120);
+    ctx.fillText('Arrow Keys / WASD \u2014 Move & Jump', cx, 400);
+    ctx.fillText('Space \u2014 Jump    Shift \u2014 Sprint', cx, 420);
+    ctx.fillText('Down/S/X \u2014 Pick up & Place blocks', cx, 440);
   }
 
   drawGameOver() {

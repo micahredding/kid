@@ -54,6 +54,7 @@ export class Input {
   get jumpReleased() { return this.wasReleased('ArrowUp') || this.wasReleased('w') || this.wasReleased(' '); }
   get sprint() { return this.isDown('Shift') || this.isDown('z'); }
   get actionPressed() { return this.wasPressed('ArrowDown') || this.wasPressed('s') || this.wasPressed('x'); }
+  get transformPressed() { return this.wasPressed('c') || this.wasPressed('e'); }
 
   destroy() {
     window.removeEventListener('keydown', this._onKeyDown);

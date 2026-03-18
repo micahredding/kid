@@ -63,6 +63,10 @@ export class Player {
     this.character = 'classic'; // set externally
     this.rotation = 0;         // rolling rotation for block character
     this.spinSpeed = 0;        // spin velocity for airborne block
+
+    // Numberblock 4 form: 'square' (2x2) or 'flat' (4x1)
+    this.blockForm = 'square';
+    this.subBlockSize = 28;
   }
 
   update(input, level) {
@@ -244,7 +248,7 @@ export class Player {
     }
 
     // --- Character-specific animation ---
-    if (this.character === 'block') {
+    if (this.character === 'block' || this.character === 'numberblock4') {
       if (this.onGround) {
         // Roll based on horizontal movement
         this.spinSpeed = this.vx * 0.06;
@@ -261,6 +265,11 @@ export class Player {
           this.rotation += this.spinSpeed;
         }
       }
+    }
+
+    // --- Numberblock 4 form switching ---
+    if (this.character === 'numberblock4' && input.transformPressed) {
+      this.switchForm(level);
     }
 
     // --- Invincibility ---
@@ -303,6 +312,64 @@ export class Player {
     if (newLives > prevLives) {
       this.lives += (newLives - prevLives);
     }
+  }
+
+  applyCharacterSize() {
+    const s = this.subBlockSize;
+    if (this.character === 'numberblock4') {
+      if (this.blockForm === 'square') {
+        this.width = s * 2;
+        this.height = s * 2;
+      } else {
+        this.width = s * 4;
+        this.height = s;
+      }
+    }
+  }
+
+  switchForm(level) {
+    const s = this.subBlockSize;
+    const oldW = this.width;
+    const oldH = this.height;
+    const oldBottom = this.y + this.height;
+
+    // Toggle form
+    const newForm = this.blockForm === 'square' ? 'flat' : 'square';
+    const newW = newForm === 'square' ? s * 2 : s * 4;
+    const newH = newForm === 'square' ? s * 2 : s;
+
+    // Calculate new position — keep feet at same place, center horizontally
+    const newX = this.x + (oldW - newW) / 2;
+    const newY = oldBottom - newH;
+
+    // Check if new shape fits (no tile collisions)
+    const ts = CONFIG.tile.size;
+    const testEntity = { x: newX, y: newY, width: newW, height: newH };
+    const left = Math.floor(testEntity.x / ts);
+    const right = Math.floor((testEntity.x + testEntity.width - 1) / ts);
+    const top = Math.floor(testEntity.y / ts);
+    const bottom = Math.floor((testEntity.y + testEntity.height - 1) / ts);
+
+    for (let row = top; row <= bottom; row++) {
+      for (let col = left; col <= right; col++) {
+        if (row < 0 || row >= level.tiles.length) continue;
+        if (col < 0 || col >= level.tiles[row].length) continue;
+        const ch = level.tiles[row][col];
+        if (ch && ch !== ' ' && ch !== 'C' && ch !== 'E' && ch !== 'K' &&
+            ch !== 'F' && ch !== 'X' && ch !== 'D' && ch !== 'I') {
+          return; // can't transform, blocked
+        }
+      }
+    }
+
+    // Apply new form
+    this.blockForm = newForm;
+    this.x = newX;
+    this.y = newY;
+    this.width = newW;
+    this.height = newH;
+    this.rotation = 0;
+    this.spinSpeed = 0;
   }
 
   pickUpBlock(block) {
@@ -354,6 +421,8 @@ export class Player {
 
     if (this.character === 'block') {
       this.drawBlock(ctx, theme);
+    } else if (this.character === 'numberblock4') {
+      this.drawNumberblock4(ctx, theme);
     } else {
       this.drawClassic(ctx, theme);
     }
@@ -501,6 +570,103 @@ export class Player {
     }
   }
 
+  drawNumberblock4(ctx, theme) {
+    const x = Math.round(this.x);
+    const y = Math.round(this.y);
+    const w = this.width;
+    const h = this.height;
+    const s = this.subBlockSize;
+    const cx = x + w / 2;
+    const cy = y + h / 2;
+
+    ctx.save();
+    ctx.translate(cx, cy);
+
+    // Only rotate in square form
+    if (this.blockForm === 'square') {
+      ctx.rotate(this.rotation);
+    }
+
+    const halfW = w / 2;
+    const halfH = h / 2;
+
+    // Determine sub-block positions based on form
+    let positions;
+    if (this.blockForm === 'square') {
+      // 2x2 grid
+      positions = [
+        { x: -halfW, y: -halfH },         // top-left
+        { x: -halfW + s, y: -halfH },     // top-right
+        { x: -halfW, y: -halfH + s },     // bottom-left
+        { x: -halfW + s, y: -halfH + s }, // bottom-right
+      ];
+    } else {
+      // 4x1 flat row
+      positions = [
+        { x: -halfW, y: -halfH },
+        { x: -halfW + s, y: -halfH },
+        { x: -halfW + s * 2, y: -halfH },
+        { x: -halfW + s * 3, y: -halfH },
+      ];
+    }
+
+    const bodyColor = '#CC3333';
+    const lightColor = '#EE5555';
+    const darkColor = '#AA2222';
+
+    // Draw each sub-block
+    for (let i = 0; i < 4; i++) {
+      const bx = positions[i].x;
+      const by = positions[i].y;
+
+      // Block body
+      ctx.fillStyle = bodyColor;
+      ctx.fillRect(bx, by, s, s);
+
+      // Light edges (top, left)
+      ctx.fillStyle = lightColor;
+      ctx.fillRect(bx, by, s, 2);
+      ctx.fillRect(bx, by, 2, s);
+
+      // Dark edges (bottom, right)
+      ctx.fillStyle = darkColor;
+      ctx.fillRect(bx, by + s - 2, s, 2);
+      ctx.fillRect(bx + s - 2, by, 2, s);
+
+      // Grid line between blocks
+      ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+      ctx.strokeRect(bx, by, s, s);
+
+      // Face on each sub-block
+      const eyeSize = 3;
+      const eyeY = by + s * 0.3;
+
+      // Eyes
+      ctx.fillStyle = '#FFF';
+      ctx.fillRect(bx + 5, eyeY, eyeSize + 1, eyeSize + 1);
+      ctx.fillRect(bx + s - 5 - eyeSize, eyeY, eyeSize + 1, eyeSize + 1);
+
+      // Pupils
+      const pupilOff = this.facing;
+      ctx.fillStyle = '#000';
+      ctx.fillRect(bx + 6 + pupilOff, eyeY + 1, 2, 2);
+      ctx.fillRect(bx + s - 4 - eyeSize + pupilOff, eyeY + 1, 2, 2);
+
+      // Smile
+      ctx.fillStyle = '#000';
+      ctx.fillRect(bx + s / 2 - 2, by + s * 0.65, 4, 1);
+    }
+
+    // Number "4" drawn in center of the whole shape
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.font = `bold ${Math.floor(Math.min(w, h) * 0.4)}px monospace`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('4', 0, 0);
+
+    ctx.restore();
+  }
+
   // Static method for drawing character previews (used by title screen)
   static drawPreview(ctx, character, x, y, size, timer) {
     ctx.save();
@@ -539,6 +705,41 @@ export class Player {
       ctx.fillRect(-half + 6, -half + 6, 3, 3);
       ctx.fillRect(half - 8, -half + 6, 3, 3);
       ctx.fillRect(-3, half - 8, 6, 2);
+    } else if (character === 'numberblock4') {
+      const s = size / 2;
+      const cx = x + size / 2;
+      const cy = y + size / 2;
+      ctx.translate(cx, cy);
+      ctx.rotate(Math.sin(timer * 0.03) * 0.2);
+      const bodyColor = '#CC3333';
+      const positions = [
+        { x: -s, y: -s }, { x: 0, y: -s },
+        { x: -s, y: 0 },  { x: 0, y: 0 },
+      ];
+      for (const p of positions) {
+        ctx.fillStyle = bodyColor;
+        ctx.fillRect(p.x, p.y, s, s);
+        ctx.fillStyle = '#EE5555';
+        ctx.fillRect(p.x, p.y, s, 2);
+        ctx.fillRect(p.x, p.y, 2, s);
+        ctx.fillStyle = '#AA2222';
+        ctx.fillRect(p.x, p.y + s - 2, s, 2);
+        ctx.fillRect(p.x + s - 2, p.y, 2, s);
+        ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+        ctx.strokeRect(p.x, p.y, s, s);
+        // Tiny eyes
+        ctx.fillStyle = '#FFF';
+        ctx.fillRect(p.x + 3, p.y + s * 0.25, 3, 3);
+        ctx.fillRect(p.x + s - 6, p.y + s * 0.25, 3, 3);
+        ctx.fillStyle = '#000';
+        ctx.fillRect(p.x + 4, p.y + s * 0.3, 1, 2);
+        ctx.fillRect(p.x + s - 5, p.y + s * 0.3, 1, 2);
+      }
+      ctx.fillStyle = 'rgba(255,255,255,0.5)';
+      ctx.font = `bold ${Math.floor(size * 0.35)}px monospace`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('4', 0, 0);
     }
     ctx.restore();
   }

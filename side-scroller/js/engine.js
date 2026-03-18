@@ -38,8 +38,8 @@ export class Engine {
     this.transitionTimer = 0;
 
     // Character selection
-    this.characters = ['classic', 'block'];
-    this.characterNames = { classic: 'CLASSIC', block: 'ROLLER' };
+    this.characters = ['classic', 'block', 'numberblock4'];
+    this.characterNames = { classic: 'CLASSIC', block: 'ROLLER', numberblock4: 'FOUR' };
     this.selectedCharacter = 0;
     this.titleTimer = 0;
 
@@ -79,6 +79,7 @@ export class Engine {
 
     this.player = new Player(this.level.playerX, this.level.playerY);
     this.player.character = this.characters[this.selectedCharacter];
+    this.player.applyCharacterSize();
     this.player.score = prevScore;
     this.player.lives = prevLives;
     this.player.coins = prevCoins;
@@ -415,9 +416,10 @@ export class Engine {
     // Controls
     ctx.font = '14px monospace';
     ctx.fillStyle = '#AAD';
-    ctx.fillText('Arrow Keys / WASD \u2014 Move & Jump', cx, 400);
-    ctx.fillText('Space \u2014 Jump    Shift \u2014 Sprint', cx, 420);
-    ctx.fillText('Down/S/X \u2014 Pick up & Place blocks', cx, 440);
+    ctx.fillText('Arrow Keys / WASD \u2014 Move & Jump', cx, 390);
+    ctx.fillText('Space \u2014 Jump    Shift \u2014 Sprint', cx, 410);
+    ctx.fillText('Down/S/X \u2014 Pick up & Place blocks', cx, 430);
+    ctx.fillText('C/E \u2014 Transform (FOUR)', cx, 450);
   }
 
   drawGameOver() {

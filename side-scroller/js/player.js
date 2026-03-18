@@ -120,16 +120,15 @@ export class Player {
       this.vx = Math.max(-maxSpeed, Math.min(maxSpeed, this.vx));
 
       // Flap-based flight: gentle gravity, flapping counteracts it
-      const butterflyGravity = 0.25;  // lighter than normal
-      const flapStrength = -1.8;       // each flap impulse
-      const maxRise = -4;             // max upward speed
-      const maxFall = 3;              // gentle float down
+      const butterflyGravity = 0.15;   // very light gravity
+      const maxRise = -5;             // max upward speed
+      const maxFall = 2.5;            // gentle float down
 
       this.isFlapping = input.jump || input.up;
 
       if (this.isFlapping) {
-        // Continuous flapping provides lift
-        this.vy += flapStrength * 0.15;  // sustained lift per frame
+        // Strong sustained lift — easy to get airborne
+        this.vy -= 0.55;
         if (this.vy < maxRise) this.vy = maxRise;
       }
 
@@ -972,6 +971,9 @@ export class Player {
     const cx = x + this.width / 2;
     const cy = y + this.height / 2;
 
+    // Scale up the butterfly for visual impact
+    const scale = 2.0;
+
     // Wing flap speed: faster when actively flapping, gentle when gliding
     const flapSpeed = this.isFlapping ? 0.5 : 0.15;
     const flapAmount = this.isFlapping ? 0.7 : 0.3;
@@ -979,6 +981,7 @@ export class Player {
 
     ctx.save();
     ctx.translate(cx, cy);
+    ctx.scale(scale, scale);
 
     // Wings — rainbow colored, symmetrical
     const colors = this.caterpillarColors;

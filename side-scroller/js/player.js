@@ -64,8 +64,9 @@ export class Player {
     this.rotation = 0;         // rolling rotation for block character
     this.spinSpeed = 0;        // spin velocity for airborne block
 
-    // Numberblock 4 form: 'square' (2x2) or 'flat' (4x1)
+    // Numberblock 4 form: 'square' (2x2), 'flat' (4x1), or 'tall' (1x4)
     this.blockForm = 'square';
+    this.blockForms = ['square', 'flat', 'tall'];
     this.subBlockSize = 28;
   }
 
@@ -248,7 +249,7 @@ export class Player {
     }
 
     // --- Character-specific animation ---
-    if (this.character === 'block' || this.character === 'numberblock4') {
+    if (this.character === 'block' || (this.character === 'numberblock4' && this.blockForm === 'square')) {
       if (this.onGround) {
         // Roll based on horizontal movement
         this.spinSpeed = this.vx * 0.06;
@@ -320,9 +321,13 @@ export class Player {
       if (this.blockForm === 'square') {
         this.width = s * 2;
         this.height = s * 2;
-      } else {
+      } else if (this.blockForm === 'flat') {
         this.width = s * 4;
         this.height = s;
+      } else {
+        // tall (1x4)
+        this.width = s;
+        this.height = s * 4;
       }
     }
   }
@@ -333,10 +338,11 @@ export class Player {
     const oldH = this.height;
     const oldBottom = this.y + this.height;
 
-    // Toggle form
-    const newForm = this.blockForm === 'square' ? 'flat' : 'square';
-    const newW = newForm === 'square' ? s * 2 : s * 4;
-    const newH = newForm === 'square' ? s * 2 : s;
+    // Cycle to next form
+    const idx = this.blockForms.indexOf(this.blockForm);
+    const newForm = this.blockForms[(idx + 1) % this.blockForms.length];
+    const newW = newForm === 'square' ? s * 2 : newForm === 'flat' ? s * 4 : s;
+    const newH = newForm === 'square' ? s * 2 : newForm === 'flat' ? s : s * 4;
 
     // Calculate new position — keep feet at same place, center horizontally
     const newX = this.x + (oldW - newW) / 2;
@@ -595,12 +601,12 @@ export class Player {
     if (this.blockForm === 'square') {
       // 2x2 grid
       positions = [
-        { x: -halfW, y: -halfH },         // top-left
-        { x: -halfW + s, y: -halfH },     // top-right
-        { x: -halfW, y: -halfH + s },     // bottom-left
-        { x: -halfW + s, y: -halfH + s }, // bottom-right
+        { x: -halfW, y: -halfH },
+        { x: -halfW + s, y: -halfH },
+        { x: -halfW, y: -halfH + s },
+        { x: -halfW + s, y: -halfH + s },
       ];
-    } else {
+    } else if (this.blockForm === 'flat') {
       // 4x1 flat row
       positions = [
         { x: -halfW, y: -halfH },
@@ -608,11 +614,19 @@ export class Player {
         { x: -halfW + s * 2, y: -halfH },
         { x: -halfW + s * 3, y: -halfH },
       ];
+    } else {
+      // 1x4 tall column
+      positions = [
+        { x: -halfW, y: -halfH },
+        { x: -halfW, y: -halfH + s },
+        { x: -halfW, y: -halfH + s * 2 },
+        { x: -halfW, y: -halfH + s * 3 },
+      ];
     }
 
-    const bodyColor = '#CC3333';
-    const lightColor = '#EE5555';
-    const darkColor = '#AA2222';
+    const bodyColor = '#33AA44';
+    const lightColor = '#55CC66';
+    const darkColor = '#228833';
 
     // Draw each sub-block
     for (let i = 0; i < 4; i++) {
@@ -636,30 +650,39 @@ export class Player {
       // Grid line between blocks
       ctx.strokeStyle = 'rgba(0,0,0,0.25)';
       ctx.strokeRect(bx, by, s, s);
-
-      // Face on each sub-block
-      const eyeSize = 3;
-      const eyeY = by + s * 0.3;
-
-      // Eyes
-      ctx.fillStyle = '#FFF';
-      ctx.fillRect(bx + 5, eyeY, eyeSize + 1, eyeSize + 1);
-      ctx.fillRect(bx + s - 5 - eyeSize, eyeY, eyeSize + 1, eyeSize + 1);
-
-      // Pupils
-      const pupilOff = this.facing;
-      ctx.fillStyle = '#000';
-      ctx.fillRect(bx + 6 + pupilOff, eyeY + 1, 2, 2);
-      ctx.fillRect(bx + s - 4 - eyeSize + pupilOff, eyeY + 1, 2, 2);
-
-      // Smile
-      ctx.fillStyle = '#000';
-      ctx.fillRect(bx + s / 2 - 2, by + s * 0.65, 4, 1);
     }
 
-    // Number "4" drawn in center of the whole shape
-    ctx.fillStyle = 'rgba(255,255,255,0.5)';
-    ctx.font = `bold ${Math.floor(Math.min(w, h) * 0.4)}px monospace`;
+    // Single face centered on the whole shape
+    const eyeSize = 5;
+    const eyeSpacing = Math.min(w, h) * 0.3;
+    const eyeY = -eyeSize / 2 - 2;
+
+    // Eyes
+    ctx.fillStyle = '#FFF';
+    ctx.fillRect(-eyeSpacing / 2 - eyeSize, eyeY, eyeSize + 2, eyeSize + 2);
+    ctx.fillRect(eyeSpacing / 2 - 1, eyeY, eyeSize + 2, eyeSize + 2);
+
+    // Pupils
+    const pupilOff = this.facing * 2;
+    ctx.fillStyle = '#000';
+    ctx.fillRect(-eyeSpacing / 2 - eyeSize + 2 + pupilOff, eyeY + 2, 3, 3);
+    ctx.fillRect(eyeSpacing / 2 + 1 + pupilOff, eyeY + 2, 3, 3);
+
+    // Mouth
+    ctx.fillStyle = '#000';
+    if (this.state === STATES.JUMPING || this.state === STATES.FALLING) {
+      ctx.beginPath();
+      ctx.arc(0, 6, 4, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (Math.abs(this.vx) > 2) {
+      ctx.fillRect(-5, 5, 10, 3);
+    } else {
+      ctx.fillRect(-3, 5, 6, 2);
+    }
+
+    // Number "4" drawn in center
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.font = `bold ${Math.floor(Math.min(w, h) * 0.35)}px monospace`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText('4', 0, 0);
@@ -711,7 +734,7 @@ export class Player {
       const cy = y + size / 2;
       ctx.translate(cx, cy);
       ctx.rotate(Math.sin(timer * 0.03) * 0.2);
-      const bodyColor = '#CC3333';
+      const bodyColor = '#33AA44';
       const positions = [
         { x: -s, y: -s }, { x: 0, y: -s },
         { x: -s, y: 0 },  { x: 0, y: 0 },
@@ -719,23 +742,25 @@ export class Player {
       for (const p of positions) {
         ctx.fillStyle = bodyColor;
         ctx.fillRect(p.x, p.y, s, s);
-        ctx.fillStyle = '#EE5555';
+        ctx.fillStyle = '#55CC66';
         ctx.fillRect(p.x, p.y, s, 2);
         ctx.fillRect(p.x, p.y, 2, s);
-        ctx.fillStyle = '#AA2222';
+        ctx.fillStyle = '#228833';
         ctx.fillRect(p.x, p.y + s - 2, s, 2);
         ctx.fillRect(p.x + s - 2, p.y, 2, s);
         ctx.strokeStyle = 'rgba(0,0,0,0.25)';
         ctx.strokeRect(p.x, p.y, s, s);
-        // Tiny eyes
-        ctx.fillStyle = '#FFF';
-        ctx.fillRect(p.x + 3, p.y + s * 0.25, 3, 3);
-        ctx.fillRect(p.x + s - 6, p.y + s * 0.25, 3, 3);
-        ctx.fillStyle = '#000';
-        ctx.fillRect(p.x + 4, p.y + s * 0.3, 1, 2);
-        ctx.fillRect(p.x + s - 5, p.y + s * 0.3, 1, 2);
       }
-      ctx.fillStyle = 'rgba(255,255,255,0.5)';
+      // Single face centered
+      ctx.fillStyle = '#FFF';
+      ctx.fillRect(-5, -3, 4, 4);
+      ctx.fillRect(1, -3, 4, 4);
+      ctx.fillStyle = '#000';
+      ctx.fillRect(-4, -1, 2, 2);
+      ctx.fillRect(2, -1, 2, 2);
+      ctx.fillRect(-2, 4, 4, 2);
+      // Number
+      ctx.fillStyle = 'rgba(255,255,255,0.4)';
       ctx.font = `bold ${Math.floor(size * 0.35)}px monospace`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';

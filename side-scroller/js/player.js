@@ -39,6 +39,9 @@ export class Player {
     this.wallDir = 0;            // -1 left wall, 1 right wall, 0 none
     this.wallSlideTimer = 0;
 
+    // Carrying blocks
+    this.carriedBlock = null;
+
     // Invincibility
     this.invincibleTimer = 0;
 
@@ -240,6 +243,14 @@ export class Player {
       this.invincibleTimer--;
     }
 
+    // --- Carried block follows player ---
+    if (this.carriedBlock) {
+      this.carriedBlock.x = this.x + (this.width - this.carriedBlock.width) / 2;
+      this.carriedBlock.y = this.y - this.carriedBlock.height;
+      this.carriedBlock.vx = 0;
+      this.carriedBlock.vy = 0;
+    }
+
     // --- Fall death ---
     const levelHeight = level.tiles.length * CONFIG.tile.size;
     if (this.y > levelHeight + 100) {
@@ -267,6 +278,40 @@ export class Player {
     if (newLives > prevLives) {
       this.lives += (newLives - prevLives);
     }
+  }
+
+  pickUpBlock(block) {
+    if (this.carriedBlock) return false;
+    this.carriedBlock = block;
+    block.carried = true;
+    block.vx = 0;
+    block.vy = 0;
+    return true;
+  }
+
+  placeBlock() {
+    if (!this.carriedBlock) return null;
+    const block = this.carriedBlock;
+    block.carried = false;
+    // Place in front of player
+    block.x = this.x + this.facing * (this.width + 2);
+    block.y = this.y - block.height + this.height;
+    block.vx = 0;
+    block.vy = 0;
+    this.carriedBlock = null;
+    return block;
+  }
+
+  throwBlock() {
+    if (!this.carriedBlock) return null;
+    const block = this.carriedBlock;
+    block.carried = false;
+    block.x = this.x + this.facing * (this.width + 2);
+    block.y = this.y - block.height;
+    block.vx = this.facing * 6;
+    block.vy = -3;
+    this.carriedBlock = null;
+    return block;
   }
 
   bounce(velocity) {
@@ -339,6 +384,13 @@ export class Player {
       ctx.fillStyle = colors.bodyColor;
       ctx.fillRect(-2, h * 0.3, 4, 6);  // arm toward wall
       ctx.fillRect(-2, h * 0.5, 4, 6);  // second arm
+    }
+
+    // Carrying pose — arms up
+    if (this.carriedBlock) {
+      ctx.fillStyle = colors.bodyColor;
+      ctx.fillRect(2, -4, 4, 8);        // left arm up
+      ctx.fillRect(w - 6, -4, 4, 8);    // right arm up
     }
 
     ctx.restore();

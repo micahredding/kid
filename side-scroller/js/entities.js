@@ -370,10 +370,14 @@ export class PushBlock {
     this.height = cfg.height;
     this.vx = 0;
     this.vy = 0;
+    this.carried = false;
     this.type = 'pushblock';
   }
 
   update(level) {
+    // Skip physics while being carried
+    if (this.carried) return true;
+
     // Gravity
     this.vy += CONFIG.player.gravity;
     if (this.vy > CONFIG.player.maxFallSpeed) this.vy = CONFIG.player.maxFallSpeed;
@@ -397,7 +401,24 @@ export class PushBlock {
     return true;
   }
 
+  // Check for block-on-block stacking
+  checkBlockCollision(otherBlock) {
+    if (this.carried || otherBlock.carried) return;
+    if (!aabbOverlap(this, otherBlock)) return;
+
+    // Only stack from above (this block landing on other block)
+    if (this.vy > 0) {
+      const thisBottom = this.y + this.height;
+      const otherTop = otherBlock.y;
+      if (thisBottom <= otherTop + 8 && thisBottom >= otherTop - 2) {
+        this.y = otherTop - this.height;
+        this.vy = 0;
+      }
+    }
+  }
+
   checkPlayerCollision(player) {
+    if (this.carried) return;
     if (!aabbOverlap(this, player)) return;
 
     const playerBottom = player.y + player.height;
@@ -421,13 +442,11 @@ export class PushBlock {
     const overlapRight = (this.x + this.width) - playerLeft;
 
     if (overlapLeft < overlapRight) {
-      // Player pushing from the left
       if (player.vx > 0) {
         this.vx = pushSpeed;
         player.x = this.x - player.width;
       }
     } else {
-      // Player pushing from the right
       if (player.vx < 0) {
         this.vx = -pushSpeed;
         player.x = this.x + this.width;

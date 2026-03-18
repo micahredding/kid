@@ -53,6 +53,7 @@ export class Input {
   get jumpPressed() { return this.wasPressed('ArrowUp') || this.wasPressed('w') || this.wasPressed(' '); }
   get jumpReleased() { return this.wasReleased('ArrowUp') || this.wasReleased('w') || this.wasReleased(' '); }
   get sprint() { return this.isDown('Shift') || this.isDown('z'); }
+  get actionPressed() { return this.wasPressed('ArrowDown') || this.wasPressed('s') || this.wasPressed('x'); }
 
   destroy() {
     window.removeEventListener('keydown', this._onKeyDown);

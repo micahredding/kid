@@ -6,7 +6,7 @@ import { CONFIG } from './config.js';
 import { Input } from './input.js';
 import { Camera } from './camera.js';
 import { Player } from './player.js';
-import { Particle } from './entities.js';
+import { Particle, PushBlock } from './entities.js';
 import { loadLevel, drawTiles, drawBackground, drawGoalFlag, LEVELS } from './level.js';
 
 const GAME_STATES = {
@@ -170,6 +170,24 @@ export class Engine {
     // Player
     this.player.update(this.input, this.level);
 
+    // Pick up / place blocks
+    if (this.input.actionPressed) {
+      if (this.player.carriedBlock) {
+        // Place or throw — throw if sprinting
+        if (this.input.sprint) {
+          this.player.throwBlock();
+        } else {
+          this.player.placeBlock();
+        }
+      } else {
+        // Try to pick up a nearby push block
+        const pickup = this.findNearbyBlock();
+        if (pickup) {
+          this.player.pickUpBlock(pickup);
+        }
+      }
+    }
+
     // Entities
     this.entities = this.entities.filter(e => {
       const alive = e.update(this.level);
@@ -178,6 +196,15 @@ export class Engine {
       }
       return alive;
     });
+
+    // Block-on-block stacking
+    const blocks = this.entities.filter(e => e.type === 'pushblock' && !e.carried);
+    for (let i = 0; i < blocks.length; i++) {
+      for (let j = i + 1; j < blocks.length; j++) {
+        blocks[i].checkBlockCollision(blocks[j]);
+        blocks[j].checkBlockCollision(blocks[i]);
+      }
+    }
 
     // Particles
     this.particles = this.particles.filter(p => p.update());
@@ -191,6 +218,30 @@ export class Engine {
       this.transitionTimer = 120;
       this.player.addScore(1000);
     }
+  }
+
+  findNearbyBlock() {
+    const p = this.player;
+    const reach = 8; // pixels of extra reach beyond player hitbox
+    const pickupBox = {
+      x: p.x - reach,
+      y: p.y - reach,
+      width: p.width + reach * 2,
+      height: p.height + reach * 2,
+    };
+    for (const e of this.entities) {
+      if (e.type === 'pushblock' && !e.carried) {
+        if (
+          e.x < pickupBox.x + pickupBox.width &&
+          e.x + e.width > pickupBox.x &&
+          e.y < pickupBox.y + pickupBox.height &&
+          e.y + e.height > pickupBox.y
+        ) {
+          return e;
+        }
+      }
+    }
+    return null;
   }
 
   draw() {
@@ -305,8 +356,9 @@ export class Engine {
 
     ctx.font = '14px monospace';
     ctx.fillStyle = '#AAD';
-    ctx.fillText('Arrow Keys / WASD — Move & Jump', this.canvas.width / 2, this.canvas.height / 2 + 90);
-    ctx.fillText('Space — Jump    Shift — Sprint', this.canvas.width / 2, this.canvas.height / 2 + 112);
+    ctx.fillText('Arrow Keys / WASD — Move & Jump', this.canvas.width / 2, this.canvas.height / 2 + 80);
+    ctx.fillText('Space — Jump    Shift — Sprint', this.canvas.width / 2, this.canvas.height / 2 + 100);
+    ctx.fillText('Down/S/X — Pick up & Place blocks', this.canvas.width / 2, this.canvas.height / 2 + 120);
   }
 
   drawGameOver() {

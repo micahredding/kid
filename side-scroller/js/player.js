@@ -68,6 +68,12 @@ export class Player {
     this.blockForm = 'square';
     this.blockForms = ['square', 'flat', 'tall'];
     this.subBlockSize = 28;
+
+    // Caterpillar segments (7 circles, rainbow colors)
+    this.caterpillarColors = ['#FF0000', '#FF7F00', '#FFFF00', '#00CC00', '#0000FF', '#4B0082', '#8B00FF'];
+    this.segmentRadius = 10;
+    this.segments = []; // populated in initCaterpillar()
+    this.segmentTimer = 0;
   }
 
   update(input, level) {
@@ -268,6 +274,43 @@ export class Player {
       }
     }
 
+    // --- Caterpillar segment following ---
+    if (this.character === 'caterpillar') {
+      this.segmentTimer++;
+      const headX = this.x + this.width / 2;
+      const headY = this.y + this.height / 2;
+
+      // Initialize segments if needed
+      if (this.segments.length === 0) {
+        for (let i = 0; i < 7; i++) {
+          this.segments.push({ x: headX - i * this.segmentRadius * 1.4, y: headY });
+        }
+      }
+
+      // Head segment tracks player center
+      this.segments[0].x = headX;
+      this.segments[0].y = headY;
+
+      // Each segment follows the one ahead with spring-like motion
+      const spacing = this.segmentRadius * 1.4;
+      for (let i = 1; i < this.segments.length; i++) {
+        const prev = this.segments[i - 1];
+        const seg = this.segments[i];
+        const dx = prev.x - seg.x;
+        const dy = prev.y - seg.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist > spacing) {
+          const ratio = (dist - spacing) / dist;
+          seg.x += dx * ratio * 0.4;
+          seg.y += dy * ratio * 0.4;
+        }
+        // Add shuffling bob when moving
+        if (Math.abs(this.vx) > 0.5) {
+          seg.y += Math.sin(this.segmentTimer * 0.2 + i * 1.2) * 0.5;
+        }
+      }
+    }
+
     // --- Numberblock 4 form switching ---
     if (this.character === 'numberblock4' && input.transformPressed) {
       this.switchForm(level);
@@ -429,6 +472,8 @@ export class Player {
       this.drawBlock(ctx, theme);
     } else if (this.character === 'numberblock4') {
       this.drawNumberblock4(ctx, theme);
+    } else if (this.character === 'caterpillar') {
+      this.drawCaterpillar(ctx, theme);
     } else {
       this.drawClassic(ctx, theme);
     }
@@ -690,6 +735,84 @@ export class Player {
     ctx.restore();
   }
 
+  drawCaterpillar(ctx, theme) {
+    const r = this.segmentRadius;
+    const colors = this.caterpillarColors;
+
+    // Draw segments back to front (tail first)
+    for (let i = this.segments.length - 1; i >= 0; i--) {
+      const seg = this.segments[i];
+      const sx = Math.round(seg.x);
+      const sy = Math.round(seg.y);
+
+      ctx.beginPath();
+      ctx.arc(sx, sy, r, 0, Math.PI * 2);
+      ctx.fillStyle = colors[i];
+      ctx.fill();
+
+      // Highlight on top edge
+      ctx.beginPath();
+      ctx.arc(sx, sy - 2, r * 0.6, Math.PI, 0);
+      ctx.fillStyle = 'rgba(255,255,255,0.3)';
+      ctx.fill();
+    }
+
+    // Face on head segment (index 0)
+    const head = this.segments[0];
+    if (head) {
+      const hx = Math.round(head.x);
+      const hy = Math.round(head.y);
+
+      // Eyes
+      const eyeOff = this.facing * 2;
+      ctx.fillStyle = '#FFF';
+      ctx.beginPath();
+      ctx.arc(hx - 3 + eyeOff, hy - 2, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(hx + 3 + eyeOff, hy - 2, 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Pupils
+      ctx.fillStyle = '#000';
+      ctx.beginPath();
+      ctx.arc(hx - 2 + eyeOff, hy - 1, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(hx + 4 + eyeOff, hy - 1, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Smile
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(hx + this.facing, hy + 3, 3, 0.1, Math.PI - 0.1);
+      ctx.stroke();
+
+      // Antennae
+      ctx.strokeStyle = '#333';
+      ctx.lineWidth = 1.5;
+      const antBob = Math.sin(this.segmentTimer * 0.15) * 2;
+      ctx.beginPath();
+      ctx.moveTo(hx - 3, hy - r + 2);
+      ctx.lineTo(hx - 6, hy - r - 8 + antBob);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(hx + 3, hy - r + 2);
+      ctx.lineTo(hx + 6, hy - r - 8 - antBob);
+      ctx.stroke();
+
+      // Antenna tips
+      ctx.fillStyle = '#FF0000';
+      ctx.beginPath();
+      ctx.arc(hx - 6, hy - r - 8 + antBob, 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(hx + 6, hy - r - 8 - antBob, 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
   // Static method for drawing character previews (used by title screen)
   static drawPreview(ctx, character, x, y, size, timer) {
     ctx.save();
@@ -765,6 +888,64 @@ export class Player {
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText('4', 0, 0);
+    } else if (character === 'caterpillar') {
+      const colors = ['#FF0000', '#FF7F00', '#FFFF00', '#00CC00', '#0000FF', '#4B0082', '#8B00FF'];
+      const r = size / 8;
+      const cx = x + size / 2;
+      const cy = y + size / 2 + r;
+
+      // Draw segments in a slight wave
+      for (let i = 6; i >= 0; i--) {
+        const bob = Math.sin(timer * 0.08 + i * 0.9) * 3;
+        const sx = cx + (3 - i) * r * 1.3;
+        const sy = cy + bob;
+        ctx.beginPath();
+        ctx.arc(sx, sy, r, 0, Math.PI * 2);
+        ctx.fillStyle = colors[i];
+        ctx.fill();
+        // Highlight
+        ctx.beginPath();
+        ctx.arc(sx, sy - 1, r * 0.5, Math.PI, 0);
+        ctx.fillStyle = 'rgba(255,255,255,0.3)';
+        ctx.fill();
+      }
+
+      // Face on head (index 0 = rightmost)
+      const hx = cx + 3 * r * 1.3;
+      const hy = cy + Math.sin(timer * 0.08) * 3;
+      ctx.fillStyle = '#FFF';
+      ctx.beginPath();
+      ctx.arc(hx - 2, hy - 1, 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(hx + 2, hy - 1, 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#000';
+      ctx.beginPath();
+      ctx.arc(hx - 1, hy, 1, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(hx + 3, hy, 1, 0, Math.PI * 2);
+      ctx.fill();
+      // Antennae
+      ctx.strokeStyle = '#333';
+      ctx.lineWidth = 1;
+      const ab = Math.sin(timer * 0.1) * 2;
+      ctx.beginPath();
+      ctx.moveTo(hx - 1, hy - r);
+      ctx.lineTo(hx - 3, hy - r - 6 + ab);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(hx + 1, hy - r);
+      ctx.lineTo(hx + 3, hy - r - 6 - ab);
+      ctx.stroke();
+      ctx.fillStyle = '#FF0000';
+      ctx.beginPath();
+      ctx.arc(hx - 3, hy - r - 6 + ab, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(hx + 3, hy - r - 6 - ab, 1.5, 0, Math.PI * 2);
+      ctx.fill();
     }
     ctx.restore();
   }

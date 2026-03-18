@@ -38,8 +38,8 @@ export class Engine {
     this.transitionTimer = 0;
 
     // Character selection
-    this.characters = ['classic', 'block', 'numberblock4'];
-    this.characterNames = { classic: 'CLASSIC', block: 'ROLLER', numberblock4: 'FOUR' };
+    this.characters = ['classic', 'block', 'numberblock4', 'caterpillar'];
+    this.characterNames = { classic: 'CLASSIC', block: 'ROLLER', numberblock4: 'FOUR', caterpillar: 'CATERPILLAR' };
     this.selectedCharacter = 0;
     this.titleTimer = 0;
 

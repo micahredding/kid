@@ -54,6 +54,15 @@ export const CONFIG = {
 
     // Invincibility frames after taking damage
     invincibilityFrames: 90,
+
+    // Wall slide / wall jump
+    wallSlide: {
+      enabled: true,
+      fallSpeed: 1.5,           // max fall speed while wall sliding
+      jumpVelocityX: 6,         // horizontal kick-off speed
+      jumpVelocityY: -9.5,      // vertical jump speed off wall
+      stickFrames: 6,           // frames of input leniency to wall jump
+    },
   },
 
   // Camera
@@ -82,6 +91,27 @@ export const CONFIG = {
       shellSpeed: 6,
       bounceVelocity: -8,
     },
+    flyguy: {
+      width: 28,
+      height: 28,
+      speed: 1.5,
+      verticalRange: 48,
+      verticalSpeed: 0.03,
+      bounceVelocity: -8,
+    },
+    spiker: {
+      width: 30,
+      height: 30,
+      speed: 0.8,
+      bounceVelocity: -8,
+    },
+  },
+
+  // Pushable blocks
+  pushBlock: {
+    pushSpeed: 2,
+    width: 32,
+    height: 32,
   },
 
   // Collectibles

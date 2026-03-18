@@ -3,7 +3,7 @@
 // =============================================================================
 
 import { CONFIG } from './config.js';
-import { resolveEntityTileCollisions } from './physics.js';
+import { resolveEntityTileCollisions, getTouchingWall } from './physics.js';
 
 const STATES = {
   IDLE: 'idle',
@@ -11,6 +11,7 @@ const STATES = {
   JUMPING: 'jumping',
   FALLING: 'falling',
   SKIDDING: 'skidding',
+  WALL_SLIDING: 'wall_sliding',
 };
 
 export class Player {
@@ -33,6 +34,10 @@ export class Player {
     this.isJumping = false;       // currently in upward jump arc with button held
     this.hasDoubleJumped = false;
     this.jumpHeld = false;
+
+    // Wall slide/jump state
+    this.wallDir = 0;            // -1 left wall, 1 right wall, 0 none
+    this.wallSlideTimer = 0;
 
     // Invincibility
     this.invincibleTimer = 0;
@@ -167,8 +172,47 @@ export class Player {
       this.isJumping = false;
     }
 
+    // --- Wall slide / wall jump ---
+    if (p.wallSlide.enabled && !this.onGround) {
+      const wall = getTouchingWall(this, level);
+      if (wall !== 0 && this.vy > 0) {
+        // Pressing into the wall
+        const pressingIntoWall = (wall === -1 && input.left) || (wall === 1 && input.right);
+        if (pressingIntoWall) {
+          this.wallDir = wall;
+          this.wallSlideTimer = p.wallSlide.stickFrames;
+          // Slow fall
+          if (this.vy > p.wallSlide.fallSpeed) {
+            this.vy = p.wallSlide.fallSpeed;
+          }
+        }
+      }
+
+      // Wall jump
+      if (this.wallSlideTimer > 0) {
+        this.wallSlideTimer--;
+        if (input.jumpPressed) {
+          this.vy = p.wallSlide.jumpVelocityY;
+          this.vx = -this.wallDir * p.wallSlide.jumpVelocityX;
+          this.facing = -this.wallDir;
+          this.isJumping = true;
+          this.jumpHeld = true;
+          this.wallDir = 0;
+          this.wallSlideTimer = 0;
+          this.jumpBufferTimer = 0;
+          this.hasDoubleJumped = false;
+        }
+      }
+
+      if (this.onGround || getTouchingWall(this, level) === 0) {
+        this.wallDir = 0;
+      }
+    }
+
     // --- State ---
-    if (!this.onGround) {
+    if (this.wallDir !== 0 && this.wallSlideTimer > 0 && !this.onGround) {
+      this.state = STATES.WALL_SLIDING;
+    } else if (!this.onGround) {
       this.state = this.vy < 0 ? STATES.JUMPING : STATES.FALLING;
     } else if (this.state !== STATES.SKIDDING || Math.abs(this.vx) < 0.5) {
       if (Math.abs(this.vx) > 0.3) {
@@ -288,6 +332,13 @@ export class Player {
     if (this.state === STATES.JUMPING || this.state === STATES.FALLING) {
       ctx.fillStyle = colors.bodyColor;
       ctx.fillRect(w - 4, h * 0.25, 4, 6); // arm up
+    }
+
+    // Wall slide pose — arms reaching toward wall
+    if (this.state === STATES.WALL_SLIDING) {
+      ctx.fillStyle = colors.bodyColor;
+      ctx.fillRect(-2, h * 0.3, 4, 6);  // arm toward wall
+      ctx.fillRect(-2, h * 0.5, 4, 6);  // second arm
     }
 
     ctx.restore();

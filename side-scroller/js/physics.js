@@ -22,12 +22,12 @@ export function getTileAt(level, worldX, worldY) {
   if (row < 0 || row >= level.tiles.length) return null;
   if (col < 0 || col >= level.tiles[row].length) return null;
   const ch = level.tiles[row][col];
-  return ch && ch !== ' ' && ch !== 'C' && ch !== 'E' && ch !== 'K' ? ch : null;
+  return ch && ch !== ' ' && ch !== 'C' && ch !== 'E' && ch !== 'K' && ch !== 'F' && ch !== 'X' && ch !== 'D' ? ch : null;
 }
 
 // Check if a tile character is solid
 export function isSolid(ch) {
-  if (!ch || ch === ' ' || ch === 'C' || ch === 'E' || ch === 'K') return false;
+  if (!ch || ch === ' ' || ch === 'C' || ch === 'E' || ch === 'K' || ch === 'F' || ch === 'X' || ch === 'D') return false;
   if (ch === 'I') return false; // one-way platforms handled separately
   return true;
 }
@@ -128,6 +128,30 @@ function getTileChar(level, col, row) {
   if (row < 0 || row >= level.tiles.length) return null;
   if (col < 0 || col >= level.tiles[row].length) return null;
   return level.tiles[row][col];
+}
+
+// Check if entity is touching a wall (for wall slide/jump)
+// Returns: -1 (wall on left), 1 (wall on right), 0 (no wall)
+export function getTouchingWall(entity, level) {
+  const ts = CONFIG.tile.size;
+  const top = Math.floor((entity.y + 4) / ts);
+  const bottom = Math.floor((entity.y + entity.height - 4) / ts);
+
+  // Check left
+  const leftCol = Math.floor((entity.x - 1) / ts);
+  for (let row = top; row <= bottom; row++) {
+    const ch = getTileChar(level, leftCol, row);
+    if (isSolid(ch)) return -1;
+  }
+
+  // Check right
+  const rightCol = Math.floor((entity.x + entity.width) / ts);
+  for (let row = top; row <= bottom; row++) {
+    const ch = getTileChar(level, rightCol, row);
+    if (isSolid(ch)) return 1;
+  }
+
+  return 0;
 }
 
 // Check if entity is standing on ground (for coyote time checks)

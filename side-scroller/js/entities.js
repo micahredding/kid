@@ -165,6 +165,311 @@ export class Coin {
 }
 
 // =============================================================================
+// FLYGUY — Flying enemy that bobs up and down while patrolling
+// =============================================================================
+export class Flyguy {
+  constructor(x, y) {
+    const cfg = CONFIG.enemies.flyguy;
+    this.x = x;
+    this.y = y;
+    this.width = cfg.width;
+    this.height = cfg.height;
+    this.vx = -cfg.speed;
+    this.vy = 0;
+    this.baseY = y;
+    this.alive = true;
+    this.squishTimer = 0;
+    this.timer = 0;
+    this.type = 'flyguy';
+  }
+
+  update(level) {
+    if (!this.alive) {
+      // Fall when dead
+      this.vy += CONFIG.player.gravity;
+      this.y += this.vy;
+      this.squishTimer--;
+      return this.squishTimer > 0 && this.y < level.tiles.length * CONFIG.tile.size + 100;
+    }
+
+    this.timer++;
+    this.x += this.vx;
+    const cfg = CONFIG.enemies.flyguy;
+    this.y = this.baseY + Math.sin(this.timer * cfg.verticalSpeed) * cfg.verticalRange;
+
+    // Reverse at level edges or walls (simple boundary check)
+    const ts = CONFIG.tile.size;
+    const col = Math.floor((this.x + (this.vx > 0 ? this.width : 0)) / ts);
+    const row = Math.floor((this.y + this.height / 2) / ts);
+    if (row >= 0 && row < level.tiles.length && col >= 0 && col < level.tiles[row].length) {
+      const ch = level.tiles[row][col];
+      if (ch && ch !== ' ' && ch !== 'I') {
+        this.vx = -this.vx;
+      }
+    }
+    if (this.x < 0 || this.x + this.width > level.tiles[0].length * ts) {
+      this.vx = -this.vx;
+    }
+
+    return true;
+  }
+
+  stomp() {
+    this.alive = false;
+    this.squishTimer = 40;
+    this.vx = 0;
+    this.vy = -3;
+  }
+
+  checkPlayerCollision(player) {
+    if (!this.alive) return;
+    if (player.invincibleTimer > 0) return;
+    if (!aabbOverlap(this, player)) return;
+
+    const playerBottom = player.y + player.height;
+    const enemyMidY = this.y + this.height * 0.4;
+
+    if (player.vy > 0 && playerBottom < enemyMidY + player.vy + 2) {
+      this.stomp();
+      player.bounce(CONFIG.enemies.flyguy.bounceVelocity);
+      player.addScore(CONFIG.scoring.enemyStomp);
+    } else {
+      player.takeDamage();
+    }
+  }
+
+  draw(ctx, theme) {
+    const colors = theme.enemies.flyguy || { bodyColor: '#CC4444', wingColor: '#FFFFFF' };
+    const x = Math.round(this.x);
+    const y = Math.round(this.y);
+
+    if (!this.alive) {
+      // Falling dead
+      ctx.fillStyle = colors.bodyColor;
+      ctx.fillRect(x + 4, y + 4, this.width - 8, this.height - 8);
+      return;
+    }
+
+    // Wings
+    ctx.fillStyle = colors.wingColor;
+    const wingFlap = Math.sin(this.timer * 0.3) * 6;
+    ctx.beginPath();
+    ctx.ellipse(x - 2, y + this.height * 0.3 - wingFlap, 8, 4, -0.3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(x + this.width + 2, y + this.height * 0.3 + wingFlap, 8, 4, 0.3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Body
+    ctx.fillStyle = colors.bodyColor;
+    ctx.beginPath();
+    ctx.arc(x + this.width / 2, y + this.height / 2, this.width / 2 - 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Eyes
+    ctx.fillStyle = '#FFF';
+    ctx.fillRect(x + 6, y + this.height * 0.25, 5, 5);
+    ctx.fillRect(x + this.width - 11, y + this.height * 0.25, 5, 5);
+    ctx.fillStyle = '#000';
+    ctx.fillRect(x + 8, y + this.height * 0.28, 2, 3);
+    ctx.fillRect(x + this.width - 9, y + this.height * 0.28, 2, 3);
+  }
+}
+
+// =============================================================================
+// SPIKER — Spiky enemy that can't be stomped, must be avoided
+// =============================================================================
+export class Spiker {
+  constructor(x, y) {
+    const cfg = CONFIG.enemies.spiker;
+    this.x = x;
+    this.y = y;
+    this.width = cfg.width;
+    this.height = cfg.height;
+    this.vx = -cfg.speed;
+    this.vy = 0;
+    this.alive = true;
+    this.type = 'spiker';
+  }
+
+  update(level) {
+    if (!this.alive) return false;
+
+    this.vy += CONFIG.player.gravity;
+    if (this.vy > CONFIG.player.maxFallSpeed) this.vy = CONFIG.player.maxFallSpeed;
+
+    const collisions = resolveEntityTileCollisions(this, level);
+
+    if (collisions.left || collisions.right) {
+      this.vx = -this.vx;
+    }
+    if (collisions.bottom) {
+      this.vy = 0;
+    }
+
+    const levelHeight = level.tiles.length * CONFIG.tile.size;
+    if (this.y > levelHeight + 100) return false;
+
+    return true;
+  }
+
+  checkPlayerCollision(player) {
+    if (!this.alive) return;
+    if (player.invincibleTimer > 0) return;
+    if (!aabbOverlap(this, player)) return;
+
+    // Can't be stomped — always damages player
+    player.takeDamage();
+  }
+
+  draw(ctx, theme) {
+    const colors = theme.enemies.spiker || { bodyColor: '#666666', spikeColor: '#CCCCCC' };
+    const x = Math.round(this.x);
+    const y = Math.round(this.y);
+    const cx = x + this.width / 2;
+
+    // Spikes
+    ctx.fillStyle = colors.spikeColor;
+    const spikeCount = 5;
+    for (let i = 0; i < spikeCount; i++) {
+      const angle = (i / spikeCount) * Math.PI * 2 - Math.PI / 2;
+      const sx = cx + Math.cos(angle) * (this.width / 2 + 4);
+      const sy = y + this.height / 2 + Math.sin(angle) * (this.height / 2 + 4);
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(sx - 3, sy - 3);
+      ctx.lineTo(sx + 3, sy - 3);
+      ctx.fill();
+    }
+
+    // Body
+    ctx.fillStyle = colors.bodyColor;
+    ctx.beginPath();
+    ctx.arc(cx, y + this.height / 2, this.width / 2 - 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Angry eyes
+    ctx.fillStyle = '#FF0000';
+    ctx.fillRect(x + 7, y + this.height * 0.3, 5, 4);
+    ctx.fillRect(x + this.width - 12, y + this.height * 0.3, 5, 4);
+    ctx.fillStyle = '#000';
+    ctx.fillRect(x + 8, y + this.height * 0.32, 3, 2);
+    ctx.fillRect(x + this.width - 11, y + this.height * 0.32, 3, 2);
+  }
+}
+
+// =============================================================================
+// PUSHBLOCK — Pushable block that can be used as stairs/platforms
+// =============================================================================
+export class PushBlock {
+  constructor(x, y) {
+    const cfg = CONFIG.pushBlock;
+    this.x = x;
+    this.y = y;
+    this.width = cfg.width;
+    this.height = cfg.height;
+    this.vx = 0;
+    this.vy = 0;
+    this.type = 'pushblock';
+  }
+
+  update(level) {
+    // Gravity
+    this.vy += CONFIG.player.gravity;
+    if (this.vy > CONFIG.player.maxFallSpeed) this.vy = CONFIG.player.maxFallSpeed;
+
+    const collisions = resolveEntityTileCollisions(this, level);
+
+    if (collisions.bottom) {
+      this.vy = 0;
+    }
+    if (collisions.left || collisions.right) {
+      this.vx = 0;
+    }
+
+    // Friction — slow down horizontal movement
+    this.vx *= 0.7;
+    if (Math.abs(this.vx) < 0.1) this.vx = 0;
+
+    const levelHeight = level.tiles.length * CONFIG.tile.size;
+    if (this.y > levelHeight + 100) return false;
+
+    return true;
+  }
+
+  checkPlayerCollision(player) {
+    if (!aabbOverlap(this, player)) return;
+
+    const playerBottom = player.y + player.height;
+    const blockTop = this.y;
+    const playerRight = player.x + player.width;
+    const playerLeft = player.x;
+
+    // Player standing on top
+    if (player.vy >= 0 && playerBottom <= blockTop + 8 && playerBottom >= blockTop - 2) {
+      player.y = blockTop - player.height;
+      player.vy = 0;
+      player.onGround = true;
+      player.hasDoubleJumped = false;
+      player.isJumping = false;
+      return;
+    }
+
+    // Push from the side
+    const pushSpeed = CONFIG.pushBlock.pushSpeed;
+    const overlapLeft = playerRight - this.x;
+    const overlapRight = (this.x + this.width) - playerLeft;
+
+    if (overlapLeft < overlapRight) {
+      // Player pushing from the left
+      if (player.vx > 0) {
+        this.vx = pushSpeed;
+        player.x = this.x - player.width;
+      }
+    } else {
+      // Player pushing from the right
+      if (player.vx < 0) {
+        this.vx = -pushSpeed;
+        player.x = this.x + this.width;
+      }
+    }
+  }
+
+  draw(ctx, theme) {
+    const x = Math.round(this.x);
+    const y = Math.round(this.y);
+    const tileDef = theme.tiles['D'] || { color: '#AA8855', topColor: '#BBAA77' };
+
+    // Block body
+    ctx.fillStyle = tileDef.color;
+    ctx.fillRect(x, y, this.width, this.height);
+
+    // Top highlight
+    ctx.fillStyle = tileDef.topColor;
+    ctx.fillRect(x, y, this.width, 4);
+
+    // Grid lines
+    ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+    ctx.strokeRect(x, y, this.width, this.height);
+
+    // Arrow indicators (shows it's pushable)
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    // Left arrow
+    ctx.beginPath();
+    ctx.moveTo(x + 5, y + this.height / 2);
+    ctx.lineTo(x + 10, y + this.height / 2 - 4);
+    ctx.lineTo(x + 10, y + this.height / 2 + 4);
+    ctx.fill();
+    // Right arrow
+    ctx.beginPath();
+    ctx.moveTo(x + this.width - 5, y + this.height / 2);
+    ctx.lineTo(x + this.width - 10, y + this.height / 2 - 4);
+    ctx.lineTo(x + this.width - 10, y + this.height / 2 + 4);
+    ctx.fill();
+  }
+}
+
+// =============================================================================
 // MOVING PLATFORM
 // =============================================================================
 export class MovingPlatform {

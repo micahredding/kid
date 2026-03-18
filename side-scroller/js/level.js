@@ -4,7 +4,7 @@
 
 import { CONFIG } from './config.js';
 import { THEMES } from './themes.js';
-import { Goomba, Coin, MovingPlatform } from './entities.js';
+import { Goomba, Coin, MovingPlatform, Flyguy, Spiker, PushBlock } from './entities.js';
 
 // =============================================================================
 // LEVEL DEFINITIONS
@@ -17,34 +17,34 @@ export const LEVELS = [
     // Legend:
     // G = ground, B = brick, ? = question block, S = stone
     // I = one-way platform, P = pipe top, p = pipe body
-    // C = coin (entity, not tile), E = goomba (entity)
-    // M = moving platform marker
+    // C = coin (entity), E = goomba, F = flyguy, X = spiker
+    // D = pushable block
     //   (space) = empty
     tiles: [
-      '                                                                                                    ',
-      '                                                                                                    ',
-      '                                                                                                    ',
-      '                                                                                                    ',
-      '                                                                                                    ',
-      '                                                                                                    ',
-      '                                                                                                    ',
-      '                                                                                                    ',
-      '                                                                                                    ',
-      '                                C  C  C                                                             ',
-      '               ?    B?B?B                        BBBB                                               ',
-      '                                                                                                    ',
-      '    C                                  E       I I I I         C  C  C                               ',
-      '         E                                                   B?B?B?B           E                    ',
-      '                         PP                PP                                                       ',
-      '  GGGGGGGGGGGGGGGG  GGGGppGGGGGGGGGGGGGGGGppGGGGGGGGGGGGGGGGGGGGGGGGGGG   GGGGGGGGGGGGGGGGGGGGGGGG',
-      '  GGGGGGGGGGGGGGGG  GGGGppGGGGGGGGGGGGGGGGppGGGGGGGGGGGGGGGGGGGGGGGGGGG   GGGGGGGGGGGGGGGGGGGGGGGG',
+      '                                                                                                                        ',
+      '                                                                                                                        ',
+      '                                                                                                                        ',
+      '                                                                                           C                            ',
+      '                                                                                           C                            ',
+      '                                                                                          B B                           ',
+      '                                                                                          B B                           ',
+      '                                                                                          B B                           ',
+      '                                                                       C                  B B                           ',
+      '                                C  C  C                         F      C                  B B                           ',
+      '               ?    B?B?B                        BBBB                  C                  B B                           ',
+      '                                                                                          B B                           ',
+      '    C                                  E       I I I I         C  C  C       D D          B B                           ',
+      '         E                                                   B?B?B?B           E    X     B B     E                     ',
+      '                         PP                PP                                             B B                           ',
+      '  GGGGGGGGGGGGGGGG  GGGGppGGGGGGGGGGGGGGGGppGGGGGGGGGGGGGGGGGGGGGGGGGGG   GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG',
+      '  GGGGGGGGGGGGGGGG  GGGGppGGGGGGGGGGGGGGGGppGGGGGGGGGGGGGGGGGGGGGGGGGGG   GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG',
     ],
     // Moving platforms defined separately
     movingPlatforms: [
       { col: 57, row: 12, widthTiles: 3, rangeX: 0, rangeY: 64, speed: 1 },
     ],
     // Goal/flag position
-    goalCol: 95,
+    goalCol: 108,
   },
   {
     name: 'World 1-2 Underground',
@@ -58,13 +58,13 @@ export const LEVELS = [
       'S                                                                                                 S',
       'S                                                                                                 S',
       'S                                                                                                 S',
-      'S                       C  C  C             C  C                                                  S',
+      'S                       C  C  C             C  C                    F                              S',
       'S                      BBBBBBBB           ?B?B?              BBB                                  S',
       'S                                                                                                 S',
-      'S          ?                        E              E        I I I       C  C  C  C                 S',
-      'S     E          BB                                                   BBBBBBBBBB        E         S',
-      'S                                    BB         BB                                                S',
-      'S              PP                PP                PP                                             S',
+      'S          ?                        E     F        E        I I I       C  C  C  C                 S',
+      'S     E          BB                                                   BBBBBBBBBB        X         S',
+      'S                            D D            BB         BB                                         S',
+      'S              PP                PP                PP             D D                              S',
       'SGGGGGGGGGG  GGppGGGGGGGG  GGGGGGppGGGGGGGGGGGGGGGppGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG   GGGGGGGGGGG',
       'SGGGGGGGGGG  GGppGGGGGGGG  GGGGGGppGGGGGGGGGGGGGGGppGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG   GGGGGGGGGGG',
       'SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS',
@@ -92,6 +92,15 @@ export function loadLevel(levelIndex) {
         newRow += ' ';
       } else if (ch === 'E') {
         entities.push(new Goomba(col * ts + 2, rowIdx * ts + (ts - CONFIG.enemies.goomba.height)));
+        newRow += ' ';
+      } else if (ch === 'F') {
+        entities.push(new Flyguy(col * ts + 2, rowIdx * ts + (ts - CONFIG.enemies.flyguy.height)));
+        newRow += ' ';
+      } else if (ch === 'X') {
+        entities.push(new Spiker(col * ts + 1, rowIdx * ts + (ts - CONFIG.enemies.spiker.height)));
+        newRow += ' ';
+      } else if (ch === 'D') {
+        entities.push(new PushBlock(col * ts, rowIdx * ts));
         newRow += ' ';
       } else {
         newRow += ch;

@@ -76,6 +76,9 @@ export class Engine {
     const prevScore = this.player ? this.player.score : 0;
     const prevLives = this.player ? this.player.lives : CONFIG.player.startingLives;
     const prevCoins = this.player ? this.player.coins : 0;
+    const prevFoods = this.player ? this.player.foods : [];
+    const prevGems = this.player ? this.player.gems : 0;
+    const prevKeys = this.player ? this.player.keys : [];
 
     this.player = new Player(this.level.playerX, this.level.playerY);
     this.player.character = this.characters[this.selectedCharacter];
@@ -83,6 +86,9 @@ export class Engine {
     this.player.score = prevScore;
     this.player.lives = prevLives;
     this.player.coins = prevCoins;
+    this.player.foods = [...prevFoods];
+    this.player.gems = prevGems;
+    this.player.keys = [...prevKeys];
 
     this.player.onDeath = () => {
       if (this.player.lives <= 0) {
@@ -335,19 +341,136 @@ export class Engine {
     ctx.fillRect(0, 0, this.canvas.width, 36);
 
     ctx.fillStyle = '#FFF';
-    ctx.font = 'bold 16px monospace';
+    ctx.font = 'bold 14px monospace';
     ctx.textAlign = 'left';
     ctx.fillText(`SCORE: ${p.score}`, 16, 24);
 
-    ctx.textAlign = 'center';
-    ctx.fillText(`COINS: ${p.coins}`, this.canvas.width / 2, 24);
+    // Coins count
+    ctx.fillStyle = '#FFD700';
+    ctx.font = 'bold 13px monospace';
+    ctx.fillText(`${p.coins}`, 160, 24);
+    // Coin icon
+    ctx.beginPath();
+    ctx.arc(150, 21, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#FFF8DC';
+    ctx.beginPath();
+    ctx.arc(150, 21, 3, 0, Math.PI * 2);
+    ctx.fill();
 
+    // Food icons — draw each collected food as a mini icon
+    let foodX = 210;
+    for (const food of p.foods) {
+      this.drawFoodIcon(ctx, foodX, 18, food);
+      foodX += 16;
+    }
+
+    // Gems count
+    const gemX = this.canvas.width / 2 + 40;
+    ctx.fillStyle = '#88BBFF';
+    ctx.font = 'bold 13px monospace';
+    ctx.textAlign = 'left';
+    // Gem icon
+    ctx.beginPath();
+    ctx.moveTo(gemX, 13);
+    ctx.lineTo(gemX + 6, 20);
+    ctx.lineTo(gemX, 27);
+    ctx.lineTo(gemX - 6, 20);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#4488FF';
+    ctx.beginPath();
+    ctx.moveTo(gemX, 13);
+    ctx.lineTo(gemX - 6, 20);
+    ctx.lineTo(gemX, 27);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#88BBFF';
+    ctx.fillText(`${p.gems}`, gemX + 10, 24);
+
+    // Key icons — draw each held key
+    let keyX = this.canvas.width / 2 + 100;
+    for (const keyColor of p.keys) {
+      this.drawKeyIcon(ctx, keyX, 18, keyColor);
+      keyX += 16;
+    }
+
+    ctx.fillStyle = '#FFF';
+    ctx.font = 'bold 14px monospace';
     ctx.textAlign = 'right';
     ctx.fillText(`LIVES: ${p.lives}`, this.canvas.width - 16, 24);
 
     ctx.textAlign = 'center';
     ctx.font = '12px monospace';
+    ctx.fillStyle = '#FFF';
     ctx.fillText(this.level.name, this.canvas.width / 2, 12);
+  }
+
+  drawFoodIcon(ctx, x, y, foodType) {
+    if (foodType === 'apple') {
+      ctx.fillStyle = '#FF2222';
+      ctx.beginPath();
+      ctx.arc(x, y, 5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#654321';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x, y - 4);
+      ctx.lineTo(x + 1, y - 7);
+      ctx.stroke();
+      ctx.fillStyle = '#228B22';
+      ctx.beginPath();
+      ctx.ellipse(x + 2, y - 6, 2, 1, 0.4, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (foodType === 'cherry') {
+      ctx.fillStyle = '#CC0000';
+      ctx.beginPath();
+      ctx.arc(x - 2, y + 1, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(x + 2, y + 1, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#228B22';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x - 2, y - 2);
+      ctx.quadraticCurveTo(x, y - 7, x + 1, y - 5);
+      ctx.moveTo(x + 2, y - 2);
+      ctx.quadraticCurveTo(x + 1, y - 7, x, y - 6);
+      ctx.stroke();
+    } else if (foodType === 'banana') {
+      ctx.fillStyle = '#FFD700';
+      ctx.beginPath();
+      ctx.arc(x, y, 5, 0.4, Math.PI - 0.4);
+      ctx.arc(x, y + 1, 3.5, Math.PI - 0.4, 0.4, true);
+      ctx.fill();
+    }
+  }
+
+  drawKeyIcon(ctx, x, y, keyColor) {
+    const colors = {
+      gold: '#FFD700',
+      silver: '#C0C0C0',
+      red: '#FF4444',
+    };
+    const c = colors[keyColor] || colors.gold;
+
+    // Key head
+    ctx.fillStyle = c;
+    ctx.beginPath();
+    ctx.arc(x, y - 3, 4, 0, Math.PI * 2);
+    ctx.fill();
+    // Hole
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.beginPath();
+    ctx.arc(x, y - 3, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+    // Shaft
+    ctx.fillStyle = c;
+    ctx.fillRect(x - 1, y, 2, 7);
+    // Teeth
+    ctx.fillRect(x, y + 3, 3, 1.5);
+    ctx.fillRect(x, y + 5, 2, 1.5);
   }
 
   drawTitle() {

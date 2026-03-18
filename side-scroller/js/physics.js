@@ -22,12 +22,12 @@ export function getTileAt(level, worldX, worldY) {
   if (row < 0 || row >= level.tiles.length) return null;
   if (col < 0 || col >= level.tiles[row].length) return null;
   const ch = level.tiles[row][col];
-  return ch && ch !== ' ' && ch !== 'C' && ch !== 'E' && ch !== 'K' && ch !== 'F' && ch !== 'X' && ch !== 'D' ? ch : null;
+  return ch && ch !== ' ' && ch !== 'C' && ch !== 'E' && ch !== 'K' && ch !== 'F' && ch !== 'X' && ch !== 'D' && ch !== 'A' && ch !== 'H' && ch !== 'N' && ch !== 'Y' && ch !== 'y' && ch !== 'J' && ch !== 'j' && ch !== 'L' && ch !== 'l' ? ch : null;
 }
 
 // Check if a tile character is solid
 export function isSolid(ch) {
-  if (!ch || ch === ' ' || ch === 'C' || ch === 'E' || ch === 'K' || ch === 'F' || ch === 'X' || ch === 'D') return false;
+  if (!ch || ch === ' ' || ch === 'C' || ch === 'E' || ch === 'K' || ch === 'F' || ch === 'X' || ch === 'D' || ch === 'A' || ch === 'H' || ch === 'N' || ch === 'Y' || ch === 'y' || ch === 'J' || ch === 'j' || ch === 'L' || ch === 'l') return false;
   if (ch === 'I') return false; // one-way platforms handled separately
   return true;
 }

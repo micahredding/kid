@@ -4,7 +4,7 @@
 
 import { CONFIG } from './config.js';
 import { THEMES } from './themes.js';
-import { Goomba, Coin, MovingPlatform, Flyguy, Spiker, PushBlock } from './entities.js';
+import { Goomba, Coin, MovingPlatform, Flyguy, Spiker, PushBlock, Food, Key, Gem, Door } from './entities.js';
 
 // =============================================================================
 // LEVEL DEFINITIONS
@@ -17,8 +17,10 @@ export const LEVELS = [
     // Legend:
     // G = ground, B = brick, ? = question block, S = stone
     // I = one-way platform, P = pipe top, p = pipe body
-    // C = coin (entity), E = goomba, F = flyguy, X = spiker
-    // D = pushable block
+    // C = coin, E = goomba, F = flyguy, X = spiker, D = pushable block
+    // A = food(apple), H = food(cherry), N = food(banana)
+    // Y = key(gold), y = key(silver), J = gem(blue), j = gem(red)
+    // L = door(gold), l = door(silver)
     //   (space) = empty
     tiles: [
       '                                                                                                                        ',
@@ -33,9 +35,9 @@ export const LEVELS = [
       '                                C  C  C                         F      C                  B B                           ',
       '               ?    B?B?B                        BBBB                  C                  B B                           ',
       '                                                                                          B B                           ',
-      '    C                                  E       I I I I         C  C  C       D D          B B                           ',
-      '         E                                                   B?B?B?B           E    X     B B     E                     ',
-      '                         PP                PP                                             B B                           ',
+      '    C          A   H                   E       I I I I         C  C  C       D D          B B          J                ',
+      '         E                                                   B?B?B?B     Y     E    X     B B     E                     ',
+      '                         PP                PP                                             B B         L                 ',
       '  GGGGGGGGGGGGGGGG  GGGGppGGGGGGGGGGGGGGGGppGGGGGGGGGGGGGGGGGGGGGGGGGGG   GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG',
       '  GGGGGGGGGGGGGGGG  GGGGppGGGGGGGGGGGGGGGGppGGGGGGGGGGGGGGGGGGGGGGGGGGG   GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG',
     ],
@@ -61,7 +63,7 @@ export const LEVELS = [
       'S                       C  C  C             C  C                    F                              S',
       'S                      BBBBBBBB           ?B?B?              BBB                                  S',
       'S                                                                                                 S',
-      'S          ?                        E     F        E        I I I       C  C  C  C                 S',
+      'S          ?                A   N    E     F        E        I I I       C  C  C  C        j        S',
       'S     E          BB                                                   BBBBBBBBBB        X         S',
       'S                            D D            BB         BB                                         S',
       'S              PP                PP                PP             D D                              S',
@@ -101,6 +103,33 @@ export function loadLevel(levelIndex) {
         newRow += ' ';
       } else if (ch === 'D') {
         entities.push(new PushBlock(col * ts, rowIdx * ts));
+        newRow += ' ';
+      } else if (ch === 'A') {
+        entities.push(new Food(col * ts, rowIdx * ts, 'apple'));
+        newRow += ' ';
+      } else if (ch === 'H') {
+        entities.push(new Food(col * ts, rowIdx * ts, 'cherry'));
+        newRow += ' ';
+      } else if (ch === 'N') {
+        entities.push(new Food(col * ts, rowIdx * ts, 'banana'));
+        newRow += ' ';
+      } else if (ch === 'Y') {
+        entities.push(new Key(col * ts, rowIdx * ts, 'gold'));
+        newRow += ' ';
+      } else if (ch === 'y') {
+        entities.push(new Key(col * ts, rowIdx * ts, 'silver'));
+        newRow += ' ';
+      } else if (ch === 'J') {
+        entities.push(new Gem(col * ts, rowIdx * ts, 'blue'));
+        newRow += ' ';
+      } else if (ch === 'j') {
+        entities.push(new Gem(col * ts, rowIdx * ts, 'red'));
+        newRow += ' ';
+      } else if (ch === 'L') {
+        entities.push(new Door(col * ts, rowIdx * ts, 'gold'));
+        newRow += ' ';
+      } else if (ch === 'l') {
+        entities.push(new Door(col * ts, rowIdx * ts, 'silver'));
         newRow += ' ';
       } else {
         newRow += ch;

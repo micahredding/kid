@@ -49,6 +49,9 @@ export class Player {
     this.score = 0;
     this.lives = p.startingLives;
     this.coins = 0;
+    this.foods = []; // list of food types collected: 'apple', 'cherry', 'banana'
+    this.gems = 0;
+    this.keys = [];
 
     // Callbacks
     this.onHitBlock = null;
@@ -72,12 +75,77 @@ export class Player {
     // Caterpillar segments (7 circles, rainbow colors)
     this.caterpillarColors = ['#FF0000', '#FF7F00', '#FFFF00', '#00CC00', '#0000FF', '#4B0082', '#8B00FF'];
     this.segmentRadius = 10;
-    this.segments = []; // populated in initCaterpillar()
+    this.segments = [];
     this.segmentTimer = 0;
+
+    // Butterfly transformation
+    this.isButterfly = false;
+    this.butterflyTimer = 0;
+    this.transformTimer = 0; // cocoon animation countdown
+    this.totalFoodsInLevel = 0; // set by engine
   }
 
   update(input, level) {
     const p = CONFIG.player;
+
+    // --- Cocoon transformation countdown ---
+    if (this.transformTimer > 0) {
+      this.transformTimer--;
+      if (this.transformTimer <= 0) {
+        this.isButterfly = true;
+        this.butterflyTimer = 0;
+        this.segments = []; // clear caterpillar segments
+      }
+      return; // frozen during transformation
+    }
+
+    // --- Butterfly flight mode ---
+    if (this.isButterfly) {
+      this.butterflyTimer++;
+      const flySpeed = input.sprint ? 5 : 3;
+      const flyAccel = 0.5;
+      const flyDecel = 0.3;
+
+      if (input.left) { this.vx -= flyAccel; this.facing = -1; }
+      else if (input.right) { this.vx += flyAccel; this.facing = 1; }
+      else { this.vx *= (1 - flyDecel); }
+
+      if (input.up || input.jump) { this.vy -= flyAccel; }
+      else if (input.down) { this.vy += flyAccel; }
+      else { this.vy *= (1 - flyDecel); }
+
+      // Clamp speed
+      this.vx = Math.max(-flySpeed, Math.min(flySpeed, this.vx));
+      this.vy = Math.max(-flySpeed, Math.min(flySpeed, this.vy));
+
+      // Apply movement
+      this.x += this.vx;
+      this.y += this.vy;
+
+      // Keep within level bounds
+      this.x = Math.max(0, Math.min(this.x, level.width - this.width));
+      this.y = Math.max(0, Math.min(this.y, level.height - this.height));
+
+      this.onGround = false;
+      this.state = STATES.JUMPING;
+
+      // Carried block follows
+      if (this.carriedBlock) {
+        this.carriedBlock.x = this.x + (this.width - this.carriedBlock.width) / 2;
+        this.carriedBlock.y = this.y - this.carriedBlock.height;
+        this.carriedBlock.vx = 0;
+        this.carriedBlock.vy = 0;
+      }
+
+      // Invincibility
+      if (this.invincibleTimer > 0) this.invincibleTimer--;
+
+      // Fall death
+      const levelHeight = level.tiles.length * CONFIG.tile.size;
+      if (this.y > levelHeight + 100) this.die();
+
+      return;
+    }
 
     // --- Horizontal movement ---
     const maxSpeed = input.sprint ? p.maxSprintSpeed : p.maxRunSpeed;
@@ -316,6 +384,13 @@ export class Player {
       this.switchForm(level);
     }
 
+    // --- Caterpillar -> Butterfly transformation ---
+    if (this.character === 'caterpillar' && !this.isButterfly && input.transformPressed) {
+      if (this.totalFoodsInLevel > 0 && this.foods.length >= this.totalFoodsInLevel) {
+        this.transformTimer = 60; // 1 second cocoon animation
+      }
+    }
+
     // --- Invincibility ---
     if (this.invincibleTimer > 0) {
       this.invincibleTimer--;
@@ -405,7 +480,9 @@ export class Player {
         if (col < 0 || col >= level.tiles[row].length) continue;
         const ch = level.tiles[row][col];
         if (ch && ch !== ' ' && ch !== 'C' && ch !== 'E' && ch !== 'K' &&
-            ch !== 'F' && ch !== 'X' && ch !== 'D' && ch !== 'I') {
+            ch !== 'F' && ch !== 'X' && ch !== 'D' && ch !== 'I' &&
+            ch !== 'A' && ch !== 'H' && ch !== 'N' && ch !== 'Y' &&
+            ch !== 'y' && ch !== 'J' && ch !== 'j' && ch !== 'L' && ch !== 'l') {
           return; // can't transform, blocked
         }
       }
@@ -473,7 +550,13 @@ export class Player {
     } else if (this.character === 'numberblock4') {
       this.drawNumberblock4(ctx, theme);
     } else if (this.character === 'caterpillar') {
-      this.drawCaterpillar(ctx, theme);
+      if (this.transformTimer > 0) {
+        this.drawCocoon(ctx);
+      } else if (this.isButterfly) {
+        this.drawButterfly(ctx);
+      } else {
+        this.drawCaterpillar(ctx, theme);
+      }
     } else {
       this.drawClassic(ctx, theme);
     }

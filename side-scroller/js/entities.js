@@ -165,6 +165,346 @@ export class Coin {
 }
 
 // =============================================================================
+// FOOD — Collectible food item (apple by default)
+// =============================================================================
+export class Food {
+  constructor(x, y, foodType = 'apple') {
+    const cfg = CONFIG.collectibles.food;
+    this.x = x + (CONFIG.tile.size - cfg.width) / 2;
+    this.y = y + (CONFIG.tile.size - cfg.height) / 2;
+    this.width = cfg.width;
+    this.height = cfg.height;
+    this.baseY = this.y;
+    this.collected = false;
+    this.timer = 0;
+    this.type = 'food';
+    this.foodType = foodType; // 'apple', 'cherry', 'banana'
+  }
+
+  update() {
+    if (this.collected) return false;
+    this.timer++;
+    const cfg = CONFIG.collectibles.food;
+    this.y = this.baseY + Math.sin(this.timer * cfg.bobSpeed) * cfg.bobAmplitude;
+    return true;
+  }
+
+  checkPlayerCollision(player) {
+    if (this.collected) return;
+    if (!aabbOverlap(this, player)) return;
+    this.collected = true;
+    if (!player.foods) player.foods = [];
+    player.foods.push(this.foodType);
+    player.addScore(CONFIG.collectibles.food.points);
+  }
+
+  draw(ctx, theme) {
+    if (this.collected) return;
+    const x = Math.round(this.x);
+    const y = Math.round(this.y);
+    const cx = x + this.width / 2;
+    const cy = y + this.height / 2;
+
+    if (this.foodType === 'cherry') {
+      // Two small red circles with stems
+      ctx.fillStyle = '#CC0000';
+      ctx.beginPath();
+      ctx.arc(cx - 4, cy + 2, 5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(cx + 4, cy + 2, 5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#228B22';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(cx - 4, cy - 3);
+      ctx.quadraticCurveTo(cx, cy - 10, cx + 2, cy - 8);
+      ctx.moveTo(cx + 4, cy - 3);
+      ctx.quadraticCurveTo(cx + 2, cy - 10, cx, cy - 9);
+      ctx.stroke();
+    } else if (this.foodType === 'banana') {
+      // Yellow curved shape
+      ctx.fillStyle = '#FFD700';
+      ctx.beginPath();
+      ctx.arc(cx, cy, 8, 0.3, Math.PI - 0.3);
+      ctx.arc(cx, cy + 2, 6, Math.PI - 0.3, 0.3, true);
+      ctx.fill();
+      ctx.strokeStyle = '#DAA520';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    } else {
+      // Apple (default)
+      ctx.fillStyle = '#FF2222';
+      ctx.beginPath();
+      ctx.arc(cx, cy + 1, 8, 0, Math.PI * 2);
+      ctx.fill();
+      // Highlight
+      ctx.fillStyle = 'rgba(255,255,255,0.4)';
+      ctx.beginPath();
+      ctx.arc(cx - 2, cy - 2, 3, 0, Math.PI * 2);
+      ctx.fill();
+      // Stem
+      ctx.strokeStyle = '#654321';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - 6);
+      ctx.lineTo(cx + 1, cy - 10);
+      ctx.stroke();
+      // Leaf
+      ctx.fillStyle = '#228B22';
+      ctx.beginPath();
+      ctx.ellipse(cx + 3, cy - 8, 4, 2, 0.4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+}
+
+// =============================================================================
+// KEY — Collectible key for unlocking doors
+// =============================================================================
+export class Key {
+  constructor(x, y, keyColor = 'gold') {
+    const cfg = CONFIG.collectibles.key;
+    this.x = x + (CONFIG.tile.size - cfg.width) / 2;
+    this.y = y + (CONFIG.tile.size - cfg.height) / 2;
+    this.width = cfg.width;
+    this.height = cfg.height;
+    this.baseY = this.y;
+    this.collected = false;
+    this.timer = 0;
+    this.type = 'key';
+    this.keyColor = keyColor; // 'gold', 'silver', 'red'
+  }
+
+  update() {
+    if (this.collected) return false;
+    this.timer++;
+    const cfg = CONFIG.collectibles.key;
+    this.y = this.baseY + Math.sin(this.timer * cfg.bobSpeed) * cfg.bobAmplitude;
+    return true;
+  }
+
+  checkPlayerCollision(player) {
+    if (this.collected) return;
+    if (!aabbOverlap(this, player)) return;
+    this.collected = true;
+    if (!player.keys) player.keys = [];
+    player.keys.push(this.keyColor);
+    player.addScore(CONFIG.collectibles.key.points);
+  }
+
+  draw(ctx, theme) {
+    if (this.collected) return;
+    const x = Math.round(this.x);
+    const y = Math.round(this.y);
+    const cx = x + this.width / 2;
+
+    const colors = {
+      gold: { body: '#FFD700', dark: '#DAA520' },
+      silver: { body: '#C0C0C0', dark: '#888888' },
+      red: { body: '#FF4444', dark: '#CC2222' },
+    };
+    const c = colors[this.keyColor] || colors.gold;
+
+    // Key head (circle)
+    ctx.fillStyle = c.body;
+    ctx.beginPath();
+    ctx.arc(cx, y + 7, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = c.dark;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Key hole
+    ctx.fillStyle = c.dark;
+    ctx.beginPath();
+    ctx.arc(cx, y + 7, 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Key shaft
+    ctx.fillStyle = c.body;
+    ctx.fillRect(cx - 2, y + 12, 4, 10);
+
+    // Key teeth
+    ctx.fillRect(cx + 1, y + 16, 4, 2);
+    ctx.fillRect(cx + 1, y + 20, 3, 2);
+
+    // Shimmer
+    const shimmer = Math.sin(this.timer * 0.1) * 0.3 + 0.3;
+    ctx.fillStyle = `rgba(255,255,255,${shimmer})`;
+    ctx.beginPath();
+    ctx.arc(cx - 2, y + 5, 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+// =============================================================================
+// GEM — Valuable collectible
+// =============================================================================
+export class Gem {
+  constructor(x, y, gemColor = 'blue') {
+    const cfg = CONFIG.collectibles.gem;
+    this.x = x + (CONFIG.tile.size - cfg.width) / 2;
+    this.y = y + (CONFIG.tile.size - cfg.height) / 2;
+    this.width = cfg.width;
+    this.height = cfg.height;
+    this.baseY = this.y;
+    this.collected = false;
+    this.timer = 0;
+    this.type = 'gem';
+    this.gemColor = gemColor; // 'blue', 'red', 'green'
+  }
+
+  update() {
+    if (this.collected) return false;
+    this.timer++;
+    const cfg = CONFIG.collectibles.gem;
+    this.y = this.baseY + Math.sin(this.timer * cfg.bobSpeed) * cfg.bobAmplitude;
+    return true;
+  }
+
+  checkPlayerCollision(player) {
+    if (this.collected) return;
+    if (!aabbOverlap(this, player)) return;
+    this.collected = true;
+    player.gems = (player.gems || 0) + 1;
+    player.addScore(CONFIG.collectibles.gem.points);
+  }
+
+  draw(ctx, theme) {
+    if (this.collected) return;
+    const x = Math.round(this.x);
+    const y = Math.round(this.y);
+    const cx = x + this.width / 2;
+    const cy = y + this.height / 2;
+
+    const colors = {
+      blue: { body: '#4488FF', light: '#88BBFF', dark: '#2255CC' },
+      red: { body: '#FF4444', light: '#FF8888', dark: '#CC2222' },
+      green: { body: '#44CC44', light: '#88FF88', dark: '#228822' },
+    };
+    const c = colors[this.gemColor] || colors.blue;
+
+    // Diamond shape
+    ctx.fillStyle = c.body;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - 9);      // top
+    ctx.lineTo(cx + 8, cy);       // right
+    ctx.lineTo(cx, cy + 9);      // bottom
+    ctx.lineTo(cx - 8, cy);       // left
+    ctx.closePath();
+    ctx.fill();
+
+    // Left facet (darker)
+    ctx.fillStyle = c.dark;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - 9);
+    ctx.lineTo(cx - 8, cy);
+    ctx.lineTo(cx, cy + 9);
+    ctx.closePath();
+    ctx.fill();
+
+    // Top highlight
+    ctx.fillStyle = c.light;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - 9);
+    ctx.lineTo(cx + 8, cy);
+    ctx.lineTo(cx, cy - 2);
+    ctx.closePath();
+    ctx.fill();
+
+    // Sparkle
+    const sparkle = Math.sin(this.timer * 0.12) * 0.4 + 0.4;
+    ctx.fillStyle = `rgba(255,255,255,${sparkle})`;
+    ctx.beginPath();
+    ctx.arc(cx + 2, cy - 3, 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+// =============================================================================
+// DOOR — Locked door that requires a specific key color
+// =============================================================================
+export class Door {
+  constructor(x, y, keyColor = 'gold') {
+    this.x = x;
+    this.y = y;
+    this.width = CONFIG.tile.size;
+    this.height = CONFIG.tile.size * 2;
+    this.y = y - CONFIG.tile.size; // door is 2 tiles tall, placed from bottom
+    this.keyColor = keyColor;
+    this.opened = false;
+    this.type = 'door';
+  }
+
+  update() {
+    return !this.opened;
+  }
+
+  checkPlayerCollision(player) {
+    if (this.opened) return;
+    if (!aabbOverlap(this, player)) return;
+
+    // Check if player has the right key
+    if (player.keys && player.keys.includes(this.keyColor)) {
+      this.opened = true;
+      // Remove the key from inventory
+      const idx = player.keys.indexOf(this.keyColor);
+      player.keys.splice(idx, 1);
+      player.addScore(300);
+    } else {
+      // Block the player — push them out
+      const playerCenterX = player.x + player.width / 2;
+      const doorCenterX = this.x + this.width / 2;
+      if (playerCenterX < doorCenterX) {
+        player.x = this.x - player.width;
+      } else {
+        player.x = this.x + this.width;
+      }
+      player.vx = 0;
+    }
+  }
+
+  draw(ctx, theme) {
+    if (this.opened) return;
+    const x = Math.round(this.x);
+    const y = Math.round(this.y);
+
+    const colors = {
+      gold: { body: '#8B6914', frame: '#DAA520', lock: '#FFD700' },
+      silver: { body: '#666666', frame: '#999999', lock: '#C0C0C0' },
+      red: { body: '#8B2222', frame: '#CC4444', lock: '#FF4444' },
+    };
+    const c = colors[this.keyColor] || colors.gold;
+
+    // Door frame
+    ctx.fillStyle = c.frame;
+    ctx.fillRect(x - 2, y, this.width + 4, this.height + 2);
+
+    // Door body
+    ctx.fillStyle = c.body;
+    ctx.fillRect(x + 2, y + 2, this.width - 4, this.height - 2);
+
+    // Panels
+    ctx.strokeStyle = c.frame;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x + 5, y + 5, this.width - 10, this.height * 0.4);
+    ctx.strokeRect(x + 5, y + this.height * 0.5, this.width - 10, this.height * 0.4);
+
+    // Lock/keyhole
+    ctx.fillStyle = c.lock;
+    ctx.beginPath();
+    ctx.arc(x + this.width - 8, y + this.height / 2, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#000';
+    ctx.beginPath();
+    ctx.arc(x + this.width - 8, y + this.height / 2, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillRect(x + this.width - 9, y + this.height / 2 + 1, 3, 4);
+  }
+}
+
+// =============================================================================
 // FLYGUY — Flying enemy that bobs up and down while patrolling
 // =============================================================================
 export class Flyguy {

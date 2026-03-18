@@ -123,6 +123,27 @@ export const CONFIG = {
       bobAmplitude: 3,
       bobSpeed: 0.05,
     },
+    food: {
+      width: 22,
+      height: 22,
+      points: 50,
+      bobAmplitude: 2,
+      bobSpeed: 0.04,
+    },
+    key: {
+      width: 18,
+      height: 24,
+      points: 200,
+      bobAmplitude: 2,
+      bobSpeed: 0.06,
+    },
+    gem: {
+      width: 20,
+      height: 20,
+      points: 500,
+      bobAmplitude: 4,
+      bobSpeed: 0.07,
+    },
   },
 
   // Moving platforms

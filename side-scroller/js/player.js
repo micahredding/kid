@@ -80,6 +80,7 @@ export class Player {
 
     // Butterfly transformation
     this.isButterfly = false;
+    this.isFlapping = false;
     this.butterflyTimer = 0;
     this.transformTimer = 0; // cocoon animation countdown
     this.totalFoodsInLevel = 0; // set by engine
@@ -92,9 +93,12 @@ export class Player {
     if (this.transformTimer > 0) {
       this.transformTimer--;
       if (this.transformTimer <= 0) {
-        this.isButterfly = true;
+        this.isButterfly = !this.isButterfly;
         this.butterflyTimer = 0;
-        this.segments = []; // clear caterpillar segments
+        if (!this.isButterfly) {
+          // Returning to caterpillar — reinitialize segments
+          this.segments = [];
+        }
       }
       return; // frozen during transformation
     }
@@ -102,32 +106,55 @@ export class Player {
     // --- Butterfly flight mode ---
     if (this.isButterfly) {
       this.butterflyTimer++;
-      const flySpeed = input.sprint ? 5 : 3;
-      const flyAccel = 0.5;
-      const flyDecel = 0.3;
+      const maxSpeed = input.sprint ? p.maxSprintSpeed : p.maxRunSpeed;
+      const accel = p.groundAcceleration;
+      const decel = p.airDeceleration;
 
-      if (input.left) { this.vx -= flyAccel; this.facing = -1; }
-      else if (input.right) { this.vx += flyAccel; this.facing = 1; }
-      else { this.vx *= (1 - flyDecel); }
+      // Horizontal movement — same as normal
+      if (input.left) { this.vx -= accel; this.facing = -1; }
+      else if (input.right) { this.vx += accel; this.facing = 1; }
+      else {
+        if (Math.abs(this.vx) < decel) this.vx = 0;
+        else this.vx -= Math.sign(this.vx) * decel;
+      }
+      this.vx = Math.max(-maxSpeed, Math.min(maxSpeed, this.vx));
 
-      if (input.up || input.jump) { this.vy -= flyAccel; }
-      else if (input.down) { this.vy += flyAccel; }
-      else { this.vy *= (1 - flyDecel); }
+      // Flap-based flight: gentle gravity, flapping counteracts it
+      const butterflyGravity = 0.25;  // lighter than normal
+      const flapStrength = -1.8;       // each flap impulse
+      const maxRise = -4;             // max upward speed
+      const maxFall = 3;              // gentle float down
 
-      // Clamp speed
-      this.vx = Math.max(-flySpeed, Math.min(flySpeed, this.vx));
-      this.vy = Math.max(-flySpeed, Math.min(flySpeed, this.vy));
+      this.isFlapping = input.jump || input.up;
 
-      // Apply movement
-      this.x += this.vx;
-      this.y += this.vy;
+      if (this.isFlapping) {
+        // Continuous flapping provides lift
+        this.vy += flapStrength * 0.15;  // sustained lift per frame
+        if (this.vy < maxRise) this.vy = maxRise;
+      }
 
-      // Keep within level bounds
-      this.x = Math.max(0, Math.min(this.x, level.width - this.width));
-      this.y = Math.max(0, Math.min(this.y, level.height - this.height));
+      // Gravity always applies
+      this.vy += butterflyGravity;
+      if (this.vy > maxFall) this.vy = maxFall;
 
-      this.onGround = false;
-      this.state = STATES.JUMPING;
+      // Collision resolution
+      const collisions = resolveEntityTileCollisions(this, level);
+      if (collisions.bottom) {
+        this.vy = 0;
+        this.onGround = true;
+      } else {
+        this.onGround = false;
+      }
+      if (collisions.top) {
+        this.vy = 0;
+      }
+
+      this.state = this.onGround ? (Math.abs(this.vx) > 0.3 ? STATES.RUNNING : STATES.IDLE) : (this.vy < 0 ? STATES.JUMPING : STATES.FALLING);
+
+      // Transform back to caterpillar
+      if (input.transformPressed) {
+        this.transformTimer = 40; // shorter transform back
+      }
 
       // Carried block follows
       if (this.carriedBlock) {
@@ -945,8 +972,10 @@ export class Player {
     const cx = x + this.width / 2;
     const cy = y + this.height / 2;
 
-    this.butterflyTimer++;
-    const wingFlap = Math.sin(this.butterflyTimer * 0.2) * 0.6;
+    // Wing flap speed: faster when actively flapping, gentle when gliding
+    const flapSpeed = this.isFlapping ? 0.5 : 0.15;
+    const flapAmount = this.isFlapping ? 0.7 : 0.3;
+    const wingFlap = Math.sin(this.butterflyTimer * flapSpeed) * flapAmount;
 
     ctx.save();
     ctx.translate(cx, cy);

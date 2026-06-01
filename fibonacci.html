@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Powers of 2</title>
+    <title>Fibonacci Sequence</title>
     <style>
       :root {
         color-scheme: light;
@@ -26,8 +26,8 @@
         margin: 0;
         min-height: 100vh;
         background:
-          linear-gradient(90deg, rgba(228, 61, 48, 0.06) 0 25%, transparent 25% 100%),
-          linear-gradient(180deg, rgba(40, 120, 212, 0.07), rgba(247, 201, 72, 0.09)),
+          linear-gradient(90deg, rgba(23, 139, 88, 0.06) 0 25%, transparent 25% 100%),
+          linear-gradient(180deg, rgba(247, 201, 72, 0.08), rgba(40, 120, 212, 0.07)),
           var(--paper);
         color: var(--ink);
         font-family: Arial, Helvetica, sans-serif;
@@ -108,24 +108,17 @@
 
       .power {
         color: var(--accent);
-        font-size: 2rem;
+        font-size: 1.1rem;
         line-height: 1;
       }
 
       .equals {
         color: var(--ink);
-        font-size: 1.3rem;
+        font-size: 1.15rem;
       }
 
       .value {
-        font-size: 1.5rem;
-      }
-
-      .name {
-        margin: 0;
-        font-size: 1.05rem;
-        font-weight: 700;
-        line-height: 1.2;
+        font-size: 2.4rem;
       }
 
       a {
@@ -203,19 +196,15 @@
         }
 
         .power {
-          font-size: 18pt;
+          font-size: 10pt;
         }
 
         .equals {
-          font-size: 14pt;
+          font-size: 10pt;
         }
 
         .value {
-          font-size: 16pt;
-        }
-
-        .name {
-          font-size: 10pt;
+          font-size: 22pt;
         }
 
         a[href]::after {
@@ -227,27 +216,52 @@
   <body>
     <main>
       <header>
-        <h1>Powers of 2</h1>
+        <h1>Fibonacci Sequence</h1>
       </header>
 
-      <section class="grid" aria-label="Powers of two Numberblocks">
+      <section class="grid" aria-label="First ten Fibonacci Numberblocks">
+        <a class="card" href="https://numberblocks.fandom.com/wiki/One_(character)" style="--accent: var(--red)" aria-label="Numberblock One source">
+          <div class="image-stage">
+            <img src="assets/numberblocks/001-one.webp" alt="Numberblock One">
+          </div>
+          <div class="card-body">
+            <div class="notation"><span class="power">F1</span><span class="equals">=</span><span class="value">1</span></div>
+          </div>
+        </a>
+
+        <a class="card" href="https://numberblocks.fandom.com/wiki/One_(character)" style="--accent: var(--red)" aria-label="Numberblock One source">
+          <div class="image-stage">
+            <img src="assets/numberblocks/001-one.webp" alt="Numberblock One">
+          </div>
+          <div class="card-body">
+            <div class="notation"><span class="power">F2</span><span class="equals">=</span><span class="value">1</span></div>
+          </div>
+        </a>
+
         <a class="card" href="https://numberblocks.fandom.com/wiki/Two_(character)" style="--accent: var(--orange)" aria-label="Numberblock Two source">
           <div class="image-stage">
             <img src="assets/numberblocks/002-two.webp" alt="Numberblock Two">
           </div>
           <div class="card-body">
-            <div class="notation"><span class="power">2^1</span><span class="equals">=</span><span class="value">2</span></div>
-            <p class="name">Two</p>
+            <div class="notation"><span class="power">F3</span><span class="equals">=</span><span class="value">2</span></div>
           </div>
         </a>
 
-        <a class="card" href="https://numberblocks.fandom.com/wiki/Four_(character)" style="--accent: var(--green)" aria-label="Numberblock Four source">
+        <a class="card" href="https://numberblocks.fandom.com/wiki/Three_(character)" style="--accent: var(--yellow)" aria-label="Numberblock Three source">
           <div class="image-stage">
-            <img src="assets/numberblocks/004-four.webp" alt="Numberblock Four">
+            <img src="assets/numberblocks/003-three.webp" alt="Numberblock Three">
           </div>
           <div class="card-body">
-            <div class="notation"><span class="power">2^2</span><span class="equals">=</span><span class="value">4</span></div>
-            <p class="name">Four</p>
+            <div class="notation"><span class="power">F4</span><span class="equals">=</span><span class="value">3</span></div>
+          </div>
+        </a>
+
+        <a class="card" href="https://numberblocks.fandom.com/wiki/Five_(character)" style="--accent: var(--blue)" aria-label="Numberblock Five source">
+          <div class="image-stage">
+            <img src="assets/numberblocks/005-five.webp" alt="Numberblock Five">
+          </div>
+          <div class="card-body">
+            <div class="notation"><span class="power">F5</span><span class="equals">=</span><span class="value">5</span></div>
           </div>
         </a>
 
@@ -256,78 +270,43 @@
             <img src="assets/numberblocks/008-eight.webp" alt="Numberblock Eight">
           </div>
           <div class="card-body">
-            <div class="notation"><span class="power">2^3</span><span class="equals">=</span><span class="value">8</span></div>
-            <p class="name">Eight</p>
+            <div class="notation"><span class="power">F6</span><span class="equals">=</span><span class="value">8</span></div>
           </div>
         </a>
 
-        <a class="card" href="https://numberblocks.fandom.com/wiki/Sixteen_(character)" style="--accent: var(--blue)" aria-label="Numberblock Sixteen source">
+        <a class="card" href="https://numberblocks.fandom.com/wiki/Thirteen_(character)" style="--accent: var(--red)" aria-label="Numberblock Thirteen source">
           <div class="image-stage">
-            <img src="assets/numberblocks/016-sixteen.webp" alt="Numberblock Sixteen">
+            <img src="assets/numberblocks/013-thirteen.webp" alt="Numberblock Thirteen">
           </div>
           <div class="card-body">
-            <div class="notation"><span class="power">2^4</span><span class="equals">=</span><span class="value">16</span></div>
-            <p class="name">Sixteen</p>
+            <div class="notation"><span class="power">F7</span><span class="equals">=</span><span class="value">13</span></div>
           </div>
         </a>
 
-        <a class="card" href="https://numberblocks.fandom.com/wiki/Thirty-Two" style="--accent: var(--red)" aria-label="Numberblock Thirty-Two source">
+        <a class="card" href="https://numberblocks.fandom.com/wiki/Twenty-One" style="--accent: var(--orange)" aria-label="Numberblock Twenty-One source">
           <div class="image-stage">
-            <img src="assets/numberblocks/032-thirty-two.webp" alt="Numberblock Thirty-Two">
+            <img src="assets/numberblocks/021-twenty-one.webp" alt="Numberblock Twenty-One">
           </div>
           <div class="card-body">
-            <div class="notation"><span class="power">2^5</span><span class="equals">=</span><span class="value">32</span></div>
-            <p class="name">Thirty-Two</p>
+            <div class="notation"><span class="power">F8</span><span class="equals">=</span><span class="value">21</span></div>
           </div>
         </a>
 
-        <a class="card" href="https://numberblocks.fandom.com/wiki/Sixty-Four" style="--accent: var(--orange)" aria-label="Numberblock Sixty-Four source">
+        <a class="card" href="https://numberblocks.fandom.com/wiki/Thirty-Four" style="--accent: var(--green)" aria-label="Numberblock Thirty-Four source">
           <div class="image-stage">
-            <img src="assets/numberblocks/064-sixty-four.webp" alt="Numberblock Sixty-Four">
+            <img src="assets/numberblocks/034-thirty-four.webp" alt="Numberblock Thirty-Four">
           </div>
           <div class="card-body">
-            <div class="notation"><span class="power">2^6</span><span class="equals">=</span><span class="value">64</span></div>
-            <p class="name">Sixty-Four</p>
+            <div class="notation"><span class="power">F9</span><span class="equals">=</span><span class="value">34</span></div>
           </div>
         </a>
 
-        <a class="card" href="https://numberblocks.fandom.com/wiki/Fanmade_Galleries_for_other_Numberblocks/120-129" style="--accent: var(--green)" aria-label="Numberblock One Hundred Twenty-Eight source">
+        <a class="card" href="https://numberblocks.fandom.com/wiki/Fifty-Five" style="--accent: var(--blue)" aria-label="Numberblock Fifty-Five source">
           <div class="image-stage">
-            <img src="assets/numberblocks/128-one-hundred-twenty-eight.webp" alt="Speculative Numberblock One Hundred Twenty-Eight">
+            <img src="assets/numberblocks/055-fifty-five.webp" alt="Numberblock Fifty-Five">
           </div>
           <div class="card-body">
-            <div class="notation"><span class="power">2^7</span><span class="equals">=</span><span class="value">128</span></div>
-            <p class="name">One Hundred Twenty-Eight</p>
-          </div>
-        </a>
-
-        <a class="card" href="https://numberblocks.fandom.com/wiki/Fanmade_Galleries_for_other_Numberblocks/250-259?file=Jz256.png" style="--accent: var(--purple)" aria-label="Numberblock Two Hundred Fifty-Six source">
-          <div class="image-stage">
-            <img src="assets/numberblocks/256-two-hundred-fifty-six.webp" alt="Speculative Numberblock Two Hundred Fifty-Six">
-          </div>
-          <div class="card-body">
-            <div class="notation"><span class="power">2^8</span><span class="equals">=</span><span class="value">256</span></div>
-            <p class="name">Two Hundred Fifty-Six</p>
-          </div>
-        </a>
-
-        <a class="card" href="https://numberblocks-big.fandom.com/wiki/512" style="--accent: var(--blue)" aria-label="Numberblock Five Hundred Twelve source">
-          <div class="image-stage">
-            <img src="assets/numberblocks/512-five-hundred-twelve.webp" alt="Speculative Numberblock Five Hundred Twelve">
-          </div>
-          <div class="card-body">
-            <div class="notation"><span class="power">2^9</span><span class="equals">=</span><span class="value">512</span></div>
-            <p class="name">Five Hundred Twelve</p>
-          </div>
-        </a>
-
-        <a class="card" href="https://numberblocks.fandom.com/wiki/Fanmade_Galleries_for_other_Numberblocks/1000-1999" style="--accent: var(--red)" aria-label="Numberblock One Thousand Twenty-Four source">
-          <div class="image-stage">
-            <img src="assets/numberblocks/1024-one-thousand-twenty-four.webp" alt="Speculative Numberblock One Thousand Twenty-Four">
-          </div>
-          <div class="card-body">
-            <div class="notation"><span class="power">2^10</span><span class="equals">=</span><span class="value">1,024</span></div>
-            <p class="name">One Thousand Twenty-Four</p>
+            <div class="notation"><span class="power">F10</span><span class="equals">=</span><span class="value">55</span></div>
           </div>
         </a>
       </section>

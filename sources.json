@@ -66,19 +66,19 @@
     "exponent": 7,
     "value": 128,
     "name": "One Hundred Twenty-Eight",
-    "status": "fan/speculative wiki image",
+    "status": "fanmade gallery image",
     "localPath": "assets/numberblocks/128-one-hundred-twenty-eight.webp",
-    "sourcePage": "https://axel-domino.fandom.com/wiki/128",
-    "sourceImage": "https://static.wikia.nocookie.net/axel-domino/images/3/32/128.png/revision/latest?cb=20250311234453"
+    "sourcePage": "https://numberblocks.fandom.com/wiki/Fanmade_Galleries_for_other_Numberblocks/120-129",
+    "sourceImage": "https://static.wikia.nocookie.net/numberblocks/images/e/ed/128tg.png/revision/latest?cb=20220109175458"
   },
   {
     "exponent": 8,
     "value": 256,
     "name": "Two Hundred Fifty-Six",
-    "status": "fan/speculative wiki image",
+    "status": "fanmade gallery image",
     "localPath": "assets/numberblocks/256-two-hundred-fifty-six.webp",
-    "sourcePage": "https://axel-domino.fandom.com/wiki/256",
-    "sourceImage": "https://static.wikia.nocookie.net/axel-domino/images/1/19/256.png/revision/latest?cb=20250522023808"
+    "sourcePage": "https://numberblocks.fandom.com/wiki/Fanmade_Galleries_for_other_Numberblocks/250-259?file=Jz256.png",
+    "sourceImage": "https://static.wikia.nocookie.net/numberblocks/images/1/1c/Jz256.png/revision/latest?cb=20221229100353"
   },
   {
     "exponent": 9,
@@ -93,9 +93,9 @@
     "exponent": 10,
     "value": 1024,
     "name": "One Thousand Twenty-Four",
-    "status": "fan/speculative wiki image",
+    "status": "fanmade gallery image",
     "localPath": "assets/numberblocks/1024-one-thousand-twenty-four.webp",
-    "sourcePage": "https://numberblocks-big.fandom.com/wiki/1024",
-    "sourceImage": "https://static.wikia.nocookie.net/numberblocks-big/images/5/50/%F0%9F%93%82%EF%B8%8E%F0%9F%93%81%EF%B8%8E%F0%9F%93%84%EF%B8%8E%F0%9F%97%90%EF%B8%8E.jpg/revision/latest?cb=20250122163941"
+    "sourcePage": "https://numberblocks.fandom.com/wiki/Fanmade_Galleries_for_other_Numberblocks/1000-1999",
+    "sourceImage": "https://static.wikia.nocookie.net/numberblocks/images/4/43/20%27s_1024.jpeg/revision/latest?cb=20211229162804"
   }
 ]

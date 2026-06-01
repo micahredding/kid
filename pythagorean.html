@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Pythagorean Theorem</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #202124;
+        --paper: #fffdf8;
+        --panel: #ffffff;
+        --red: #e43d30;
+        --blue: #2878d4;
+        --green: #178b58;
+        --yellow: #f7c948;
+        --orange: #f28b30;
+        --purple: #8b5ac7;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background:
+          linear-gradient(90deg, rgba(40, 120, 212, 0.07) 0 28%, transparent 28% 100%),
+          linear-gradient(180deg, rgba(247, 201, 72, 0.09), rgba(228, 61, 48, 0.05)),
+          var(--paper);
+        color: var(--ink);
+        font-family: Arial, Helvetica, sans-serif;
+      }
+
+      main {
+        width: min(1180px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 28px 0 40px;
+      }
+
+      header {
+        margin-bottom: 18px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2.1rem, 5vw, 4.8rem);
+        line-height: 0.95;
+        letter-spacing: 0;
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      .theorem {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 16px;
+      }
+
+      .square-card,
+      .triangle-scene,
+      .equation {
+        --accent: var(--blue);
+        overflow: hidden;
+        border: 2px solid color-mix(in srgb, var(--accent), #ffffff 38%);
+        border-radius: 8px;
+        background:
+          linear-gradient(135deg, color-mix(in srgb, var(--accent), #ffffff 84%), #fff 55%);
+        box-shadow: 0 10px 26px rgba(32, 33, 36, 0.08);
+      }
+
+      .square-card {
+        position: absolute;
+        display: grid;
+        grid-template-rows: 1fr auto;
+        color: inherit;
+      }
+
+      .square-card img,
+      .side-card img {
+        display: block;
+        width: auto;
+        height: auto;
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+        filter: drop-shadow(0 8px 10px rgba(32, 33, 36, 0.15));
+      }
+
+      .image-stage {
+        display: grid;
+        place-items: center;
+        min-height: 0;
+        padding: 14px;
+      }
+
+      .label {
+        display: flex;
+        justify-content: center;
+        align-items: baseline;
+        gap: 8px;
+        padding: 8px 10px 10px;
+        font-weight: 800;
+        background: rgba(255, 255, 255, 0.76);
+      }
+
+      .term {
+        color: var(--accent);
+        font-size: 1rem;
+      }
+
+      .value {
+        font-size: 2.4rem;
+        line-height: 1;
+      }
+
+      .square-9 {
+        left: 4%;
+        top: 6%;
+        width: 22%;
+        height: 22%;
+      }
+
+      .square-16 {
+        left: 32%;
+        bottom: 4%;
+        width: 30%;
+        height: 20%;
+      }
+
+      .square-25 {
+        right: 4%;
+        top: 5%;
+        width: 28%;
+        height: 32%;
+      }
+
+      .triangle-scene {
+        position: relative;
+        min-height: 680px;
+        background: #fff;
+      }
+
+      .triangle-svg {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+      }
+
+      .side-card {
+        position: absolute;
+        display: grid;
+        place-items: center;
+        overflow: visible;
+        border: 0;
+        background: transparent;
+        box-shadow: none;
+        color: inherit;
+        text-decoration: none;
+        z-index: 3;
+      }
+
+      .side-card img {
+        max-height: 100%;
+      }
+
+      .side-3 {
+        left: 27%;
+        top: 36%;
+        width: 9%;
+        height: 25%;
+      }
+
+      .side-4 {
+        left: 46%;
+        bottom: 25%;
+        width: 13%;
+        height: 16%;
+      }
+
+      .side-5 {
+        left: 52%;
+        top: 36%;
+        width: 10%;
+        height: 23%;
+        transform: rotate(-37deg);
+        transform-origin: center;
+      }
+
+      .equation {
+        display: flex;
+        justify-content: center;
+        align-items: baseline;
+        gap: clamp(8px, 2vw, 18px);
+        padding: 18px 16px;
+        font-weight: 800;
+        --accent: var(--purple);
+      }
+
+      .equation .part {
+        white-space: nowrap;
+      }
+
+      .equation .small {
+        color: var(--accent);
+        font-size: clamp(1.2rem, 2.6vw, 2rem);
+      }
+
+      .equation .large {
+        font-size: clamp(2rem, 4.5vw, 4rem);
+      }
+
+      @media (max-width: 820px) {
+        .triangle-scene {
+          min-height: 560px;
+        }
+      }
+
+      @media print {
+        @page {
+          size: landscape;
+          margin: 0.35in;
+        }
+
+        body {
+          background: #fff;
+        }
+
+        main {
+          width: 100%;
+          padding: 0;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+
+        header {
+          margin-bottom: 12px;
+        }
+
+        h1 {
+          font-size: 28pt;
+        }
+
+        .theorem {
+          gap: 10px;
+        }
+
+        .square-card,
+        .side-card,
+        .equation,
+        .triangle-scene {
+          border-color: #bbb;
+          box-shadow: none;
+          break-inside: avoid;
+          page-break-inside: avoid;
+        }
+
+        .triangle-scene {
+          min-height: 5.9in;
+        }
+
+        .image-stage {
+          padding: 8px;
+        }
+
+        .square-card img,
+        .side-card img {
+          filter: none;
+        }
+
+        .label {
+          padding: 5px 8px 6px;
+        }
+
+        .term {
+          font-size: 10pt;
+        }
+
+        .value {
+          font-size: 24pt;
+        }
+
+        .equation {
+          padding: 10px 12px;
+        }
+
+        a[href]::after {
+          content: none !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Pythagorean Theorem</h1>
+      </header>
+
+      <section class="theorem" aria-label="Pythagorean theorem with Numberblocks 3, 4, and 5">
+        <div class="triangle-scene" aria-label="Right triangle with sides 3, 4, and 5">
+          <svg class="triangle-svg" viewBox="0 0 1000 620" role="img" aria-label="Right triangle">
+            <polygon points="360,455 650,455 360,235" fill="rgba(247, 201, 72, 0.16)" stroke="#202124" stroke-width="7" stroke-linejoin="round"></polygon>
+            <polyline points="360,415 400,415 400,455" fill="none" stroke="#202124" stroke-width="5"></polyline>
+            <line x1="360" y1="235" x2="360" y2="455" stroke="#e43d30" stroke-width="4" stroke-dasharray="12 12" opacity="0.55"></line>
+            <line x1="360" y1="455" x2="650" y2="455" stroke="#2878d4" stroke-width="4" stroke-dasharray="12 12" opacity="0.55"></line>
+            <line x1="360" y1="235" x2="650" y2="455" stroke="#178b58" stroke-width="4" stroke-dasharray="12 12" opacity="0.55"></line>
+          </svg>
+
+          <a class="square-card square-9" href="https://numberblocks.fandom.com/wiki/Nine_(character)" style="--accent: var(--yellow)" aria-label="Numberblock Nine source">
+            <div class="image-stage">
+              <img src="assets/numberblocks/009-nine.webp" alt="Numberblock Nine">
+            </div>
+            <div class="label"><span class="term">3^2</span><span class="value">9</span></div>
+          </a>
+
+          <a class="square-card square-16" href="https://numberblocks.fandom.com/wiki/Sixteen_(character)" style="--accent: var(--blue)" aria-label="Numberblock Sixteen source">
+            <div class="image-stage">
+              <img src="assets/numberblocks/016-sixteen.webp" alt="Numberblock Sixteen">
+            </div>
+            <div class="label"><span class="term">4^2</span><span class="value">16</span></div>
+          </a>
+
+          <a class="square-card square-25" href="https://numberblocks.fandom.com/wiki/Twenty-Five" style="--accent: var(--purple)" aria-label="Numberblock Twenty-Five source">
+            <div class="image-stage">
+              <img src="assets/numberblocks/025-twenty-five.webp" alt="Numberblock Twenty-Five">
+            </div>
+            <div class="label"><span class="term">5^2</span><span class="value">25</span></div>
+          </a>
+
+          <a class="side-card side-3" href="https://numberblocks.fandom.com/wiki/Three_(character)" style="--accent: var(--red)" aria-label="Numberblock Three source">
+            <img src="assets/numberblocks/003-three.webp" alt="Numberblock Three">
+          </a>
+          <a class="side-card side-4" href="https://numberblocks.fandom.com/wiki/Four_(character)" style="--accent: var(--green)" aria-label="Numberblock Four source">
+            <img src="assets/numberblocks/004-four.webp" alt="Numberblock Four">
+          </a>
+          <a class="side-card side-5" href="https://numberblocks.fandom.com/wiki/Five_(character)" style="--accent: var(--blue)" aria-label="Numberblock Five source">
+            <img src="assets/numberblocks/005-five.webp" alt="Numberblock Five">
+          </a>
+        </div>
+
+        <div class="equation" aria-label="Three squared plus four squared equals five squared">
+          <span class="part"><span class="small">3^2</span> <span class="large">+</span> <span class="small">4^2</span></span>
+          <span class="large">=</span>
+          <span class="small">5^2</span>
+          <span class="large">=</span>
+          <span class="part"><span class="small">9</span> <span class="large">+</span> <span class="small">16</span> <span class="large">=</span> <span class="small">25</span></span>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

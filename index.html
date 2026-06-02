@@ -404,6 +404,24 @@ const labelEl = document.getElementById('number-label');
 const feedbackEl = document.getElementById('feedback');
 const input = document.getElementById('user-input');
 let labelTimeoutId = null; // track pending label display
+const BLOCK_REVEAL_STAGGER_MS = 60;
+const BLOCK_REVEAL_START_OFFSET_MS = 50;
+const BLOCK_DROP_DURATION_MS = 500;
+const BLOCK_REVEAL_LEAD_MS = 200;
+const WALK_IN_LABEL_DELAY_MS = 1200;
+const POST_LABEL_HOLD_MS = 2500;
+
+function getNumberblockLabelDelay(n, animate = true, walkDir = null) {
+  const walking = walkDir === 'left' || walkDir === 'right';
+  if (walking) return WALK_IN_LABEL_DELAY_MS;
+  if (!animate) return 0;
+  const finalBlockVisibleAt = Math.max(0, (n - 1) * BLOCK_REVEAL_STAGGER_MS) + BLOCK_REVEAL_START_OFFSET_MS;
+  return finalBlockVisibleAt + BLOCK_DROP_DURATION_MS + BLOCK_REVEAL_LEAD_MS;
+}
+
+function getNumberblockDisplayDuration(n, animate = true, walkDir = null) {
+  return getNumberblockLabelDelay(n, animate, walkDir) + POST_LABEL_HOLD_MS;
+}
 
 // walkDir: null (drop animation), 'left', 'right' (walk onto screen)
 function renderNumberblock(n, animate = true, showLabel = true, walkDir = null) {
@@ -446,8 +464,8 @@ function renderNumberblock(n, animate = true, showLabel = true, walkDir = null) 
         // Blocks are instantly visible; the grid itself walks in
         cell.classList.add('visible');
       } else if (animate) {
-        const delay = blockIndex * 60;
-        setTimeout(() => cell.classList.add('visible'), delay + 50);
+        const delay = blockIndex * BLOCK_REVEAL_STAGGER_MS;
+        setTimeout(() => cell.classList.add('visible'), delay + BLOCK_REVEAL_START_OFFSET_MS);
       } else {
         cell.classList.add('visible');
       }
@@ -474,7 +492,7 @@ function renderNumberblock(n, animate = true, showLabel = true, walkDir = null) 
 
   // Show number label after all blocks appear (unless hidden for quiz)
   if (showLabel) {
-    const totalDelay = walking ? 1200 : (animate ? (n * 60 + 200) : 0);
+    const totalDelay = getNumberblockLabelDelay(n, animate, walkDir);
     labelTimeoutId = setTimeout(() => {
       labelTimeoutId = null;
       labelEl.textContent = n;
@@ -859,7 +877,7 @@ function handleFreePlayInput(value) {
     setTimeout(() => {
       input.disabled = false;
       startQuizRound();
-    }, 4000);
+    }, getNumberblockDisplayDuration(result, true));
   }
 }
 

@@ -67,6 +67,18 @@ export class Player {
     this.rotation = 0;         // rolling rotation for block character
     this.spinSpeed = 0;        // spin velocity for airborne block
 
+    // Classic character follower: red one-eyed Numberblock
+    this.follower = {
+      x: x - 36,
+      y,
+      width: 28,
+      height: 28,
+      vx: 0,
+      vy: 0,
+      rotation: 0,
+      spinSpeed: 0,
+    };
+
     // Numberblock 4 form: 'square' (2x2), 'flat' (4x1), or 'tall' (1x4)
     this.blockForm = 'square';
     this.blockForms = ['square', 'flat', 'tall'];
@@ -405,6 +417,11 @@ export class Player {
       }
     }
 
+    // --- Classic follower update ---
+    if (this.character === 'classic') {
+      this.updateFollower();
+    }
+
     // --- Numberblock 4 form switching ---
     if (this.character === 'numberblock4' && input.transformPressed) {
       this.switchForm(level);
@@ -571,7 +588,10 @@ export class Player {
       return;
     }
 
-    if (this.character === 'block') {
+    if (this.character === 'classic') {
+      this.drawFollower(ctx);
+      this.drawClassic(ctx, theme);
+    } else if (this.character === 'block') {
       this.drawBlock(ctx, theme);
     } else if (this.character === 'numberblock4') {
       this.drawNumberblock4(ctx, theme);
@@ -1096,6 +1116,96 @@ export class Player {
     ctx.beginPath();
     ctx.arc(8, -18 - antBob, 2, 0, Math.PI * 2);
     ctx.fill();
+
+    ctx.restore();
+  }
+
+  updateFollower() {
+    if (!this.follower) return;
+
+    const targetX = this.x + (this.facing === 1 ? -this.follower.width - 8 : this.width + 8);
+    const targetY = this.y + this.height - this.follower.height - 2;
+
+    const dx = targetX - this.follower.x;
+    const dy = targetY - this.follower.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    const teleportThreshold = 96;
+
+    if (distance > teleportThreshold) {
+      this.follower.x = targetX;
+      this.follower.y = targetY;
+      this.follower.vx = 0;
+      this.follower.vy = 0;
+    } else {
+      this.follower.vx += dx * 0.16;
+      this.follower.vy += (dy + 1) * 0.16;
+      this.follower.vx *= 0.8;
+      this.follower.vy *= 0.8;
+
+      const maxSpeed = 7;
+      if (Math.abs(this.follower.vx) > maxSpeed) {
+        this.follower.vx = Math.sign(this.follower.vx) * maxSpeed;
+      }
+      if (Math.abs(this.follower.vy) > maxSpeed) {
+        this.follower.vy = Math.sign(this.follower.vy) * maxSpeed;
+      }
+
+      this.follower.x += this.follower.vx;
+      this.follower.y += this.follower.vy;
+    }
+
+    this.follower.spinSpeed = this.follower.vx * 0.08;
+    this.follower.rotation += this.follower.spinSpeed;
+  }
+
+  resetFollowerPosition() {
+    if (!this.follower) return;
+    this.follower.x = this.x + (this.facing === 1 ? -this.follower.width - 8 : this.width + 8);
+    this.follower.y = this.y + this.height - this.follower.height - 2;
+    this.follower.vx = 0;
+    this.follower.vy = 0;
+    this.follower.rotation = 0;
+    this.follower.spinSpeed = 0;
+  }
+
+  drawFollower(ctx) {
+    if (!this.follower) return;
+
+    const x = Math.round(this.follower.x);
+    const y = Math.round(this.follower.y);
+    const size = this.follower.width;
+    const cx = x + size / 2;
+    const cy = y + size / 2;
+
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(this.follower.rotation);
+
+    // Body
+    ctx.fillStyle = '#CC3333';
+    ctx.fillRect(-size / 2, -size / 2, size, size);
+
+    // Light and shadow edges
+    ctx.fillStyle = '#EE6666';
+    ctx.fillRect(-size / 2, -size / 2, size, 3);
+    ctx.fillRect(-size / 2, -size / 2, 3, size);
+    ctx.fillStyle = '#AA1111';
+    ctx.fillRect(-size / 2, size / 2 - 3, size, 3);
+    ctx.fillRect(size / 2 - 3, -size / 2, 3, size);
+
+    // Single eye
+    ctx.fillStyle = '#FFF';
+    ctx.fillRect(-6, -6, 12, 12);
+    ctx.fillStyle = '#000';
+    ctx.fillRect(-3, -3, 6, 6);
+
+    // Mouth
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-6, 8);
+    ctx.lineTo(6, 8);
+    ctx.stroke();
 
     ctx.restore();
   }

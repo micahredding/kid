@@ -83,6 +83,7 @@ export class Engine {
     this.player = new Player(this.level.playerX, this.level.playerY);
     this.player.character = this.characters[this.selectedCharacter];
     this.player.applyCharacterSize();
+    this.player.resetFollowerPosition();
     this.player.score = prevScore;
     this.player.lives = prevLives;
     this.player.coins = prevCoins;
@@ -147,6 +148,7 @@ export class Engine {
     this.player.vx = 0;
     this.player.vy = 0;
     this.player.invincibleTimer = CONFIG.player.invincibilityFrames;
+    this.player.resetFollowerPosition();
   }
 
   update() {

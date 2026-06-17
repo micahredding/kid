@@ -1,0 +1,101 @@
+[
+  {
+    "exponent": 0,
+    "value": 1,
+    "name": "One",
+    "status": "official wiki character image",
+    "localPath": "assets/numberblocks/001-one.webp",
+    "sourcePage": "https://numberblocks.fandom.com/wiki/One_(character)",
+    "sourceImage": "https://static.wikia.nocookie.net/numberblocks/images/9/9c/One.png/revision/latest?cb=20260525110505"
+  },
+  {
+    "exponent": 1,
+    "value": 2,
+    "name": "Two",
+    "status": "official wiki character image",
+    "localPath": "assets/numberblocks/002-two.webp",
+    "sourcePage": "https://numberblocks.fandom.com/wiki/Two_(character)",
+    "sourceImage": "https://static.wikia.nocookie.net/numberblocks/images/c/cd/Two.png/revision/latest?cb=20210717144937"
+  },
+  {
+    "exponent": 2,
+    "value": 4,
+    "name": "Four",
+    "status": "official wiki character image",
+    "localPath": "assets/numberblocks/004-four.webp",
+    "sourcePage": "https://numberblocks.fandom.com/wiki/Four_(character)",
+    "sourceImage": "https://static.wikia.nocookie.net/numberblocks/images/0/06/4_square.png/revision/latest?cb=20220701224910"
+  },
+  {
+    "exponent": 3,
+    "value": 8,
+    "name": "Eight",
+    "status": "official wiki character image",
+    "localPath": "assets/numberblocks/008-eight.webp",
+    "sourcePage": "https://numberblocks.fandom.com/wiki/Eight_(character)",
+    "sourceImage": "https://static.wikia.nocookie.net/numberblocks/images/f/f0/987204DB-1E53-43FB-B3C6-92239ED8FBA5.png/revision/latest?cb=20250326030723"
+  },
+  {
+    "exponent": 4,
+    "value": 16,
+    "name": "Sixteen",
+    "status": "official wiki character image",
+    "localPath": "assets/numberblocks/016-sixteen.webp",
+    "sourcePage": "https://numberblocks.fandom.com/wiki/Sixteen_(character)",
+    "sourceImage": "https://static.wikia.nocookie.net/numberblocks/images/1/10/Numberblocks_16_Official.png/revision/latest/scale-to-width-down/865?cb=20220609215900"
+  },
+  {
+    "exponent": 5,
+    "value": 32,
+    "name": "Thirty-Two",
+    "status": "official wiki character image",
+    "localPath": "assets/numberblocks/032-thirty-two.webp",
+    "sourcePage": "https://numberblocks.fandom.com/wiki/Thirty-Two",
+    "sourceImage": "https://static.wikia.nocookie.net/numberblocks/images/b/bc/32better.png/revision/latest?cb=20250728204343"
+  },
+  {
+    "exponent": 6,
+    "value": 64,
+    "name": "Sixty-Four",
+    "status": "official wiki character image",
+    "localPath": "assets/numberblocks/064-sixty-four.webp",
+    "sourcePage": "https://numberblocks.fandom.com/wiki/Sixty-Four",
+    "sourceImage": "https://static.wikia.nocookie.net/numberblocks/images/f/f0/Sixty-Fouroffical.PNG/revision/latest?cb=20241230050851"
+  },
+  {
+    "exponent": 7,
+    "value": 128,
+    "name": "One Hundred Twenty-Eight",
+    "status": "fanmade gallery image",
+    "localPath": "assets/numberblocks/128-one-hundred-twenty-eight.webp",
+    "sourcePage": "https://numberblocks.fandom.com/wiki/Fanmade_Galleries_for_other_Numberblocks/120-129",
+    "sourceImage": "https://static.wikia.nocookie.net/numberblocks/images/e/ed/128tg.png/revision/latest?cb=20220109175458"
+  },
+  {
+    "exponent": 8,
+    "value": 256,
+    "name": "Two Hundred Fifty-Six",
+    "status": "fanmade gallery image",
+    "localPath": "assets/numberblocks/256-two-hundred-fifty-six.webp",
+    "sourcePage": "https://numberblocks.fandom.com/wiki/Fanmade_Galleries_for_other_Numberblocks/250-259?file=Jz256.png",
+    "sourceImage": "https://static.wikia.nocookie.net/numberblocks/images/1/1c/Jz256.png/revision/latest?cb=20221229100353"
+  },
+  {
+    "exponent": 9,
+    "value": 512,
+    "name": "Five Hundred Twelve",
+    "status": "fan/speculative wiki image",
+    "localPath": "assets/numberblocks/512-five-hundred-twelve.webp",
+    "sourcePage": "https://numberblocks-big.fandom.com/wiki/512",
+    "sourceImage": "https://static.wikia.nocookie.net/numberblocks-big/images/2/2e/512.jpg/revision/latest?cb=20230720204849"
+  },
+  {
+    "exponent": 10,
+    "value": 1024,
+    "name": "One Thousand Twenty-Four",
+    "status": "fanmade gallery image",
+    "localPath": "assets/numberblocks/1024-one-thousand-twenty-four.webp",
+    "sourcePage": "https://numberblocks.fandom.com/wiki/Fanmade_Galleries_for_other_Numberblocks/1000-1999",
+    "sourceImage": "https://static.wikia.nocookie.net/numberblocks/images/4/43/20%27s_1024.jpeg/revision/latest?cb=20211229162804"
+  }
+]

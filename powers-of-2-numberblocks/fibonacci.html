@@ -1,0 +1,385 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Fibonacci Sequence</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #202124;
+        --paper: #fffdf8;
+        --panel: #ffffff;
+        --red: #e43d30;
+        --blue: #2878d4;
+        --green: #178b58;
+        --yellow: #f7c948;
+        --orange: #f28b30;
+        --purple: #8b5ac7;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background:
+          linear-gradient(90deg, rgba(23, 139, 88, 0.06) 0 25%, transparent 25% 100%),
+          linear-gradient(180deg, rgba(247, 201, 72, 0.08), rgba(40, 120, 212, 0.07)),
+          var(--paper);
+        color: var(--ink);
+        font-family: Arial, Helvetica, sans-serif;
+      }
+
+      main {
+        width: min(1180px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 28px 0 40px;
+      }
+
+      header {
+        margin-bottom: 22px;
+      }
+
+      h1,
+      h2 {
+        margin: 0;
+        line-height: 0.95;
+        letter-spacing: 0;
+      }
+
+      h1 {
+        font-size: clamp(2.1rem, 5vw, 4.8rem);
+      }
+
+      h2 {
+        font-size: clamp(1.4rem, 3vw, 2.2rem);
+        margin-bottom: 12px;
+      }
+
+      .layout {
+        margin-bottom: 32px;
+      }
+
+      .fib-card {
+        --accent: var(--blue);
+        display: grid;
+        grid-template-rows: 1fr auto;
+        overflow: hidden;
+        border: 2px solid color-mix(in srgb, var(--accent), #ffffff 38%);
+        border-radius: 8px;
+        background:
+          linear-gradient(135deg, color-mix(in srgb, var(--accent), #ffffff 84%), #fff 55%);
+        box-shadow: 0 10px 26px rgba(32, 33, 36, 0.08);
+        color: inherit;
+        text-decoration: none;
+      }
+
+      .image-stage {
+        display: grid;
+        place-items: center;
+        min-height: 0;
+        padding: clamp(6px, 2vw, 18px);
+      }
+
+      .image-stage img {
+        display: block;
+        width: auto;
+        height: auto;
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+        filter: drop-shadow(0 8px 10px rgba(32, 33, 36, 0.15));
+      }
+
+      .notation {
+        display: flex;
+        align-items: baseline;
+        justify-content: center;
+        gap: 7px;
+        padding: 8px 10px 10px;
+        font-weight: 800;
+        background: rgba(255, 255, 255, 0.76);
+      }
+
+      .power {
+        color: var(--accent);
+        font-size: 1rem;
+        line-height: 1;
+      }
+
+      .equals {
+        color: var(--ink);
+        font-size: 1rem;
+      }
+
+      .value {
+        font-size: 2rem;
+        line-height: 1;
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      .spiral {
+        position: relative;
+        aspect-ratio: 89 / 55;
+        border: 2px solid #d9d4c7;
+        border-radius: 8px;
+        background: #fff;
+        overflow: hidden;
+      }
+
+      .spiral .fib-card {
+        position: absolute;
+        grid-template-rows: 1fr;
+        min-width: 0;
+        min-height: 0;
+        border-radius: 0;
+        box-shadow: none;
+      }
+
+      .spiral .image-stage {
+        padding: 5%;
+      }
+
+      .spiral .tiny .image-stage {
+        display: none;
+      }
+
+      .single-value {
+        display: grid;
+        place-items: center;
+        height: 100%;
+        font-weight: 800;
+        font-size: clamp(0.45rem, 1.5vw, 0.85rem);
+      }
+
+      .card-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+        gap: 16px;
+      }
+
+      .card-grid .fib-card {
+        min-height: 320px;
+      }
+
+      @media (max-width: 720px) {
+        main {
+          width: min(100% - 20px, 1180px);
+          padding-top: 18px;
+        }
+
+        .layout {
+          margin-bottom: 24px;
+        }
+
+        .card-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media print {
+        @page {
+          size: landscape;
+          margin: 0.35in;
+        }
+
+        body {
+          background: #fff;
+        }
+
+        main {
+          width: 100%;
+          padding: 0;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+
+        h1 {
+          font-size: 26pt;
+        }
+
+        h2 {
+          font-size: 14pt;
+          margin-bottom: 8px;
+        }
+
+        .layout + .layout {
+          break-before: page;
+          page-break-before: always;
+        }
+
+        .fib-card {
+          border-color: #bbb;
+          box-shadow: none;
+          overflow: hidden;
+          break-inside: avoid;
+          page-break-inside: avoid;
+        }
+
+        .image-stage img {
+          filter: none;
+        }
+
+        .power,
+        .equals {
+          font-size: 10pt;
+        }
+
+        .value {
+          font-size: 22pt;
+        }
+
+        .card-grid {
+          grid-template-columns: repeat(5, 1fr);
+          gap: 8px;
+        }
+
+        .card-grid .fib-card {
+          grid-template-rows: minmax(0, 1fr) auto;
+          min-height: 1.55in;
+        }
+
+        .card-grid .image-stage {
+          height: 1.12in;
+          min-height: 0;
+          padding: 7px;
+        }
+
+        .card-grid .image-stage img {
+          max-height: 100%;
+        }
+
+        .card-grid .notation {
+          padding: 5px 8px 6px;
+        }
+
+        .spiral {
+          max-height: 6.6in;
+        }
+
+        a[href]::after {
+          content: none !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Fibonacci Sequence</h1>
+      </header>
+
+      <section class="layout" aria-label="First fifteen Fibonacci Numberblocks grid">
+        <h2>Cards</h2>
+        <div class="card-grid">
+          <a class="fib-card" href="https://numberblocks.fandom.com/wiki/One_(character)" style="--accent: var(--red)" aria-label="Numberblock One source">
+            <div class="image-stage"><img src="assets/numberblocks/001-one.webp" alt="Numberblock One"></div>
+            <div class="notation"><span class="power">F1</span><span class="equals">=</span><span class="value">1</span></div>
+          </a>
+          <a class="fib-card" href="https://numberblocks.fandom.com/wiki/One_(character)" style="--accent: var(--red)" aria-label="Numberblock One source">
+            <div class="image-stage"><img src="assets/numberblocks/001-one.webp" alt="Numberblock One"></div>
+            <div class="notation"><span class="power">F2</span><span class="equals">=</span><span class="value">1</span></div>
+          </a>
+          <a class="fib-card" href="https://numberblocks.fandom.com/wiki/Two_(character)" style="--accent: var(--orange)" aria-label="Numberblock Two source">
+            <div class="image-stage"><img src="assets/numberblocks/002-two.webp" alt="Numberblock Two"></div>
+            <div class="notation"><span class="power">F3</span><span class="equals">=</span><span class="value">2</span></div>
+          </a>
+          <a class="fib-card" href="https://numberblocks.fandom.com/wiki/Three_(character)" style="--accent: var(--yellow)" aria-label="Numberblock Three source">
+            <div class="image-stage"><img src="assets/numberblocks/003-three.webp" alt="Numberblock Three"></div>
+            <div class="notation"><span class="power">F4</span><span class="equals">=</span><span class="value">3</span></div>
+          </a>
+          <a class="fib-card" href="https://numberblocks.fandom.com/wiki/Five_(character)" style="--accent: var(--blue)" aria-label="Numberblock Five source">
+            <div class="image-stage"><img src="assets/numberblocks/005-five.webp" alt="Numberblock Five"></div>
+            <div class="notation"><span class="power">F5</span><span class="equals">=</span><span class="value">5</span></div>
+          </a>
+          <a class="fib-card" href="https://numberblocks.fandom.com/wiki/Eight_(character)" style="--accent: var(--purple)" aria-label="Numberblock Eight source">
+            <div class="image-stage"><img src="assets/numberblocks/008-eight.webp" alt="Numberblock Eight"></div>
+            <div class="notation"><span class="power">F6</span><span class="equals">=</span><span class="value">8</span></div>
+          </a>
+          <a class="fib-card" href="https://numberblocks.fandom.com/wiki/Thirteen_(character)" style="--accent: var(--red)" aria-label="Numberblock Thirteen source">
+            <div class="image-stage"><img src="assets/numberblocks/013-thirteen.webp" alt="Numberblock Thirteen"></div>
+            <div class="notation"><span class="power">F7</span><span class="equals">=</span><span class="value">13</span></div>
+          </a>
+          <a class="fib-card" href="https://numberblocks.fandom.com/wiki/Twenty-One" style="--accent: var(--orange)" aria-label="Numberblock Twenty-One source">
+            <div class="image-stage"><img src="assets/numberblocks/021-twenty-one.webp" alt="Numberblock Twenty-One"></div>
+            <div class="notation"><span class="power">F8</span><span class="equals">=</span><span class="value">21</span></div>
+          </a>
+          <a class="fib-card" href="https://numberblocks.fandom.com/wiki/Thirty-Four" style="--accent: var(--green)" aria-label="Numberblock Thirty-Four source">
+            <div class="image-stage"><img src="assets/numberblocks/034-thirty-four.webp" alt="Numberblock Thirty-Four"></div>
+            <div class="notation"><span class="power">F9</span><span class="equals">=</span><span class="value">34</span></div>
+          </a>
+          <a class="fib-card" href="https://numberblocks.fandom.com/wiki/Fifty-Five" style="--accent: var(--blue)" aria-label="Numberblock Fifty-Five source">
+            <div class="image-stage"><img src="assets/numberblocks/055-fifty-five.webp" alt="Numberblock Fifty-Five"></div>
+            <div class="notation"><span class="power">F10</span><span class="equals">=</span><span class="value">55</span></div>
+          </a>
+          <a class="fib-card" href="https://numberblocks.fandom.com/wiki/Eighty-Nine" style="--accent: var(--purple)" aria-label="Numberblock Eighty-Nine source">
+            <div class="image-stage"><img src="assets/numberblocks/089-eighty-nine.webp" alt="Numberblock Eighty-Nine"></div>
+            <div class="notation"><span class="power">F11</span><span class="equals">=</span><span class="value">89</span></div>
+          </a>
+          <a class="fib-card" href="https://numberblocks.fandom.com/wiki/Fanmade_Galleries_for_other_Numberblocks/140-149?file=Jz144.png" style="--accent: var(--red)" aria-label="Numberblock One Hundred Forty-Four source">
+            <div class="image-stage"><img src="assets/numberblocks/144-one-hundred-forty-four.webp" alt="Numberblock One Hundred Forty-Four"></div>
+            <div class="notation"><span class="power">F12</span><span class="equals">=</span><span class="value">144</span></div>
+          </a>
+          <a class="fib-card" href="https://numberblocks.fandom.com/wiki/Fanmade_Galleries_for_other_Numberblocks/230-239?file=Jz233.png" style="--accent: var(--orange)" aria-label="Numberblock Two Hundred Thirty-Three source">
+            <div class="image-stage"><img src="assets/numberblocks/233-two-hundred-thirty-three.webp" alt="Numberblock Two Hundred Thirty-Three"></div>
+            <div class="notation"><span class="power">F13</span><span class="equals">=</span><span class="value">233</span></div>
+          </a>
+          <a class="fib-card" href="https://numberblocks.fandom.com/wiki/Fanmade_Galleries_for_other_Numberblocks/350-399?file=Jz377.png" style="--accent: var(--green)" aria-label="Numberblock Three Hundred Seventy-Seven source">
+            <div class="image-stage"><img src="assets/numberblocks/377-three-hundred-seventy-seven.webp" alt="Numberblock Three Hundred Seventy-Seven"></div>
+            <div class="notation"><span class="power">F14</span><span class="equals">=</span><span class="value">377</span></div>
+          </a>
+          <a class="fib-card" href="https://numberblocks.fandom.com/wiki/Fanmade_Galleries_for_other_Numberblocks/600-699?file=Jz610.png" style="--accent: var(--blue)" aria-label="Numberblock Six Hundred Ten source">
+            <div class="image-stage"><img src="assets/numberblocks/610-six-hundred-ten.webp" alt="Numberblock Six Hundred Ten"></div>
+            <div class="notation"><span class="power">F15</span><span class="equals">=</span><span class="value">610</span></div>
+          </a>
+        </div>
+      </section>
+
+      <section class="layout" aria-label="Fibonacci spiral">
+        <h2>Spiral</h2>
+        <div class="spiral">
+          <a class="fib-card" href="https://numberblocks.fandom.com/wiki/Fifty-Five" style="--accent: var(--blue); left: 0%; top: 0%; width: 61.7978%; height: 100%;" aria-label="Numberblock Fifty-Five source">
+            <div class="image-stage"><img src="assets/numberblocks/055-fifty-five.webp" alt="Numberblock Fifty-Five"></div>
+          </a>
+          <a class="fib-card" href="https://numberblocks.fandom.com/wiki/Thirty-Four" style="--accent: var(--green); left: 61.7978%; top: 0%; width: 38.2022%; height: 61.8182%;" aria-label="Numberblock Thirty-Four source">
+            <div class="image-stage"><img src="assets/numberblocks/034-thirty-four.webp" alt="Numberblock Thirty-Four"></div>
+          </a>
+          <a class="fib-card" href="https://numberblocks.fandom.com/wiki/Twenty-One" style="--accent: var(--orange); left: 76.4045%; top: 61.8182%; width: 23.5955%; height: 38.1818%;" aria-label="Numberblock Twenty-One source">
+            <div class="image-stage"><img src="assets/numberblocks/021-twenty-one.webp" alt="Numberblock Twenty-One"></div>
+          </a>
+          <a class="fib-card" href="https://numberblocks.fandom.com/wiki/Thirteen_(character)" style="--accent: var(--red); left: 61.7978%; top: 76.3636%; width: 14.6067%; height: 23.6364%;" aria-label="Numberblock Thirteen source">
+            <div class="image-stage"><img src="assets/numberblocks/013-thirteen.webp" alt="Numberblock Thirteen"></div>
+          </a>
+          <a class="fib-card" href="https://numberblocks.fandom.com/wiki/Eight_(character)" style="--accent: var(--purple); left: 61.7978%; top: 61.8182%; width: 8.9888%; height: 14.5455%;" aria-label="Numberblock Eight source">
+            <div class="image-stage"><img src="assets/numberblocks/008-eight.webp" alt="Numberblock Eight"></div>
+          </a>
+          <a class="fib-card" href="https://numberblocks.fandom.com/wiki/Five_(character)" style="--accent: var(--blue); left: 70.7865%; top: 61.8182%; width: 5.618%; height: 9.0909%;" aria-label="Numberblock Five source">
+            <div class="image-stage"><img src="assets/numberblocks/005-five.webp" alt="Numberblock Five"></div>
+          </a>
+          <a class="fib-card" href="https://numberblocks.fandom.com/wiki/Three_(character)" style="--accent: var(--yellow); left: 73.0337%; top: 70.9091%; width: 3.3708%; height: 5.4545%;" aria-label="Numberblock Three source">
+            <div class="image-stage"><img src="assets/numberblocks/003-three.webp" alt="Numberblock Three"></div>
+          </a>
+          <a class="fib-card tiny" href="https://numberblocks.fandom.com/wiki/Two_(character)" style="--accent: var(--orange); left: 70.7865%; top: 72.7273%; width: 2.2472%; height: 3.6364%;" aria-label="Numberblock Two source">
+            <div class="image-stage"><img src="assets/numberblocks/002-two.webp" alt="Numberblock Two"></div>
+            <div class="single-value">2</div>
+          </a>
+          <a class="fib-card tiny" href="https://numberblocks.fandom.com/wiki/One_(character)" style="--accent: var(--red); left: 70.7865%; top: 70.9091%; width: 1.1236%; height: 1.8182%;" aria-label="Numberblock One source">
+            <div class="image-stage"><img src="assets/numberblocks/001-one.webp" alt="Numberblock One"></div>
+            <div class="single-value">1</div>
+          </a>
+          <a class="fib-card tiny" href="https://numberblocks.fandom.com/wiki/One_(character)" style="--accent: var(--red); left: 71.9101%; top: 70.9091%; width: 1.1236%; height: 1.8182%;" aria-label="Numberblock One source">
+            <div class="image-stage"><img src="assets/numberblocks/001-one.webp" alt="Numberblock One"></div>
+            <div class="single-value">1</div>
+          </a>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

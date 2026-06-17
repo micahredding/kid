@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Powers of 2</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #202124;
+        --paper: #fffdf8;
+        --panel: #ffffff;
+        --red: #e43d30;
+        --blue: #2878d4;
+        --green: #178b58;
+        --yellow: #f7c948;
+        --orange: #f28b30;
+        --purple: #8b5ac7;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background:
+          linear-gradient(90deg, rgba(228, 61, 48, 0.06) 0 25%, transparent 25% 100%),
+          linear-gradient(180deg, rgba(40, 120, 212, 0.07), rgba(247, 201, 72, 0.09)),
+          var(--paper);
+        color: var(--ink);
+        font-family: Arial, Helvetica, sans-serif;
+      }
+
+      main {
+        width: min(1180px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 28px 0 40px;
+      }
+
+      header {
+        display: grid;
+        gap: 8px;
+        margin-bottom: 24px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2.1rem, 5vw, 4.8rem);
+        line-height: 0.95;
+        letter-spacing: 0;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+        gap: 16px;
+      }
+
+      .card {
+        --accent: var(--blue);
+        display: grid;
+        grid-template-rows: auto 1fr;
+        min-height: 360px;
+        overflow: hidden;
+        border: 2px solid color-mix(in srgb, var(--accent), #ffffff 40%);
+        border-radius: 8px;
+        background: var(--panel);
+        box-shadow: 0 10px 26px rgba(32, 33, 36, 0.08);
+        color: inherit;
+        text-decoration: none;
+      }
+
+      .image-stage {
+        display: grid;
+        place-items: center;
+        min-height: 220px;
+        padding: 18px;
+        background:
+          linear-gradient(135deg, color-mix(in srgb, var(--accent), #ffffff 82%), #ffffff);
+      }
+
+      .image-stage img {
+        display: block;
+        width: auto;
+        height: auto;
+        max-width: 100%;
+        max-height: 210px;
+        object-fit: contain;
+        filter: drop-shadow(0 8px 10px rgba(32, 33, 36, 0.15));
+      }
+
+      .card-body {
+        display: grid;
+        align-content: start;
+        gap: 8px;
+        padding: 14px 16px 16px;
+      }
+
+      .notation {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        flex-wrap: wrap;
+        font-weight: 800;
+      }
+
+      .power {
+        color: var(--accent);
+        font-size: 2rem;
+        line-height: 1;
+      }
+
+      .equals {
+        color: var(--ink);
+        font-size: 1.3rem;
+      }
+
+      .value {
+        font-size: 1.5rem;
+      }
+
+      .name {
+        margin: 0;
+        font-size: 1.05rem;
+        font-weight: 700;
+        line-height: 1.2;
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      @media (max-width: 560px) {
+        main {
+          width: min(100% - 20px, 1180px);
+          padding-top: 18px;
+        }
+
+        .grid {
+          grid-template-columns: 1fr;
+        }
+
+        .card {
+          min-height: 320px;
+        }
+      }
+
+      @media print {
+        @page {
+          size: landscape;
+          margin: 0.45in;
+        }
+
+        body {
+          background: #fff;
+        }
+
+        main {
+          width: 100%;
+          padding: 0;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+
+        header {
+          margin-bottom: 12px;
+        }
+
+        h1 {
+          font-size: 28pt;
+        }
+
+        .grid {
+          grid-template-columns: repeat(5, 1fr);
+          gap: 10px;
+        }
+
+        .card {
+          min-height: 0;
+          border-color: #bbb;
+          box-shadow: none;
+          break-inside: avoid;
+          page-break-inside: avoid;
+        }
+
+        .image-stage {
+          min-height: 135px;
+          padding: 10px;
+          background: #fff;
+        }
+
+        .image-stage img {
+          max-height: 130px;
+          filter: none;
+        }
+
+        .card-body {
+          gap: 4px;
+          padding: 8px 10px 10px;
+        }
+
+        .power {
+          font-size: 18pt;
+        }
+
+        .equals {
+          font-size: 14pt;
+        }
+
+        .value {
+          font-size: 16pt;
+        }
+
+        .name {
+          font-size: 10pt;
+        }
+
+        a[href]::after {
+          content: none !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Powers of 2</h1>
+      </header>
+
+      <section class="grid" aria-label="Powers of two Numberblocks">
+        <a class="card" href="https://numberblocks.fandom.com/wiki/Two_(character)" style="--accent: var(--orange)" aria-label="Numberblock Two source">
+          <div class="image-stage">
+            <img src="assets/numberblocks/002-two.webp" alt="Numberblock Two">
+          </div>
+          <div class="card-body">
+            <div class="notation"><span class="power">2^1</span><span class="equals">=</span><span class="value">2</span></div>
+            <p class="name">Two</p>
+          </div>
+        </a>
+
+        <a class="card" href="https://numberblocks.fandom.com/wiki/Four_(character)" style="--accent: var(--green)" aria-label="Numberblock Four source">
+          <div class="image-stage">
+            <img src="assets/numberblocks/004-four.webp" alt="Numberblock Four">
+          </div>
+          <div class="card-body">
+            <div class="notation"><span class="power">2^2</span><span class="equals">=</span><span class="value">4</span></div>
+            <p class="name">Four</p>
+          </div>
+        </a>
+
+        <a class="card" href="https://numberblocks.fandom.com/wiki/Eight_(character)" style="--accent: var(--purple)" aria-label="Numberblock Eight source">
+          <div class="image-stage">
+            <img src="assets/numberblocks/008-eight.webp" alt="Numberblock Eight">
+          </div>
+          <div class="card-body">
+            <div class="notation"><span class="power">2^3</span><span class="equals">=</span><span class="value">8</span></div>
+            <p class="name">Eight</p>
+          </div>
+        </a>
+
+        <a class="card" href="https://numberblocks.fandom.com/wiki/Sixteen_(character)" style="--accent: var(--blue)" aria-label="Numberblock Sixteen source">
+          <div class="image-stage">
+            <img src="assets/numberblocks/016-sixteen.webp" alt="Numberblock Sixteen">
+          </div>
+          <div class="card-body">
+            <div class="notation"><span class="power">2^4</span><span class="equals">=</span><span class="value">16</span></div>
+            <p class="name">Sixteen</p>
+          </div>
+        </a>
+
+        <a class="card" href="https://numberblocks.fandom.com/wiki/Thirty-Two" style="--accent: var(--red)" aria-label="Numberblock Thirty-Two source">
+          <div class="image-stage">
+            <img src="assets/numberblocks/032-thirty-two.webp" alt="Numberblock Thirty-Two">
+          </div>
+          <div class="card-body">
+            <div class="notation"><span class="power">2^5</span><span class="equals">=</span><span class="value">32</span></div>
+            <p class="name">Thirty-Two</p>
+          </div>
+        </a>
+
+        <a class="card" href="https://numberblocks.fandom.com/wiki/Sixty-Four" style="--accent: var(--orange)" aria-label="Numberblock Sixty-Four source">
+          <div class="image-stage">
+            <img src="assets/numberblocks/064-sixty-four.webp" alt="Numberblock Sixty-Four">
+          </div>
+          <div class="card-body">
+            <div class="notation"><span class="power">2^6</span><span class="equals">=</span><span class="value">64</span></div>
+            <p class="name">Sixty-Four</p>
+          </div>
+        </a>
+
+        <a class="card" href="https://numberblocks.fandom.com/wiki/Fanmade_Galleries_for_other_Numberblocks/120-129" style="--accent: var(--green)" aria-label="Numberblock One Hundred Twenty-Eight source">
+          <div class="image-stage">
+            <img src="assets/numberblocks/128-one-hundred-twenty-eight.webp" alt="Speculative Numberblock One Hundred Twenty-Eight">
+          </div>
+          <div class="card-body">
+            <div class="notation"><span class="power">2^7</span><span class="equals">=</span><span class="value">128</span></div>
+            <p class="name">One Hundred Twenty-Eight</p>
+          </div>
+        </a>
+
+        <a class="card" href="https://numberblocks.fandom.com/wiki/Fanmade_Galleries_for_other_Numberblocks/250-259?file=Jz256.png" style="--accent: var(--purple)" aria-label="Numberblock Two Hundred Fifty-Six source">
+          <div class="image-stage">
+            <img src="assets/numberblocks/256-two-hundred-fifty-six.webp" alt="Speculative Numberblock Two Hundred Fifty-Six">
+          </div>
+          <div class="card-body">
+            <div class="notation"><span class="power">2^8</span><span class="equals">=</span><span class="value">256</span></div>
+            <p class="name">Two Hundred Fifty-Six</p>
+          </div>
+        </a>
+
+        <a class="card" href="https://numberblocks-big.fandom.com/wiki/512" style="--accent: var(--blue)" aria-label="Numberblock Five Hundred Twelve source">
+          <div class="image-stage">
+            <img src="assets/numberblocks/512-five-hundred-twelve.webp" alt="Speculative Numberblock Five Hundred Twelve">
+          </div>
+          <div class="card-body">
+            <div class="notation"><span class="power">2^9</span><span class="equals">=</span><span class="value">512</span></div>
+            <p class="name">Five Hundred Twelve</p>
+          </div>
+        </a>
+
+        <a class="card" href="https://numberblocks.fandom.com/wiki/Fanmade_Galleries_for_other_Numberblocks/1000-1999" style="--accent: var(--red)" aria-label="Numberblock One Thousand Twenty-Four source">
+          <div class="image-stage">
+            <img src="assets/numberblocks/1024-one-thousand-twenty-four.webp" alt="Speculative Numberblock One Thousand Twenty-Four">
+          </div>
+          <div class="card-body">
+            <div class="notation"><span class="power">2^10</span><span class="equals">=</span><span class="value">1,024</span></div>
+            <p class="name">One Thousand Twenty-Four</p>
+          </div>
+        </a>
+      </section>
+    </main>
+  </body>
+</html>

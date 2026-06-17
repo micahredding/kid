@@ -1,0 +1,60 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/player.gd" id="1_8na7q"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_y8nqi"]
+radius = 18.0
+
+[node name="Player" type="CharacterBody2D"]
+script = ExtResource("1_8na7q")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_y8nqi")
+
+[node name="Torso" type="Polygon2D" parent="."]
+color = Color(0.2, 0.55, 1, 1)
+polygon = PackedVector2Array(-14, -2, 14, -2, 14, 20, -14, 20)
+
+[node name="Head" type="Polygon2D" parent="."]
+color = Color(1, 0.88, 0.74, 1)
+polygon = PackedVector2Array(-13, -26, 13, -26, 13, -2, -13, -2)
+
+[node name="Hair" type="Polygon2D" parent="."]
+color = Color(0.98, 0.86, 0.22, 1)
+polygon = PackedVector2Array(-14, -30, 14, -30, 11, -18, -11, -18)
+
+[node name="EyeLeft" type="Polygon2D" parent="."]
+color = Color(0.08, 0.08, 0.08, 1)
+polygon = PackedVector2Array(-8, -16, -4, -16, -4, -12, -8, -12)
+
+[node name="EyeRight" type="Polygon2D" parent="."]
+color = Color(0.08, 0.08, 0.08, 1)
+polygon = PackedVector2Array(4, -16, 8, -16, 8, -12, 4, -12)
+
+[node name="GhostBody" type="Polygon2D" parent="."]
+visible = false
+color = Color(0.95, 0.97, 1, 0.95)
+polygon = PackedVector2Array(-15, -24, 15, -24, 15, 10, 9, 16, 3, 10, -2, 16, -9, 10, -15, 16)
+
+[node name="GhostEyeLeft" type="Polygon2D" parent="."]
+visible = false
+color = Color(0.08, 0.08, 0.08, 1)
+polygon = PackedVector2Array(-8, -12, -4, -12, -4, -8, -8, -8)
+
+[node name="GhostEyeRight" type="Polygon2D" parent="."]
+visible = false
+color = Color(0.08, 0.08, 0.08, 1)
+polygon = PackedVector2Array(4, -12, 8, -12, 8, -8, 4, -8)
+
+[node name="NameLabel" type="Label" parent="."]
+offset_left = -40.0
+offset_top = -52.0
+offset_right = 40.0
+offset_bottom = -24.0
+horizontal_alignment = 1
+text = "Asher"
+
+[node name="Camera2D" type="Camera2D" parent="."]
+position_smoothing_enabled = true
+position_smoothing_speed = 8.0
+enabled = true

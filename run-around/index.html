@@ -1,0 +1,1515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Run Around</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html {
+  height: 100%;
+  height: -webkit-fill-available;
+}
+body {
+  background: #0f0f1a;
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100vh;
+  height: -webkit-fill-available;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: system-ui, -apple-system, sans-serif;
+  color: white;
+  overflow: hidden;
+}
+#wrapper {
+  position: relative;
+  width: 1120px;
+  height: 640px;
+  max-width: 100vw;
+  max-height: 100vh;
+  max-height: -webkit-fill-available;
+}
+canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
+/* ── MENU ── */
+#menu {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(8, 8, 22, 0.88);
+  z-index: 20;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 12px 0;
+}
+#menu-box {
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 18px;
+  padding: 32px 44px;
+  text-align: center;
+  min-width: 300px;
+  max-width: 520px;
+  width: 92vw;
+  max-height: calc(100% - 24px);
+  overflow: auto;
+}
+#menu h1 { font-size: 2rem; margin-bottom: 6px; letter-spacing: -0.5px; }
+#menu p  { opacity: 0.65; margin-bottom: 22px; font-size: 0.95rem; }
+#level-buttons { display: flex; flex-direction: column; gap: 9px; }
+.level-btn {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 10px;
+  color: white;
+  font-size: 1.05rem;
+  padding: 11px 22px;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.level-btn:hover { background: rgba(255,255,255,0.22); }
+/* ── HUD ── */
+#hud {
+  position: absolute;
+  top: 0; right: 0;
+  width: 236px;
+  height: 100%;
+  background: rgba(0,0,0,0.52);
+  padding: 12px 10px;
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 10;
+  overflow-y: auto;
+  pointer-events: none;
+}
+#hud-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.2;
+}
+#hud-progress {
+  font-size: 0.82rem;
+  text-align: center;
+  opacity: 0.75;
+}
+#rainbow-canvas { display: none; align-self: center; }
+#hud-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  justify-content: center;
+}
+.chip {
+  border: 2px solid rgba(255,255,255,0.6);
+  border-radius: 8px;
+  padding: 3px 7px;
+  font-size: 0.8rem;
+  text-align: center;
+  opacity: 0.38;
+  min-width: 36px;
+  line-height: 1.3;
+  transition: opacity 0.2s;
+}
+.chip.found { opacity: 1; }
+#hud-complete {
+  text-align: center;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #ffd700;
+  display: none;
+}
+#back-btn {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 8px;
+  color: white;
+  padding: 7px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  margin-top: auto;
+  pointer-events: all;
+}
+#back-btn:hover { background: rgba(255,255,255,0.2); }
+/* Mobile/small-screen scaling */
+@media (max-width: 1140px) {
+  #wrapper { width: 100vw; height: calc(100vw * 640 / 1120); }
+}
+@media (max-height: 660px) {
+  #wrapper { height: 100vh; height: -webkit-fill-available; width: calc(100vh * 1120 / 640); }
+}
+</style>
+</head>
+<body>
+<div id="wrapper">
+  <canvas id="canvas" width="1120" height="640"></canvas>
+
+  <div id="menu">
+    <div id="menu-box">
+      <h1>Run Around</h1>
+      <p>Run to collect everything! (Arrow keys or WASD)</p>
+      <div id="level-buttons"></div>
+    </div>
+  </div>
+
+  <div id="hud">
+    <div id="hud-title"></div>
+    <div id="hud-progress"></div>
+    <canvas id="rainbow-canvas" width="210" height="210"></canvas>
+    <div id="hud-chips"></div>
+    <div id="hud-complete">You did it!</div>
+    <button id="back-btn">Back to Menu</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════════
+// LEVEL DATA
+// ═══════════════════════════════════════════════════════════════════════════════
+const LEVEL_ORDER = [
+  'alphabet','rainbow','numbers','simple_words','shapes','animals','halloween',
+  'house_tour','castle_quest'
+];
+const LEVELS = {
+  alphabet: {
+    title: 'Alphabet Hunt', mode: 'letters', map_theme: 'forest',
+    items: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
+  },
+  rainbow: {
+    title: 'Rainbow Run', mode: 'rainbow', map_theme: 'island_chain',
+    items: ['Red','Orange','Yellow','Green','Blue','Indigo','Violet']
+  },
+  numbers: {
+    title: 'Count to 10', mode: 'numbers', map_theme: 'mountains',
+    items: ['1','2','3','4','5','6','7','8','9','10']
+  },
+  simple_words: {
+    title: 'Simple Words', mode: 'words_emoji', map_theme: 'house',
+    items: ['cat','hat','dog','sun','car','tree','book','ball'],
+    emoji_map: { cat:'🐱', hat:'🧢', dog:'🐶', sun:'☀️', car:'🚗', tree:'🌳', book:'📘', ball:'⚽' }
+  },
+  shapes: {
+    title: 'Shape Hunt', mode: 'shapes', map_theme: 'desert',
+    items: ['Circle','Square','Triangle','Star','Heart','Diamond','Oval','Rectangle'],
+    symbol_map: { Circle:'●', Square:'■', Triangle:'▲', Star:'★', Heart:'♥', Diamond:'◆', Oval:'⬭', Rectangle:'▭' }
+  },
+  animals: {
+    title: 'Animal Hunt', mode: 'animals', map_theme: 'cave',
+    items: ['Cat','Dog','Bird','Fish','Duck','Horse','Frog','Cow'],
+    emoji_map: { Cat:'🐱', Dog:'🐶', Bird:'🐦', Fish:'🐟', Duck:'🦆', Horse:'🐴', Frog:'🐸', Cow:'🐮' }
+  },
+  halloween: {
+    title: 'Halloween Trick-or-Treat', mode: 'words_emoji', map_theme: 'trick_or_treat',
+    char_styles: { asher:'ghost', mommy:'bat', daddy:'skeleton' },
+    items: ['candy','pumpkin','ghost','bat','spider','hat','moon','house'],
+    emoji_map: { candy:'🍬', pumpkin:'🎃', ghost:'👻', bat:'🦇', spider:'🕷️', hat:'🧙', moon:'🌙', house:'🏠' }
+  },
+
+  // ── ROOM-BASED LEVELS ────────────────────────────────────────────────────────
+  house_tour: {
+    title: 'House Tour',
+    mode: 'words_emoji',
+    map_type: 'rooms',
+    world_bounds: { x:-1680, y:-320, w:3360, h:640 },
+    start_pos:    { wx: 0, wy: 0 },
+    rooms: [
+      { x:-1680, y:-320, w:1120, h:640, color:'#d4c0a0', label:'Kitchen'     },
+      { x: -560, y:-320, w:1120, h:640, color:'#c8b090', label:'Living Room' },
+      { x:  560, y:-320, w:1120, h:640, color:'#4a8040', label:'Backyard'    }
+    ],
+    walls: [
+      // Outer perimeter
+      { x:-1680, y:-320, w:3360, h:22,  color:'#7a6040' }, // top
+      { x:-1680, y: 298, w:3360, h:22,  color:'#7a6040' }, // bottom
+      { x:-1680, y:-298, w:22,  h:596,  color:'#7a6040' }, // left
+      { x: 1658, y:-298, w:22,  h:596,  color:'#7a6040' }, // right
+      // Kitchen ↔ Living Room divider (doorway y=-70..70, 140px gap)
+      { x: -572, y:-298, w:24,  h:228,  color:'#7a6040' }, // top segment
+      { x: -572, y:  70, w:24,  h:228,  color:'#7a6040' }, // bottom segment
+      // Living Room ↔ Backyard divider
+      { x:  548, y:-298, w:24,  h:228,  color:'#7a6040' }, // top segment
+      { x:  548, y:  70, w:24,  h:228,  color:'#7a6040' }  // bottom segment
+    ],
+    doorways: [
+      { x:-572, y:-70, w:24, h:140, color:'#9e7940' }, // Kitchen ↔ Living
+      { x: 548, y:-70, w:24, h:140, color:'#9e7940' }  // Living ↔ Backyard
+    ],
+    room_deco: 'house',
+    items: ['stove','bowl','mug','couch','lamp','tv','ball','flower','key','apple'],
+    emoji_map: { stove:'🍳', bowl:'🥣', mug:'☕', couch:'🛋️', lamp:'💡', tv:'📺', ball:'⚽', flower:'🌸', key:'🗝️', apple:'🍎' }
+  },
+
+  castle_quest: {
+    title: 'Castle Quest',
+    mode: 'words_emoji',
+    map_type: 'rooms',
+    world_bounds: { x:-1120, y:-640, w:2240, h:1280 },
+    start_pos:    { wx:-560, wy:-320 },
+    rooms: [
+      { x:-1120, y:-640, w:1120, h:640, color:'#2a2018', label:'Throne Room' },
+      { x:    0, y:-640, w:1120, h:640, color:'#1c2030', label:'Tower Room'  },
+      { x:-1120, y:   0, w:1120, h:640, color:'#181818', label:'Dungeon'     },
+      { x:    0, y:   0, w:1120, h:640, color:'#1e3020', label:'Garden'      }
+    ],
+    walls: [
+      // Outer perimeter
+      { x:-1120, y:-640, w:2240, h:24,  color:'#3a3028' }, // top
+      { x:-1120, y: 616, w:2240, h:24,  color:'#3a3028' }, // bottom
+      { x:-1120, y:-616, w:24,  h:1232, color:'#3a3028' }, // left
+      { x: 1096, y:-616, w:24,  h:1232, color:'#3a3028' }, // right
+      // Vertical wall Throne↔Tower (doorway y=-400..-280, 120px)
+      { x:  -12, y:-616, w:24,  h:216,  color:'#3a3028' }, // top: to y=-400
+      { x:  -12, y:-280, w:24,  h:280,  color:'#3a3028' }, // bottom: to horizontal wall
+      // Vertical wall Dungeon↔Garden (doorway y=260..380)
+      { x:  -12, y:   0, w:24,  h:260,  color:'#3a3028' }, // top: y=0..260
+      { x:  -12, y: 380, w:24,  h:236,  color:'#3a3028' }, // bottom: y=380..616
+      // Horizontal wall top-rooms↔bottom-rooms (doorways: Throne↔Dungeon x=-620..-500, Tower↔Garden x=500..620)
+      { x:-1096, y: -12, w:476, h:24,   color:'#3a3028' }, // far-left: to x=-620
+      { x: -500, y: -12, w:488, h:24,   color:'#3a3028' }, // left-center: x=-500..-12
+      { x:   12, y: -12, w:488, h:24,   color:'#3a3028' }, // right-center: x=12..500
+      { x:  620, y: -12, w:476, h:24,   color:'#3a3028' }  // far-right: x=620..1096
+    ],
+    doorways: [
+      { x: -12, y:-400, w:24,  h:120, color:'#5a4820' }, // Throne↔Tower
+      { x: -12, y: 260, w:24,  h:120, color:'#5a4820' }, // Dungeon↔Garden
+      { x:-620, y: -12, w:120, h:24,  color:'#5a4820' }, // Throne↔Dungeon
+      { x: 500, y: -12, w:120, h:24,  color:'#5a4820' }  // Tower↔Garden
+    ],
+    room_deco: 'castle',
+    items: ['crown','sword','shield','potion','torch','key','chest','coin','gem','scroll'],
+    emoji_map: { crown:'👑', sword:'⚔️', shield:'🛡️', potion:'🧪', torch:'🔦', key:'🗝️', chest:'📦', coin:'🪙', gem:'💎', scroll:'📜' }
+  }
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SEEDED RNG  (mulberry32)
+// ═══════════════════════════════════════════════════════════════════════════════
+function strHash(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (Math.imul(31, h) + s.charCodeAt(i)) | 0;
+  return h >>> 0;
+}
+function makeRng(seed) {
+  let s = seed >>> 0;
+  return {
+    next() {
+      s += 0x6D2B79F5;
+      let t = Math.imul(s ^ (s >>> 15), 1 | s);
+      t ^= t + Math.imul(t ^ (t >>> 7), 61 | t);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    },
+    randf(lo, hi) { return lo + this.next() * (hi - lo); },
+    randi(lo, hi)  { return Math.floor(lo + this.next() * (hi - lo + 1)); }
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CANVAS / COORDINATE SYSTEM
+// World space: origin at (0,0). Camera transform maps world→canvas each frame.
+// OX/OY is the canvas center, used only for the camera transform in frame().
+// ═══════════════════════════════════════════════════════════════════════════════
+const wrapper = document.getElementById('wrapper');
+const canvas = document.getElementById('canvas');
+const ctx    = canvas.getContext('2d');
+const CW = 1120, CH = 640;
+const OX = CW / 2, OY = CH / 2;   // canvas center
+
+function getViewportSize() {
+  const vv = window.visualViewport;
+  if (vv && vv.width && vv.height) return { width: vv.width, height: vv.height };
+  return {
+    width: window.innerWidth || document.documentElement.clientWidth || CW,
+    height: window.innerHeight || document.documentElement.clientHeight || CH
+  };
+}
+
+function sizeWrapperToViewport() {
+  const viewport = getViewportSize();
+  const gutter = 12;
+  const maxWidth = Math.max(320, viewport.width - gutter * 2);
+  const maxHeight = Math.max(240, viewport.height - gutter * 2);
+  const scale = Math.min(maxWidth / CW, maxHeight / CH, 1);
+  wrapper.style.width = Math.round(CW * scale) + 'px';
+  wrapper.style.height = Math.round(CH * scale) + 'px';
+}
+
+sizeWrapperToViewport();
+window.addEventListener('resize', sizeWrapperToViewport);
+window.addEventListener('orientationchange', sizeWrapperToViewport);
+window.addEventListener('pageshow', sizeWrapperToViewport);
+if (window.visualViewport) window.visualViewport.addEventListener('resize', sizeWrapperToViewport);
+
+// bgElems store raw world coords — the camera transform handles viewport mapping.
+function w2c(pts) { return pts.slice(); }
+
+// Pre-translate a list of local pts to world pts
+function localToWorld(pts, wx, wy, scale = 1) {
+  const out = [];
+  for (let i = 0; i < pts.length; i += 2)
+    out.push(pts[i] * scale + wx, pts[i+1] * scale + wy);
+  return out;
+}
+
+function ovalPts(rx, ry, segs = 12) {
+  const pts = [];
+  for (let i = 0; i < segs; i++) {
+    const t = (Math.PI * 2 * i) / segs;
+    pts.push(Math.cos(t) * rx, Math.sin(t) * ry);
+  }
+  return pts;
+}
+
+// Draw a polygon from canvas-coord pts array
+function ctxPoly(canvasPts, color) {
+  ctx.beginPath();
+  ctx.moveTo(canvasPts[0], canvasPts[1]);
+  for (let i = 2; i < canvasPts.length; i += 2) ctx.lineTo(canvasPts[i], canvasPts[i+1]);
+  ctx.closePath();
+  ctx.fillStyle = color;
+  ctx.fill();
+}
+
+function ctxRoundedRect(x, y, w, h, radius) {
+  if (typeof ctx.roundRect === 'function') {
+    ctx.beginPath();
+    ctx.roundRect(x, y, w, h, radius);
+    return;
+  }
+
+  const defaultRadius = radius == null ? 0 : radius;
+  const radii = Array.isArray(radius)
+    ? [
+        radius[0] == null ? 0 : radius[0],
+        radius[1] == null ? (radius[0] == null ? 0 : radius[0]) : radius[1],
+        radius[2] == null ? (radius[0] == null ? 0 : radius[0]) : radius[2],
+        radius[3] == null ? (radius[1] == null ? (radius[0] == null ? 0 : radius[0]) : radius[1]) : radius[3]
+      ]
+    : [defaultRadius, defaultRadius, defaultRadius, defaultRadius];
+  const maxR = Math.min(w / 2, h / 2);
+  const [rtl, rtr, rbr, rbl] = radii.map(r => Math.max(0, Math.min(r, maxR)));
+
+  ctx.beginPath();
+  ctx.moveTo(x + rtl, y);
+  ctx.lineTo(x + w - rtr, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + rtr);
+  ctx.lineTo(x + w, y + h - rbr);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - rbr, y + h);
+  ctx.lineTo(x + rbl, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - rbl);
+  ctx.lineTo(x, y + rtl);
+  ctx.quadraticCurveTo(x, y, x + rtl, y);
+  ctx.closePath();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// BACKGROUND ELEMENT SYSTEM
+// bgElems: array of { canvasPts, color, isShimmer?, swayGroup? }
+// swayGroups: array of { elemIndices[], pivotCX, pivotCY, phase, speed, amp, rot }
+// ═══════════════════════════════════════════════════════════════════════════════
+let bgElems     = [];
+let swayGroups  = [];
+let shimmerIdx  = -1;
+let shimmerBase = null;   // [r,g,b,a] 0..255 / 0..1
+
+function bgAddPoly(worldPts, color, shimmer = false) {
+  const idx = bgElems.length;
+  bgElems.push({ canvasPts: w2c(worldPts), color, isShimmer: shimmer });
+  if (shimmer) shimmerIdx = idx;
+  return idx;
+}
+
+function bgAddOval(wx, wy, rx, ry, color, segs = 12, shimmer = false) {
+  return bgAddPoly(localToWorld(ovalPts(rx, ry, segs), wx, wy), color, shimmer);
+}
+
+function bgAddSwayGroup(indices, pivotWX, pivotWY, rng, minAmp = 0.01, maxAmp = 0.028) {
+  swayGroups.push({
+    indices,
+    pivotCX: pivotWX,   // world coords; canvas transform applied in frame()
+    pivotCY: pivotWY,
+    phase: rng.randf(0, Math.PI * 2),
+    speed: rng.randf(0.75, 1.3),
+    amp:   rng.randf(minAmp, maxAmp),
+    rot: 0
+  });
+}
+
+// Map each elem index → sway group index (for fast lookup while drawing)
+let elemSwayGroup = [];   // elemSwayGroup[elemIdx] = swayGroup ref or null
+
+function buildSwayLookup() {
+  elemSwayGroup = new Array(bgElems.length).fill(null);
+  for (const sg of swayGroups) {
+    for (const i of sg.indices) elemSwayGroup[i] = sg;
+  }
+}
+
+function updateSway(ambientTime) {
+  for (const sg of swayGroups) {
+    sg.rot = Math.sin(ambientTime * sg.speed + sg.phase) * sg.amp;
+  }
+}
+
+function drawBackground(ambientTime) {
+  for (let i = 0; i < bgElems.length; i++) {
+    const el = bgElems[i];
+    let color = el.color;
+
+    if (el.isShimmer && shimmerBase) {
+      const shimmer = Math.sin(ambientTime * 2.2) * 0.12;
+      const [r,g,b,a] = shimmerBase;
+      const na = Math.max(0.08, Math.min(0.9, a + shimmer));
+      color = `rgba(${r},${g},${b},${na.toFixed(3)})`;
+    }
+
+    const sg = elemSwayGroup[i];
+    if (sg && sg.rot !== 0) {
+      ctx.save();
+      ctx.translate(sg.pivotCX, sg.pivotCY);
+      ctx.rotate(sg.rot);
+      ctx.translate(-sg.pivotCX, -sg.pivotCY);
+      ctxPoly(el.canvasPts, color);
+      ctx.restore();
+    } else {
+      ctxPoly(el.canvasPts, color);
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// BACKGROUND HELPERS
+// ═══════════════════════════════════════════════════════════════════════════════
+const BX = -560, BY = -320, BW = 1120, BH = 640;
+
+function edgePos(rng, eMin, eMax, rx = BX, ry = BY, rw = BW, rh = BH) {
+  const side = rng.randi(0, 3);
+  if (side === 0) return [rng.randf(rx+20, rx+rw-20), ry + rng.randf(eMin, eMax)];
+  if (side === 1) return [rng.randf(rx+20, rx+rw-20), ry+rh - rng.randf(eMin, eMax)];
+  if (side === 2) return [rx + rng.randf(eMin, eMax), rng.randf(ry+20, ry+rh-20)];
+  return [rx+rw - rng.randf(eMin, eMax), rng.randf(ry+20, ry+rh-20)];
+}
+
+function makeTree(wx, wy, rng) {
+  const sc = rng.randf(0.8, 1.25);
+  const i0 = bgElems.length;
+  bgAddPoly(localToWorld([-4,-2, 4,-2, 5,16, -5,16], wx, wy, sc), '#765236');
+  bgAddOval(wx, wy - 12*sc, 17*sc, 14*sc, '#28683a', 12);
+  bgAddOval(wx, wy - 15*sc, 14*sc, 12*sc, '#358746', 12);
+  bgAddSwayGroup([i0, i0+1, i0+2], wx, wy + 16*sc, rng);
+}
+
+function makeCactus(wx, wy, rng) {
+  const sc = rng.randf(0.8, 1.3);
+  const i0 = bgElems.length;
+  bgAddPoly(localToWorld([-7,-18, 7,-18, 7,18, -7,18],   wx, wy, sc), 'rgba(51,138,87,1)');
+  bgAddPoly(localToWorld([7,-8, 16,-8, 16,0, 7,0],        wx, wy, sc), 'rgba(51,138,87,1)');
+  bgAddPoly(localToWorld([-16,2, -7,2, -7,10, -16,10],    wx, wy, sc), 'rgba(51,138,87,1)');
+  bgAddSwayGroup([i0, i0+1, i0+2], wx, wy + 18*sc, rng, 0.006, 0.014);
+}
+
+function makePalmTree(wx, wy, rng) {
+  const sc = rng.randf(0.75, 1.15);
+  const i0 = bgElems.length;
+  // trunk
+  bgAddPoly(localToWorld([-3,-2, 3,-2, 7,22, -7,22], wx, wy, sc), 'rgba(158,117,66,1)');
+  // fronds – each stored individually so all rotate around trunk base
+  const frondLocal = [0,-8, 26,-2, 18,8, 0,1];
+  for (let i = 0; i < 6; i++) {
+    const ang = ((-70 + i * 28) * Math.PI) / 180;
+    const rotPts = [];
+    for (let j = 0; j < frondLocal.length; j += 2) {
+      const lx = frondLocal[j] * sc, ly = frondLocal[j+1] * sc;
+      rotPts.push(lx*Math.cos(ang) - ly*Math.sin(ang) + wx,
+                  lx*Math.sin(ang) + ly*Math.cos(ang) + wy);
+    }
+    bgAddPoly(rotPts, 'rgba(61,168,92,1)');
+  }
+  const indices = Array.from({length: 7}, (_, k) => i0 + k);
+  bgAddSwayGroup(indices, wx, wy + 22*sc, rng, 0.015, 0.03);
+}
+
+function makeBat(wx, wy, rng) {
+  const i0 = bgElems.length;
+  bgAddPoly(localToWorld([-16,0,-28,-6,-20,7,-8,2,0,-5,8,2,20,7,28,-6,16,0,0,8], wx, wy),
+            'rgba(20,20,31,0.9)');
+  bgAddSwayGroup([i0], wx, wy, rng, 0.008, 0.02);
+}
+
+function addNeighborhoodHouse(hx, hy, rng) {
+  bgAddPoly([hx-46,hy-22, hx+46,hy-22, hx+46,hy+46, hx-46,hy+46], 'rgba(133,107,102,1)');
+  bgAddPoly([hx-58,hy-22, hx,hy-64, hx+58,hy-22], 'rgba(79,48,48,1)');
+  bgAddPoly([hx-10,hy+8, hx+10,hy+8, hx+10,hy+46, hx-10,hy+46], 'rgba(61,41,31,1)');
+  const v = Math.round((0.76 + rng.randf(-0.08, 0.08)) * 255);
+  const wc = `rgba(255,${v},87,0.82)`;
+  bgAddPoly([hx-36,hy-10, hx-18,hy-10, hx-18,hy+8, hx-36,hy+8], wc);
+  bgAddPoly([hx+18,hy-10, hx+36,hy-10, hx+36,hy+8, hx+18,hy+8], wc);
+}
+
+// River / highlight polygons (world coords)
+function riverPoly(key) {
+  if (key === 'rainbow')
+    return [-560,-190,-360,-120,-120,-155,120,-95,360,-135,560,-80,560,10,360,-35,110,15,-120,-35,-360,0,-560,-65];
+  if (key === 'numbers')
+    return [-560,40,-340,95,-110,70,130,120,360,85,560,150,560,245,360,185,140,225,-120,175,-350,200,-560,140];
+  return [-560,-10,-320,55,-110,15,120,75,350,20,560,85,560,180,350,120,130,170,-100,110,-340,150,-560,90];
+}
+function riverHighPoly(key) {
+  if (key === 'rainbow')
+    return [-560,-145,-360,-90,-120,-125,120,-65,360,-105,560,-55,560,-30,360,-75,120,-35,-120,-95,-360,-55,-560,-95];
+  if (key === 'numbers')
+    return [-560,95,-340,145,-120,120,130,165,360,130,560,195,560,210,360,155,130,195,-120,145,-350,170,-560,115];
+  return [-560,35,-320,100,-110,60,120,115,350,65,560,130,560,145,350,90,130,140,-100,80,-340,120,-560,65];
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// BACKGROUND BUILDERS
+// ═══════════════════════════════════════════════════════════════════════════════
+function buildBackground(levelKey, theme) {
+  bgElems    = [];
+  swayGroups = [];
+  shimmerIdx = -1;
+  shimmerBase = null;
+
+  switch (theme) {
+    case 'forest':       buildForest(levelKey);        break;
+    case 'desert':       buildDesert(levelKey);         break;
+    case 'mountains':    buildMountains(levelKey);      break;
+    case 'island_chain': buildIslandChain(levelKey);    break;
+    case 'cave':         buildCave(levelKey);            break;
+    case 'house':        buildHouse(levelKey);           break;
+    case 'trick_or_treat': buildTrickOrTreat(levelKey); break;
+    default:             buildForest(levelKey);
+  }
+
+  buildSwayLookup();
+}
+
+const GROUND_COLORS = {
+  forest:'#2b5f30', desert:'#d8bd73', mountains:'#4f6a3f',
+  island_chain:'#3e9ccf', cave:'#1f2127', house:'#4f8f4a', trick_or_treat:'#1b2535'
+};
+
+function buildForest(key) {
+  const rng = makeRng(strHash(key + ':forest'));
+  bgAddPoly(riverPoly(key), '#419cd4');
+  bgAddPoly(riverHighPoly(key), 'rgba(191,237,255,0.4)', true);
+  shimmerBase = [191, 237, 255, 0.4];
+  for (let i = 0; i < 24; i++) {
+    bgAddOval(rng.randf(BX+50, BX+BW-50), rng.randf(BY+50, BY+BH-50),
+              rng.randf(22,54), rng.randf(14,30), 'rgba(89,184,87,0.4)');
+  }
+  for (let i = 0; i < 28; i++) {
+    const [ex, ey] = edgePos(rng, 18, 60);
+    makeTree(ex, ey, rng);
+  }
+}
+
+function buildDesert(key) {
+  const rng = makeRng(strHash(key + ':desert'));
+  for (let i = 0; i < 16; i++) {
+    bgAddOval(rng.randf(BX, BX+BW), rng.randf(BY, BY+BH),
+              rng.randf(50,120), rng.randf(18,40), 'rgba(235,204,127,0.45)', 14);
+  }
+  bgAddPoly([-560,-35, 560,-55, 560,35, -560,15], 'rgba(255,245,217,0.2)', true);
+  shimmerBase = [255, 245, 217, 0.2];
+  for (let i = 0; i < 22; i++) {
+    const [ex, ey] = edgePos(rng, 28, 90);
+    makeCactus(ex, ey, rng);
+  }
+}
+
+function buildMountains(key) {
+  const rng = makeRng(strHash(key + ':mountains'));
+  for (let i = 0; i < 5; i++) {
+    const bx = BX+80 + (BW-160)*i/4;
+    const w = rng.randf(170,250), h = rng.randf(140,220);
+    bgAddPoly([bx-w*0.5, BY+130, bx, BY+130-h, bx+w*0.5, BY+130], 'rgba(107,115,122,1)');
+    bgAddPoly([bx-36, BY+130-h+52, bx, BY+130-h, bx+36, BY+130-h+52], 'rgba(237,245,255,0.95)');
+  }
+  bgAddPoly([-240,150,-80,178,90,156,220,185,250,240,110,250,-70,265,-250,220], 'rgba(79,156,219,0.78)');
+  bgAddPoly([-220,185,-80,205,80,190,190,210,115,224,-40,232,-200,214], 'rgba(214,242,255,0.3)', true);
+  shimmerBase = [214, 242, 255, 0.3];
+  for (let i = 0; i < 10; i++) {
+    bgAddOval(rng.randf(BX+60, BX+BW-60), rng.randf(90, BY+BH-30),
+              rng.randf(24,44), rng.randf(14,24), 'rgba(87,146,79,0.8)');
+  }
+}
+
+function buildIslandChain(key) {
+  const rng = makeRng(strHash(key + ':island_chain'));
+  bgAddPoly([-560,-15, 560,-35, 560,45, -560,25], 'rgba(214,247,255,0.2)', true);
+  shimmerBase = [214, 247, 255, 0.2];
+  for (let i = 0; i < 8; i++) {
+    const ix = rng.randf(BX+120, BX+BW-120);
+    const iy = rng.randf(BY+80, BY+BH-70);
+    const srx = rng.randf(58,96), sry = rng.randf(34,52);
+    bgAddOval(ix, iy, srx, sry, 'rgba(242,222,158,1)');
+    bgAddOval(ix, iy-3, srx*0.62, sry*0.62, 'rgba(71,168,89,1)');
+    makePalmTree(ix + rng.randf(-18,18), iy + rng.randf(-10,12), rng);
+  }
+}
+
+function buildCave(key) {
+  const rng = makeRng(strHash(key + ':cave'));
+  for (let i = 0; i < 20; i++) {
+    bgAddOval(rng.randf(BX, BX+BW), rng.randf(BY, BY+BH),
+              rng.randf(22,66), rng.randf(12,30), 'rgba(71,74,84,0.65)');
+  }
+  for (let i = 0; i < 16; i++) {
+    const x = BX+30 + (BW-60)*i/15;
+    bgAddPoly([x-16,BY, x+16,BY, x,BY+rng.randf(28,78)],   'rgba(89,92,102,0.9)');
+    bgAddPoly([x-14,BY+BH, x+14,BY+BH, x,BY+BH-rng.randf(24,72)], 'rgba(77,79,92,0.95)');
+  }
+  const i0 = bgElems.length;
+  for (let i = 0; i < 8; i++) {
+    const cx = rng.randf(BX+80, BX+BW-80);
+    const cy = rng.randf(BY+80, BY+BH-70);
+    bgAddPoly(localToWorld([0,-24, 16,-8, 10,18, -10,18, -16,-8], cx, cy), 'rgba(115,217,255,0.65)');
+  }
+  shimmerIdx  = i0;
+  shimmerBase = [115, 217, 255, 0.65];
+  bgElems[i0].isShimmer = true;
+}
+
+function buildHouse(key) {
+  const rng = makeRng(strHash(key + ':house'));
+  bgAddPoly([-45,BY+BH, 45,BY+BH, 92,160, -92,160], 'rgba(199,184,158,0.95)');
+  bgAddPoly([220,-90, 470,-90, 470,100, 220,100], 'rgba(242,217,184,1)');
+  bgAddPoly([190,-90, 345,-215, 500,-90], 'rgba(184,71,56,1)');
+  bgAddPoly([325,8, 370,8, 370,100, 325,100], 'rgba(120,79,56,1)');
+  bgAddPoly([248,-35, 292,-35, 292,10, 248,10], 'rgba(166,222,255,0.9)');
+  bgAddPoly([395,-35, 439,-35, 439,10, 395,10], 'rgba(166,222,255,0.9)');
+  bgAddOval(390, -245, 20, 13, 'rgba(235,242,255,0.3)', 12, true);
+  shimmerBase = [235, 242, 255, 0.3];
+  for (let i = 0; i < 10; i++) {
+    const [ex,ey] = edgePos(rng,18,56);
+    bgAddOval(ex, ey, rng.randf(22,44), rng.randf(14,22), 'rgba(59,148,74,0.9)');
+  }
+  for (let i = 0; i < 6; i++) {
+    bgAddOval(rng.randf(-240,180), rng.randf(70,240), 8, 8, 'rgba(247,133,158,0.95)');
+  }
+}
+
+function buildTrickOrTreat(key) {
+  const rng = makeRng(strHash(key + ':trick_or_treat'));
+  bgAddOval(-420, -235, 42, 42, 'rgba(242,237,184,0.8)', 20, true);
+  shimmerBase = [242, 237, 184, 0.8];
+  bgAddPoly([-560,45, 560,45, 560,210, -560,210], 'rgba(46,51,61,0.95)');
+  bgAddPoly([-560,122, 560,122, 560,132, -560,132], 'rgba(225,199,97,0.65)');
+  for (let i = 0; i < 6; i++) addNeighborhoodHouse(-510 + i*190, -50, rng);
+  for (let i = 0; i < 10; i++) {
+    const px = rng.randf(BX+40, BX+BW-40);
+    const py = rng.randf(220, BY+BH-18);
+    bgAddOval(px, py, 12, 10, 'rgba(242,117,36,0.95)');
+    bgAddPoly([px-2,py-13, px+2,py-13, px+2,py-8, px-2,py-8], 'rgba(87,143,56,0.95)');
+  }
+  for (let i = 0; i < 10; i++) {
+    const fx = rng.randf(BX+20, BX+BW-20);
+    const fy = 198 + (i%2)*28;
+    bgAddPoly([fx-14,fy, fx+14,fy, fx+14,fy+18, fx-14,fy+18], 'rgba(153,158,168,0.8)');
+  }
+  for (let i = 0; i < 5; i++) {
+    const bx = rng.randf(BX+80, BX+BW-80);
+    const by = rng.randf(BY+30, -120);
+    makeBat(bx, by, rng);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CHARACTER DRAWING
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Helper: fill a polygon given local pts + canvas anchor
+function fillLocalPoly(acx, acy, localPts, color) {
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(acx + localPts[0], acy + localPts[1]);
+  for (let i = 2; i < localPts.length; i += 2) ctx.lineTo(acx + localPts[i], acy + localPts[i+1]);
+  ctx.closePath();
+  ctx.fill();
+}
+function fillR(cx, cy, x, y, w, h, color) {
+  ctx.fillStyle = color;
+  ctx.fillRect(cx+x, cy+y, w, h);
+}
+
+function drawPlayer(wx, wy, lookType) {
+  const cx = wx, cy = wy;
+  if (lookType === 'ghost') {
+    // ghost glow aura
+    ctx.shadowColor = 'rgba(160,210,255,0.9)';
+    ctx.shadowBlur = 16;
+    fillLocalPoly(cx, cy, [-15,-24, 15,-24, 15,10, 9,16, 3,10, -2,16, -9,10, -15,16],
+                  'rgba(242,247,255,0.95)');
+    ctx.shadowBlur = 0;
+    // subtle shine on ghost body
+    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    ctx.beginPath();
+    ctx.ellipse(cx - 3, cy - 14, 5, 7, -0.3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#141414';
+    ctx.fillRect(cx-8, cy-12, 4, 4);
+    ctx.fillRect(cx+4, cy-12, 4, 4);
+  } else {
+    drawCharShadow(cx, cy);
+    // torso
+    fillR(cx, cy, -14,-2, 28,22, 'rgba(51,140,255,1)');
+    // rounded head
+    ctx.fillStyle = 'rgba(255,224,189,1)';
+    ctxRoundedRect(cx-13, cy-26, 26, 24, [10, 10, 4, 4]);
+    ctx.fill();
+    // hair
+    fillLocalPoly(cx, cy, [-14,-30, 14,-30, 11,-18, -11,-18], 'rgba(250,219,56,1)');
+    // eyes
+    ctx.fillStyle = '#141414';
+    ctx.fillRect(cx-8, cy-16, 4, 4);
+    ctx.fillRect(cx+4, cy-16, 4, 4);
+  }
+  drawLabel(cx, cy - 38, 'Asher');
+}
+
+function drawFollower(wx, wy, lookType, bodyColorArr, name) {
+  const cx = wx, cy = wy;
+  const [r,g,b] = bodyColorArr;
+  const bc = `rgb(${Math.round(r*255)},${Math.round(g*255)},${Math.round(b*255)})`;
+
+  drawCharShadow(cx, cy);
+
+  if (lookType === 'bat') {
+    fillLocalPoly(cx, cy, [-12,-4,-36,-16,-28,2,-36,16,-12,8], 'rgba(36,36,51,1)');
+    fillLocalPoly(cx, cy, [12,-4,36,-16,28,2,36,16,12,8],       'rgba(36,36,51,1)');
+    fillR(cx, cy, -13,-2, 26,21, bc);
+    // rounded head
+    ctx.fillStyle = bc;
+    ctxRoundedRect(cx-12, cy-24, 24, 22, [9, 9, 3, 3]);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,56,56,1)';
+    ctx.fillRect(cx-7, cy-15, 4, 4);
+    ctx.fillRect(cx+3, cy-15, 4, 4);
+
+  } else if (lookType === 'skeleton') {
+    fillR(cx, cy, -13,-2, 26,21, bc);
+    ctx.fillStyle = 'rgba(230,230,230,1)';
+    ctxRoundedRect(cx-12, cy-24, 24, 22, [9, 9, 3, 3]);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(235,235,235,1)';
+    ctx.fillRect(cx-10, cy+0,  20, 3);
+    ctx.fillRect(cx-10, cy+5,  20, 3);
+    ctx.fillRect(cx-10, cy+10, 20, 3);
+    ctx.fillRect(cx-17, cy+6,  4, 15);
+    ctx.fillRect(cx+13, cy+6,  4, 15);
+    ctx.fillStyle = '#141414';
+    ctx.fillRect(cx-7, cy-15, 4, 4);
+    ctx.fillRect(cx+3, cy-15, 4, 4);
+
+  } else {
+    fillR(cx, cy, -13,-2, 26,21, bc);
+    // rounded head
+    ctx.fillStyle = 'rgba(255,224,189,1)';
+    ctxRoundedRect(cx-12, cy-24, 24, 22, [9, 9, 3, 3]);
+    ctx.fill();
+    const hairColor = lookType === 'daddy' ? 'rgba(112,71,41,1)' : 'rgba(242,107,56,1)';
+    fillLocalPoly(cx, cy, [-13,-28, 13,-28, 10,-17, -10,-17], hairColor);
+    if (lookType === 'daddy') {
+      ctx.fillStyle = 'rgba(31,31,31,1)';
+      ctx.fillRect(cx-9, cy-17, 7, 7);
+      ctx.fillRect(cx+2, cy-17, 7, 7);
+      ctx.fillRect(cx-2, cy-14, 4, 2);
+    }
+    ctx.fillStyle = '#141414';
+    ctx.fillRect(cx-7, cy-15, 4, 4);
+    ctx.fillRect(cx+3, cy-15, 4, 4);
+  }
+  drawLabel(cx, cy - 36, name);
+}
+
+// Character helpers
+function drawCharShadow(cx, cy) {
+  ctx.fillStyle = 'rgba(0,0,0,0.18)';
+  ctx.beginPath();
+  ctx.ellipse(cx, cy + 20, 15, 5, 0, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawLabel(cx, cy, text) {
+  ctx.font = 'bold 12px system-ui';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  const w = ctx.measureText(text).width + 12;
+  ctx.fillStyle = 'rgba(0,0,0,0.42)';
+  ctxRoundedRect(cx - w/2, cy - 8, w, 16, 6);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.95)';
+  ctx.fillText(text, cx, cy);
+  ctx.textBaseline = 'alphabetic';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// COLLECTIBLES
+// ═══════════════════════════════════════════════════════════════════════════════
+const RAINBOW_COLORS = {
+  Red:'#ff4d4d', Orange:'#ff9f40', Yellow:'#ffe066',
+  Green:'#6bd66b', Blue:'#5ba8ff', Indigo:'#7a6bff', Violet:'#b46bff'
+};
+function colorForItem(item) {
+  if (RAINBOW_COLORS[item]) return RAINBOW_COLORS[item];
+  if (/^\d+$/.test(item))   return 'rgb(191,255,191)';
+  return 'rgb(255,242,153)';
+}
+function lumaFromRgb(r,g,b) { return (0.299*r + 0.587*g + 0.114*b) / 255; }
+function parseCssColor(c) {
+  let m = c.match(/rgb\((\d+),(\d+),(\d+)\)/);
+  if (m) return [+m[1],+m[2],+m[3]];
+  m = c.match(/^#([0-9a-f]{6})/i);
+  if (m) return [parseInt(m[1].slice(0,2),16),parseInt(m[1].slice(2,4),16),parseInt(m[1].slice(4,6),16)];
+  return [128,128,128];
+}
+
+let collectibles = [];
+
+function spawnCollectibles(data, key) {
+  collectibles = [];
+  const rng = makeRng(strHash(key + ':collectibles'));
+  const wb  = worldBounds;
+  // HUD occupies right 236 screen px (= 236 world units at 1:1 scale)
+  const xMax = wb.x + wb.w - 236 - 40;
+
+  for (let i = 0; i < data.items.length; i++) {
+    const item = data.items[i];
+    let wx, wy, tries = 0;
+    do {
+      wx = rng.randf(wb.x + 40, xMax);
+      wy = rng.randf(wb.y + 40, wb.y + wb.h - 40);
+      tries++;
+    } while (tries < 20 && isInsideAnyWall(wx, wy, 20));
+    collectibles.push({ wx, wy, value: item, color: colorForItem(item), alive: true, phase: i * 0.71 });
+  }
+}
+
+function isInsideAnyWall(wx, wy, r) {
+  for (const w of levelWalls) {
+    if (wx + r > w.x && wx - r < w.x + w.w &&
+        wy + r > w.y && wy - r < w.y + w.h) return true;
+  }
+  return false;
+}
+
+function drawCollectibles() {
+  for (const c of collectibles) {
+    if (!c.alive) continue;
+    const cx = c.wx;
+    // bob: gentle vertical oscillation, unique phase per item
+    const bob = Math.sin(ambientTime * 2.5 + c.phase) * 5;
+    const cy = c.wy + bob;
+
+    // glow
+    ctx.shadowColor = c.color;
+    ctx.shadowBlur = 18;
+
+    // diamond body
+    ctx.beginPath();
+    ctx.moveTo(cx,    cy-24);
+    ctx.lineTo(cx+20, cy);
+    ctx.lineTo(cx,    cy+24);
+    ctx.lineTo(cx-20, cy);
+    ctx.closePath();
+    ctx.fillStyle = c.color;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // white stroke border
+    ctx.strokeStyle = 'rgba(255,255,255,0.65)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // facet shine — brighter upper-left triangle
+    ctx.fillStyle = 'rgba(255,255,255,0.32)';
+    ctx.beginPath();
+    ctx.moveTo(cx,    cy-24);
+    ctx.lineTo(cx+20, cy);
+    ctx.lineTo(cx,    cy);
+    ctx.closePath();
+    ctx.fill();
+
+    // label
+    const [r,g,b] = parseCssColor(c.color);
+    const fs = c.value.length > 2 ? 13 : 17;
+    ctx.font = `bold ${fs}px system-ui`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = lumaFromRgb(r,g,b) > 0.62 ? '#141414' : '#ffffff';
+    ctx.shadowColor = 'rgba(0,0,0,0.6)';
+    ctx.shadowBlur = 4;
+    ctx.fillText(c.value, cx, cy);
+    ctx.shadowBlur = 0;
+    ctx.textBaseline = 'alphabetic';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// HUD
+// ═══════════════════════════════════════════════════════════════════════════════
+const hudEl      = document.getElementById('hud');
+const hudTitle   = document.getElementById('hud-title');
+const hudProg    = document.getElementById('hud-progress');
+const hudChips   = document.getElementById('hud-chips');
+const hudDone    = document.getElementById('hud-complete');
+const rcvs       = document.getElementById('rainbow-canvas');
+const rctx       = rcvs.getContext('2d');
+
+let chipMap  = {};
+let foundSet = new Set();
+
+function chipBg(mode) {
+  const map = { words_emoji:'rgba(66,87,158,0.9)', animals:'rgba(48,122,97,0.9)',
+                shapes:'rgba(135,87,48,0.9)', numbers:'rgba(56,117,158,0.9)' };
+  return map[mode] || 'rgba(88,88,88,0.9)';
+}
+function chipLabel(mode, item, data) {
+  if (mode === 'words_emoji' && data.emoji_map) return data.emoji_map[item] || item;
+  if (mode === 'animals' && data.emoji_map)     return `${data.emoji_map[item] || ''} ${item}`;
+  if (mode === 'shapes' && data.symbol_map)     return `${data.symbol_map[item] || ''} ${item}`;
+  return item;
+}
+
+function setupHud(data) {
+  hudTitle.textContent = data.title;
+  hudProg.textContent  = `0 / ${data.items.length}`;
+  hudDone.style.display = 'none';
+  hudChips.innerHTML = '';
+  chipMap  = {};
+  foundSet = new Set();
+
+  if (data.mode === 'rainbow') {
+    rcvs.style.display = 'block';
+    drawRainbowArcs(data.items);
+  } else {
+    rcvs.style.display = 'none';
+  }
+
+  const bg = chipBg(data.mode);
+  for (const item of data.items) {
+    const chip = document.createElement('div');
+    chip.className = 'chip';
+    chip.style.background = data.mode === 'rainbow' ? RAINBOW_COLORS[item] || '#999' : bg;
+    chip.textContent = chipLabel(data.mode, item, data);
+    hudChips.appendChild(chip);
+    chipMap[item] = chip;
+  }
+
+  hudEl.style.display = 'flex';
+}
+
+function markCollected(item) {
+  foundSet.add(item);
+  hudProg.textContent = `${foundSet.size} / ${currentItems.length}`;
+  const chip = chipMap[item];
+  if (chip) chip.classList.add('found');
+  if (currentLevel && currentLevel.mode === 'rainbow') drawRainbowArcs(currentItems);
+  if (foundSet.size === currentItems.length) hudDone.style.display = 'block';
+}
+
+function drawRainbowArcs(items) {
+  const w = rcvs.width, h = rcvs.height;
+  rctx.clearRect(0, 0, w, h);
+  const cx = w * 0.5, cy = h * 0.95;
+  const baseR = Math.min(w * 0.42, h * 0.88);
+  const ringW = 12, ringGap = 4;
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    const r = baseR - i * (ringW + ringGap);
+    if (r <= ringW) continue;
+    rctx.beginPath();
+    rctx.arc(cx, cy, r, Math.PI, Math.PI * 2);
+    rctx.strokeStyle = foundSet.has(item) ? (RAINBOW_COLORS[item] || '#fff') : 'rgba(120,120,120,0.3)';
+    rctx.lineWidth = ringW;
+    rctx.stroke();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// GAME STATE
+// ═══════════════════════════════════════════════════════════════════════════════
+const SPEED          = 230;
+const FOLLOWER_SPEED = 180;
+const MOMMY_DELAY    = 28;
+const DADDY_DELAY    = 48;
+const PATH_LIMIT     = 1200;
+const SAMPLE_INT     = 0.05;
+const COLLECT_RADIUS = 28;  // slightly larger than Godot's 24 for feel
+
+let gameState    = 'menu';
+let currentLevel = null;
+let currentItems = [];
+
+// Camera (world coords of viewport center)
+let camera = { wx: 0, wy: 0 };
+// Current world bounds (may be larger than one screen for room levels)
+let worldBounds = { x: BX, y: BY, w: BW, h: BH };
+// Walls (AABB rects the player/followers can't pass through)
+let levelWalls = [];
+// Rooms (visual floor areas for multi-room levels)
+let levelRooms = [];
+// Doorways (visual markers only – gaps already exist in levelWalls)
+let levelDoorways = [];
+
+let player = { wx: 0, wy: 0, lookType: 'normal' };
+let mommy  = { wx:-70, wy: 40, vx:0, vy:0, lookType:'mommy', color:[1,0.65,0.8] };
+let daddy  = { wx:-120, wy:-20, vx:0, vy:0, lookType:'daddy', color:[0.55,0.75,1] };
+
+let playerPath  = [];
+let sampleTimer = 0;
+let ambientTime = 0;
+
+// Keyboard input
+const keys = {};
+document.addEventListener('keydown', e => {
+  keys[e.code] = true;
+  if (gameState === 'playing' && (e.code === 'Escape' || e.code === 'Backspace')) showMenu();
+});
+document.addEventListener('keyup', e => { keys[e.code] = false; });
+
+function inputDir() {
+  let dx = 0, dy = 0;
+  if (keys['ArrowLeft']  || keys['KeyA']) dx -= 1;
+  if (keys['ArrowRight'] || keys['KeyD']) dx += 1;
+  if (keys['ArrowUp']    || keys['KeyW']) dy -= 1;
+  if (keys['ArrowDown']  || keys['KeyS']) dy += 1;
+  const len = Math.hypot(dx, dy);
+  return len > 0 ? [dx/len, dy/len] : [0, 0];
+}
+
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+function followerColor(look, isMommy) {
+  if (look === 'bat')      return [0.22, 0.2,  0.32];
+  if (look === 'skeleton') return [0.88, 0.88, 0.88];
+  if (look === 'daddy')    return [0.55, 0.75, 1.0];
+  return isMommy ? [1.0, 0.65, 0.8] : [0.55, 0.75, 1.0];
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MENU
+// ═══════════════════════════════════════════════════════════════════════════════
+const menuEl   = document.getElementById('menu');
+const levelBtns = document.getElementById('level-buttons');
+
+for (const key of LEVEL_ORDER) {
+  const btn = document.createElement('button');
+  btn.className = 'level-btn';
+  btn.textContent = LEVELS[key].title;
+  btn.addEventListener('click', () => startLevel(key));
+  levelBtns.appendChild(btn);
+}
+document.getElementById('back-btn').addEventListener('click', showMenu);
+
+function showMenu() {
+  gameState = 'menu';
+  menuEl.style.display = 'flex';
+  hudEl.style.display  = 'none';
+  collectibles  = [];
+  playerPath    = [];
+  bgElems       = [];
+  swayGroups    = [];
+  elemSwayGroup = [];
+  levelWalls    = [];
+  levelRooms    = [];
+  levelDoorways = [];
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ROOM DECORATION BUILDERS
+// ═══════════════════════════════════════════════════════════════════════════════
+function buildRoomDecorations(data) {
+  for (const room of (data.rooms || [])) {
+    const rng = makeRng(strHash((room.label || '') + ':deco'));
+    const cx  = room.x + room.w / 2;
+    const cy  = room.y + room.h / 2;
+
+    if (data.room_deco === 'house') {
+      switch (room.label) {
+        case 'Kitchen': {
+          // Countertop along the bottom wall
+          bgAddPoly([room.x+28, room.y+room.h-85, room.x+room.w-28, room.y+room.h-85,
+                     room.x+room.w-28, room.y+room.h-25, room.x+28, room.y+room.h-25],
+                    '#b09070');
+          // Stove burners
+          for (let i = 0; i < 4; i++)
+            bgAddOval(room.x+90+i*65, room.y+room.h-54, 18, 18, 'rgba(60,50,40,0.8)', 16);
+          // Window on top wall
+          bgAddPoly([cx-50, room.y+28, cx+50, room.y+28, cx+50, room.y+95, cx-50, room.y+95], 'rgba(140,210,255,0.6)');
+          bgAddPoly([cx-50, room.y+28, cx+50, room.y+28, cx+50, room.y+31, cx-50, room.y+31], '#7a6040');
+          bgAddPoly([cx-2,  room.y+28, cx+2,  room.y+28, cx+2,  room.y+95, cx-2, room.y+95], '#7a6040');
+          bgAddPoly([cx-50, room.y+58, cx+50, room.y+58, cx+50, room.y+62, cx-50, room.y+62], '#7a6040');
+          break;
+        }
+        case 'Living Room': {
+          // Large rug
+          bgAddOval(cx, cy+30, 260, 130, 'rgba(110,60,40,0.3)', 22);
+          bgAddOval(cx, cy+30, 210, 100, 'rgba(90,40,20,0.2)', 20);
+          // Sofa silhouette
+          bgAddPoly([cx-150, cy-160, cx+150, cy-160, cx+150, cy-100, cx-150, cy-100], '#7a5a40');
+          bgAddPoly([cx-150, cy-220, cx-120, cy-220, cx-120, cy-100, cx-150, cy-100], '#7a5a40');
+          bgAddPoly([cx+120, cy-220, cx+150, cy-220, cx+150, cy-100, cx+120, cy-100], '#7a5a40');
+          // TV
+          bgAddPoly([cx-70, cy+100, cx+70, cy+100, cx+70, cy+160, cx-70, cy+160], '#1a1a1a');
+          bgAddPoly([cx-58, cy+108, cx+58, cy+108, cx+58, cy+152, cx-58, cy+152], 'rgba(40,100,180,0.7)');
+          break;
+        }
+        case 'Backyard': {
+          // Grass patches
+          for (let i = 0; i < 12; i++)
+            bgAddOval(rng.randf(room.x+40, room.x+room.w-40), rng.randf(room.y+40, room.y+room.h-40),
+                      rng.randf(20,55), rng.randf(12,28), 'rgba(89,184,87,0.35)');
+          // Trees at edges
+          for (let i = 0; i < 10; i++) {
+            const [ex, ey] = edgePos(rng, 20, 70,
+              room.x, room.y, room.w, room.h);
+            makeTree(ex, ey, rng);
+          }
+          // Flower patches
+          for (let i = 0; i < 8; i++)
+            bgAddOval(rng.randf(room.x+60, room.x+room.w-60), rng.randf(room.y+60, room.y+room.h-60),
+                      7, 7, `hsl(${rng.randi(280,360)},70%,62%)`, 8);
+          break;
+        }
+      }
+    } else if (data.room_deco === 'castle') {
+      switch (room.label) {
+        case 'Throne Room': {
+          // Throne
+          bgAddPoly([cx-35, cy-200, cx+35, cy-200, cx+35, cy-100, cx-35, cy-100], '#8b6914');
+          bgAddPoly([cx-45, cy-100, cx+45, cy-100, cx+55, cy-60, cx-55, cy-60],  '#a07820');
+          bgAddPoly([cx-55, cy-240, cx-30, cy-240, cx-30, cy-200, cx-55, cy-200], '#8b6914');
+          bgAddPoly([cx+30,  cy-240, cx+55, cy-240, cx+55, cy-200, cx+30, cy-200], '#8b6914');
+          // Banners
+          for (const sx of [-220, 220]) {
+            bgAddPoly([cx+sx-14, room.y+24, cx+sx+14, room.y+24, cx+sx+14, room.y+160, cx+sx-14, room.y+160], '#8b1414');
+            bgAddPoly([cx+sx-10, room.y+28, cx+sx+10, room.y+28, cx+sx, room.y+155], '#cc2020');
+          }
+          // Torches (shimmer sources)
+          for (const sx of [-350, 350]) {
+            bgAddOval(cx+sx, room.y+50, 8, 12, 'rgba(255,140,30,0.9)', 10, sx === -350);
+            if (sx === -350) shimmerBase = [255, 140, 30, 0.9];
+          }
+          break;
+        }
+        case 'Tower Room': {
+          // Bookshelves
+          for (let i = 0; i < 3; i++) {
+            const sx = room.x + 60 + i * 170;
+            bgAddPoly([sx, room.y+50, sx+110, room.y+50, sx+110, room.y+220, sx, room.y+220], 'rgba(90,65,35,0.65)');
+            for (let j = 0; j < 4; j++)
+              bgAddOval(sx+18+j*24, room.y+140, 9, 62, `rgba(${50+j*40},${30+j*20},${80+j*30},0.85)`, 8);
+          }
+          // Telescope
+          bgAddPoly([cx+200, cy+60, cx+240, cy+20, cx+260, cy+30, cx+220, cy+70], 'rgba(80,80,90,0.9)');
+          break;
+        }
+        case 'Dungeon': {
+          // Stalactites
+          for (let i = 0; i < 12; i++) {
+            const x = room.x + 40 + (room.w-80)*i/11;
+            bgAddPoly([x-10, room.y, x+10, room.y, x, room.y+rng.randf(18,65)], 'rgba(80,82,92,0.9)');
+          }
+          // Chains
+          for (let i = 0; i < 4; i++)
+            bgAddOval(room.x+180+i*200, room.y+80, 3, 50, 'rgba(110,110,110,0.7)', 6);
+          // Crystal glow
+          bgAddOval(cx, cy, 20, 20, 'rgba(80,200,255,0.4)', 14, true);
+          shimmerBase = [80, 200, 255, 0.4];
+          break;
+        }
+        case 'Garden': {
+          // Trees
+          for (let i = 0; i < 8; i++) {
+            const [ex, ey] = edgePos(rng, 20, 70, room.x, room.y, room.w, room.h);
+            makeTree(ex, ey, rng);
+          }
+          // Flower clusters
+          for (let i = 0; i < 14; i++)
+            bgAddOval(rng.randf(room.x+40, room.x+room.w-40), rng.randf(room.y+40, room.y+room.h-40),
+                      8, 8, `hsl(${rng.randi(80,160)},65%,55%)`, 8);
+          // Pond
+          bgAddOval(cx, cy+80, 90, 50, 'rgba(60,140,200,0.55)', 16);
+          bgAddOval(cx, cy+80, 70, 36, 'rgba(100,180,240,0.25)', 14, true);
+          shimmerBase = [100, 180, 240, 0.3];
+          break;
+        }
+      }
+    }
+  }
+  buildSwayLookup();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// LEVEL START
+// ═══════════════════════════════════════════════════════════════════════════════
+function startLevel(key) {
+  const data   = LEVELS[key];
+  currentLevel = data;
+  currentItems = [...data.items];
+  ambientTime  = 0;
+  sampleTimer  = 0;
+  playerPath   = [];
+
+  // World bounds
+  if (data.world_bounds) {
+    worldBounds = { ...data.world_bounds };
+  } else {
+    worldBounds = { x: BX, y: BY, w: BW, h: BH };
+  }
+
+  // Player/follower start positions
+  const sp = data.start_pos || { wx: 0, wy: 0 };
+  player.wx = sp.wx; player.wy = sp.wy;
+  player.lookType = (data.char_styles && data.char_styles.asher) || 'normal';
+
+  mommy.wx = sp.wx - 70; mommy.wy = sp.wy + 40; mommy.vx = 0; mommy.vy = 0;
+  mommy.lookType = (data.char_styles && data.char_styles.mommy) || 'mommy';
+  mommy.color    = followerColor(mommy.lookType, true);
+
+  daddy.wx = sp.wx - 120; daddy.wy = sp.wy - 20; daddy.vx = 0; daddy.vy = 0;
+  daddy.lookType = (data.char_styles && data.char_styles.daddy) || 'daddy';
+  daddy.color    = followerColor(daddy.lookType, false);
+
+  // Camera starts on player
+  camera.wx = player.wx;
+  camera.wy = player.wy;
+
+  // Walls / rooms / doorways
+  levelWalls    = data.walls    || [];
+  levelRooms    = data.rooms    || [];
+  levelDoorways = data.doorways || [];
+
+  // Background decorations
+  bgElems = []; swayGroups = []; shimmerIdx = -1; shimmerBase = null;
+  if (data.map_type === 'rooms') {
+    buildRoomDecorations(data);
+  } else {
+    buildBackground(key, data.map_theme);
+  }
+
+  spawnCollectibles(data, key);
+  setupHud(data);
+
+  menuEl.style.display = 'none';
+  gameState = 'playing';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PHYSICS + UPDATE
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Push entity out of any overlapping walls (circle vs AABB)
+function resolveWalls(entity, radius) {
+  for (const w of levelWalls) {
+    const el = w.x, er = w.x + w.w;
+    const et = w.y, eb = w.y + w.h;
+    if (entity.wx + radius > el && entity.wx - radius < er &&
+        entity.wy + radius > et && entity.wy - radius < eb) {
+      const oL = entity.wx + radius - el;
+      const oR = er - (entity.wx - radius);
+      const oT = entity.wy + radius - et;
+      const oB = eb - (entity.wy - radius);
+      const m  = Math.min(oL, oR, oT, oB);
+      if      (m === oL) entity.wx = el - radius;
+      else if (m === oR) entity.wx = er + radius;
+      else if (m === oT) entity.wy = et - radius;
+      else               entity.wy = eb + radius;
+    }
+  }
+}
+
+function updateFollower(f, delay, delta) {
+  if (playerPath.length <= delay) return;
+  const t  = playerPath[playerPath.length - 1 - delay];
+  const dx = t[0] - f.wx, dy = t[1] - f.wy;
+  const dist = Math.hypot(dx, dy);
+  if (Math.hypot(f.wx - player.wx, f.wy - player.wy) > 700) {
+    f.wx = player.wx + (Math.random()-0.5)*180;
+    f.wy = player.wy + (Math.random()-0.5)*180;
+  }
+  if (dist < 6) { f.vx = 0; f.vy = 0; }
+  else          { f.vx = (dx/dist)*FOLLOWER_SPEED; f.vy = (dy/dist)*FOLLOWER_SPEED; }
+  f.wx += f.vx * delta;
+  f.wy += f.vy * delta;
+  f.wx = clamp(f.wx, worldBounds.x, worldBounds.x + worldBounds.w);
+  f.wy = clamp(f.wy, worldBounds.y, worldBounds.y + worldBounds.h);
+  resolveWalls(f, 14);
+}
+
+function checkCollections() {
+  for (const c of collectibles) {
+    if (!c.alive) continue;
+    const dx = c.wx - player.wx, dy = c.wy - player.wy;
+    if (dx*dx + dy*dy < COLLECT_RADIUS*COLLECT_RADIUS) {
+      c.alive = false;
+      markCollected(c.value);
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ROOM / WALL DRAWING  (world space — called inside camera transform)
+// ═══════════════════════════════════════════════════════════════════════════════
+function drawRoomsAndWalls() {
+  // Room floors
+  for (const r of levelRooms) {
+    ctx.fillStyle = r.color;
+    ctx.fillRect(r.x, r.y, r.w, r.h);
+    if (r.label) {
+      ctx.font = 'bold 20px system-ui';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = 'rgba(255,255,255,0.1)';
+      ctx.fillText(r.label, r.x + r.w/2, r.y + r.h/2);
+    }
+  }
+  // Doorways (wood-colored fills in the wall gap)
+  for (const d of levelDoorways) {
+    ctx.fillStyle = d.color || '#9e7940';
+    ctx.fillRect(d.x, d.y, d.w, d.h);
+    // subtle inner shadow lines
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    if (d.w < d.h) {
+      ctx.fillRect(d.x+2, d.y, 3, d.h);
+      ctx.fillRect(d.x+d.w-5, d.y, 3, d.h);
+    } else {
+      ctx.fillRect(d.x, d.y+2, d.w, 3);
+      ctx.fillRect(d.x, d.y+d.h-5, d.w, 3);
+    }
+  }
+  // Walls (drawn on top)
+  for (const w of levelWalls) {
+    ctx.fillStyle = w.color || '#5a4a3a';
+    ctx.fillRect(w.x, w.y, w.w, w.h);
+    ctx.fillStyle = 'rgba(255,255,255,0.12)';
+    ctx.fillRect(w.x, w.y, w.w, 3);
+  }
+}
+
+// Minimap for multi-room levels
+function drawMinimap() {
+  if (levelRooms.length === 0) return;
+  const wb = worldBounds;
+  const mw = 110, mh = Math.round(mw * wb.h / wb.w);
+  const mx = 8, my = CH - mh - 8;
+  const scale = mw / wb.w;
+
+  ctx.save();
+  ctx.globalAlpha = 0.75;
+  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  ctxRoundedRect(mx-3, my-3, mw+6, mh+6, 4);
+  ctx.fill();
+
+  for (const r of levelRooms) {
+    ctx.fillStyle = r.color;
+    ctx.fillRect(mx + (r.x - wb.x)*scale, my + (r.y - wb.y)*scale, r.w*scale, r.h*scale);
+  }
+  for (const w of levelWalls) {
+    ctx.fillStyle = w.color || '#5a4a3a';
+    ctx.fillRect(mx + (w.x - wb.x)*scale, my + (w.y - wb.y)*scale, Math.max(w.w*scale,1), Math.max(w.h*scale,1));
+  }
+  // Player dot
+  ctx.fillStyle = '#fff';
+  ctx.beginPath();
+  ctx.arc(mx + (player.wx - wb.x)*scale, my + (player.wy - wb.y)*scale, 3, 0, Math.PI*2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// GAME LOOP
+// ═══════════════════════════════════════════════════════════════════════════════
+let lastTs = null;
+
+function frame(ts) {
+  requestAnimationFrame(frame);
+
+  if (gameState !== 'playing') {
+    ctx.fillStyle = '#0f0f1a';
+    ctx.fillRect(0, 0, CW, CH);
+    return;
+  }
+
+  const delta = lastTs ? Math.min((ts - lastTs) / 1000, 0.05) : 0.016;
+  lastTs = ts;
+  ambientTime += delta;
+
+  // ── UPDATE ──
+  const [dx, dy] = inputDir();
+  const wb = worldBounds;
+  // HUD occupies right 236 screen px; world is 1:1 pixel scale so same in world units
+  player.wx += dx * SPEED * delta;
+  player.wy += dy * SPEED * delta;
+  player.wx = clamp(player.wx, wb.x + 14, wb.x + wb.w - 14 - 236);
+  player.wy = clamp(player.wy, wb.y + 14, wb.y + wb.h - 14);
+  resolveWalls(player, 14);
+
+  sampleTimer += delta;
+  if (sampleTimer >= SAMPLE_INT) {
+    sampleTimer = 0;
+    playerPath.push([player.wx, player.wy]);
+    if (playerPath.length > PATH_LIMIT) playerPath.shift();
+  }
+
+  updateFollower(mommy, MOMMY_DELAY, delta);
+  updateFollower(daddy, DADDY_DELAY, delta);
+  checkCollections();
+  updateSway(ambientTime);
+
+  // ── CAMERA (smooth follow, clamped to world) ──
+  const halfW = CW / 2, halfH = CH / 2;
+  const lerp  = Math.min(delta * 7, 1);
+  camera.wx += (player.wx - camera.wx) * lerp;
+  camera.wy += (player.wy - camera.wy) * lerp;
+  camera.wx = clamp(camera.wx, wb.x + halfW, wb.x + wb.w - halfW);
+  camera.wy = clamp(camera.wy, wb.y + halfH, wb.y + wb.h - halfH);
+
+  // ── RENDER ──
+  // Screen-space ground fill (base color behind everything)
+  ctx.fillStyle = currentLevel.map_type === 'rooms'
+    ? '#1a1a1a'
+    : (GROUND_COLORS[currentLevel.map_theme] || '#2b5f30');
+  ctx.fillRect(0, 0, CW, CH);
+
+  // World-space drawing (all game objects)
+  ctx.save();
+  ctx.translate(OX - camera.wx, OY - camera.wy);
+
+  if (currentLevel.map_type === 'rooms') {
+    drawRoomsAndWalls();
+  } else {
+    // Open-world ground color is the fillRect above; bg decorations follow
+  }
+  drawBackground(ambientTime);
+  drawCollectibles();
+  drawFollower(daddy.wx, daddy.wy, daddy.lookType, daddy.color, 'Daddy');
+  drawFollower(mommy.wx, mommy.wy, mommy.lookType, mommy.color, 'Mommy');
+  drawPlayer(player.wx, player.wy, player.lookType);
+
+  ctx.restore();
+
+  // Screen-space overlays (minimap etc.)
+  drawMinimap();
+}
+
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

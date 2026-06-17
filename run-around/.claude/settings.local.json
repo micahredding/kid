@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(open /Users/micahredding/Sites/202602011501/run-around/index.html)"
+    ]
+  }
+}

@@ -1,0 +1,89 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/follower.gd" id="1_dv8iu"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_6j4ud"]
+radius = 17.0
+
+[node name="Follower" type="CharacterBody2D"]
+script = ExtResource("1_dv8iu")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_6j4ud")
+
+[node name="Torso" type="Polygon2D" parent="."]
+color = Color(1, 0.65, 0.8, 1)
+polygon = PackedVector2Array(-13, -2, 13, -2, 13, 19, -13, 19)
+
+[node name="Head" type="Polygon2D" parent="."]
+color = Color(1, 0.88, 0.74, 1)
+polygon = PackedVector2Array(-12, -24, 12, -24, 12, -2, -12, -2)
+
+[node name="Hair" type="Polygon2D" parent="."]
+color = Color(0.95, 0.42, 0.22, 1)
+polygon = PackedVector2Array(-13, -28, 13, -28, 10, -17, -10, -17)
+
+[node name="EyeLeft" type="Polygon2D" parent="."]
+color = Color(0.08, 0.08, 0.08, 1)
+polygon = PackedVector2Array(-7, -15, -3, -15, -3, -11, -7, -11)
+
+[node name="EyeRight" type="Polygon2D" parent="."]
+color = Color(0.08, 0.08, 0.08, 1)
+polygon = PackedVector2Array(3, -15, 7, -15, 7, -11, 3, -11)
+
+[node name="BatWings" type="Node2D" parent="."]
+visible = false
+
+[node name="WingLeft" type="Polygon2D" parent="BatWings"]
+color = Color(0.14, 0.14, 0.2, 1)
+polygon = PackedVector2Array(-12, -4, -36, -16, -28, 2, -36, 16, -12, 8)
+
+[node name="WingRight" type="Polygon2D" parent="BatWings"]
+color = Color(0.14, 0.14, 0.2, 1)
+polygon = PackedVector2Array(12, -4, 36, -16, 28, 2, 36, 16, 12, 8)
+
+[node name="SkeletonBits" type="Node2D" parent="."]
+visible = false
+
+[node name="Rib1" type="Polygon2D" parent="SkeletonBits"]
+color = Color(0.92, 0.92, 0.92, 1)
+polygon = PackedVector2Array(-10, 0, 10, 0, 10, 3, -10, 3)
+
+[node name="Rib2" type="Polygon2D" parent="SkeletonBits"]
+color = Color(0.92, 0.92, 0.92, 1)
+polygon = PackedVector2Array(-10, 5, 10, 5, 10, 8, -10, 8)
+
+[node name="Rib3" type="Polygon2D" parent="SkeletonBits"]
+color = Color(0.92, 0.92, 0.92, 1)
+polygon = PackedVector2Array(-10, 10, 10, 10, 10, 13, -10, 13)
+
+[node name="BoneLeft" type="Polygon2D" parent="SkeletonBits"]
+color = Color(0.92, 0.92, 0.92, 1)
+polygon = PackedVector2Array(-17, 6, -13, 6, -13, 21, -17, 21)
+
+[node name="BoneRight" type="Polygon2D" parent="SkeletonBits"]
+color = Color(0.92, 0.92, 0.92, 1)
+polygon = PackedVector2Array(13, 6, 17, 6, 17, 21, 13, 21)
+
+[node name="Glasses" type="Node2D" parent="."]
+visible = false
+
+[node name="LensLeft" type="Polygon2D" parent="Glasses"]
+color = Color(0.12, 0.12, 0.12, 1)
+polygon = PackedVector2Array(-9, -17, -2, -17, -2, -10, -9, -10)
+
+[node name="LensRight" type="Polygon2D" parent="Glasses"]
+color = Color(0.12, 0.12, 0.12, 1)
+polygon = PackedVector2Array(2, -17, 9, -17, 9, -10, 2, -10)
+
+[node name="Bridge" type="Polygon2D" parent="Glasses"]
+color = Color(0.12, 0.12, 0.12, 1)
+polygon = PackedVector2Array(-2, -14, 2, -14, 2, -12, -2, -12)
+
+[node name="NameLabel" type="Label" parent="."]
+offset_left = -40.0
+offset_top = -48.0
+offset_right = 40.0
+offset_bottom = -20.0
+horizontal_alignment = 1
+text = "Mommy"

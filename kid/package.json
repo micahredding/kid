@@ -1,0 +1,14 @@
+{
+  "name": "kid-tui",
+  "version": "1.0.0",
+  "description": "Logo-inspired TUI for kids",
+  "type": "module",
+  "main": "kid.mjs",
+  "bin": {
+    "kid": "./kid.mjs"
+  },
+  "scripts": {
+    "start": "node kid.mjs",
+    "serve": "node server.mjs"
+  }
+}

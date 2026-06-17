@@ -1,0 +1,8 @@
+{"type":"start","version":"1.0.0","ts":"2026-03-04T16:04:05.190Z"}
+{"type":"input","raw":"set asher 4","output":{"type":"number","data":4},"display":"4","ts":"2026-03-04T16:04:05.193Z"}
+{"type":"input","raw":"asher","output":{"type":"number","data":4},"display":"4","ts":"2026-03-04T16:04:05.193Z"}
+{"type":"input","raw":"4 asher","output":{"type":"text","data":"4 4"},"display":"4 4","ts":"2026-03-04T16:04:05.193Z"}
+{"type":"input","raw":"set rocket 🚀","output":{"type":"text","data":"🚀"},"display":"🚀","ts":"2026-03-04T16:04:05.193Z"}
+{"type":"input","raw":"3 rocket","output":{"type":"emoji","data":"🚀🚀🚀"},"display":"🚀🚀🚀","ts":"2026-03-04T16:04:05.193Z"}
+{"type":"input","raw":"4 = 8","output":{"type":"text","data":"= = = =8"},"display":"= = = =8","ts":"2026-03-04T16:04:05.194Z"}
+{"type":"end","ts":"2026-03-04T16:04:05.194Z"}

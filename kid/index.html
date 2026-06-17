@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kid</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #1a1a2e;
+    color: #e0e0e0;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 20px;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ---- REPL ---- */
+  #repl-mode {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 16px;
+  }
+
+  #output {
+    flex: 1;
+    overflow-y: auto;
+    padding-bottom: 8px;
+  }
+
+  .output-line {
+    margin: 3px 0;
+    min-height: 1.5em;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 2px;
+    line-height: 1.5;
+  }
+
+  .output-line.welcome { color: #7ec8e3; }
+  .output-line.input-echo { color: #888; }
+  .output-line.result { color: #fff; font-size: 1.1em; }
+  .output-line.system { color: #aaa; font-style: italic; }
+
+  .color-block {
+    display: inline-block;
+    width: 1.4em;
+    height: 1em;
+    vertical-align: middle;
+    border-radius: 2px;
+  }
+
+  #input-row {
+    display: flex;
+    align-items: center;
+    border-top: 1px solid #333;
+    padding-top: 10px;
+    margin-top: 4px;
+    gap: 10px;
+  }
+
+  #prompt { color: #7ec8e3; font-weight: bold; user-select: none; }
+
+  #input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #fff;
+    font-family: inherit;
+    font-size: inherit;
+    caret-color: #7ec8e3;
+  }
+
+  /* ---- DRAWING MODE ---- */
+  #draw-mode {
+    display: none;
+    flex-direction: column;
+    height: 100%;
+    background: #000;
+  }
+
+  #canvas-container {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
+  }
+
+  #draw-canvas {
+    display: block;
+    cursor: crosshair;
+  }
+
+  #draw-status {
+    background: #222;
+    color: #ddd;
+    padding: 5px 10px;
+    font-size: 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    white-space: nowrap;
+    border-top: 1px solid #444;
+  }
+
+  #status-pen { font-weight: bold; color: #7ec8e3; min-width: 8ch; }
+  #status-pen.down { color: #f0c040; }
+
+  .status-swatch {
+    display: inline-block;
+    width: 20px;
+    height: 16px;
+    border: 1px solid #666;
+    vertical-align: middle;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  .status-hint { color: #777; margin-left: auto; }
+</style>
+</head>
+<body>
+
+<div id="repl-mode">
+  <div id="output">
+    <div class="output-line welcome">Welcome! Type anything and press Enter.</div>
+    <div class="output-line welcome">Try: 4 + 4 &nbsp; 3 trex &nbsp; 5 red &nbsp; red + blue</div>
+    <div class="output-line welcome">Type "draw" to draw, "print" to save!</div>
+    <div class="output-line welcome">&nbsp;</div>
+  </div>
+  <div id="input-row">
+    <span id="prompt">&gt;</span>
+    <input id="input" type="text"
+      autocomplete="off" autocorrect="off" autocapitalize="off"
+      spellcheck="false" autofocus />
+  </div>
+</div>
+
+<div id="draw-mode">
+  <div id="canvas-container">
+    <canvas id="draw-canvas" tabindex="0"></canvas>
+  </div>
+  <div id="draw-status">
+    <span id="status-pen">pen up</span>
+    <span>|</span>
+    <span class="status-swatch" id="status-swatch"></span>
+    <span id="status-color-name">red</span>
+    <span class="status-hint">Space: pen &nbsp;&nbsp; Tab: color &nbsp;&nbsp; Arrows: move &nbsp;&nbsp; ESC: exit</span>
+  </div>
+</div>
+
+<script>
+// ===================== SERVER BRIDGE =====================
+// Fire-and-forget: works whether or not the server is running.
+
+const SERVER = 'http://localhost:3131';
+
+function serverLog(entry) {
+  fetch(`${SERVER}/log`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(entry),
+  }).catch(() => { /* server not running — silently skip */ });
+}
+
+async function serverSaveDrawing(dataUrl) {
+  try {
+    const res = await fetch(`${SERVER}/save-drawing`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dataUrl }),
+    });
+    if (res.ok) {
+      const { filepath } = await res.json();
+      return filepath;
+    }
+  } catch { /* server not running */ }
+  return null;
+}
+
+// ===================== COLORS =====================
+
+const COLORS = {
+  red:     { name: 'red',     rgb: [255, 0, 0] },
+  blue:    { name: 'blue',    rgb: [0, 0, 255] },
+  yellow:  { name: 'yellow',  rgb: [255, 255, 0] },
+  green:   { name: 'green',   rgb: [0, 160, 0] },
+  orange:  { name: 'orange',  rgb: [255, 165, 0] },
+  purple:  { name: 'purple',  rgb: [128, 0, 128] },
+  pink:    { name: 'pink',    rgb: [255, 192, 203] },
+  brown:   { name: 'brown',   rgb: [139, 69, 19] },
+  black:   { name: 'black',   rgb: [0, 0, 0] },
+  white:   { name: 'white',   rgb: [255, 255, 255] },
+  gray:    { name: 'gray',    rgb: [128, 128, 128] },
+  grey:    { name: 'grey',    rgb: [128, 128, 128] },
+  cyan:    { name: 'cyan',    rgb: [0, 255, 255] },
+  magenta: { name: 'magenta', rgb: [255, 0, 255] },
+};
+
+const MIX_TABLE = {
+  'red+blue': 'purple',    'blue+red': 'purple',
+  'red+yellow': 'orange',  'yellow+red': 'orange',
+  'blue+yellow': 'green',  'yellow+blue': 'green',
+  'red+white': 'pink',     'white+red': 'pink',
+  'red+green': 'brown',    'green+red': 'brown',
+  'black+white': 'gray',   'white+black': 'gray',
+  'blue+white': 'cyan',    'white+blue': 'cyan',
+  'red+blue+yellow': 'brown',
+  'purple+yellow': 'brown', 'yellow+purple': 'brown',
+  'orange+blue': 'brown',  'blue+orange': 'brown',
+  'pink+blue': 'purple',   'blue+pink': 'purple',
+};
+
+const COLOR_CYCLE = [
+  COLORS.red, COLORS.orange, COLORS.yellow, COLORS.green,
+  COLORS.blue, COLORS.purple, COLORS.pink, COLORS.white,
+  COLORS.cyan, COLORS.brown, COLORS.black, COLORS.gray,
+];
+
+function isColor(token) { return token.toLowerCase() in COLORS; }
+function getColor(token) { return COLORS[token.toLowerCase()] || null; }
+function rgbStr([r, g, b]) { return `rgb(${r},${g},${b})`; }
+
+function rgbToCmyk([r, g, b]) {
+  const r1 = r/255, g1 = g/255, b1 = b/255;
+  const k = 1 - Math.max(r1, g1, b1);
+  if (k >= 1) return [0, 0, 0, 1];
+  return [(1-r1-k)/(1-k), (1-g1-k)/(1-k), (1-b1-k)/(1-k), k];
+}
+function cmykToRgb([c, m, y, k]) {
+  return [
+    Math.round(255*(1-c)*(1-k)),
+    Math.round(255*(1-m)*(1-k)),
+    Math.round(255*(1-y)*(1-k)),
+  ];
+}
+function mixColors(color1, color2) {
+  if (color1.name && color2.name) {
+    const key = `${color1.name}+${color2.name}`;
+    if (MIX_TABLE[key]) return { ...COLORS[MIX_TABLE[key]] };
+  }
+  const cm1 = rgbToCmyk(color1.rgb), cm2 = rgbToCmyk(color2.rgb);
+  return { name: null, rgb: cmykToRgb(cm1.map((v, i) => (v + cm2[i]) / 2)) };
+}
+
+// ===================== KEYWORDS =====================
+
+const KEYWORDS = {
+  "trex":"🦖","dinosaur":"🦕","dino":"🦕","dragon":"🐉","fire":"🔥","rocket":"🚀",
+  "star":"⭐","stars":"✨","sparkle":"✨","moon":"🌙","sun":"☀️","rainbow":"🌈",
+  "heart":"❤️","cat":"🐱","dog":"🐶","fish":"🐟","bird":"🐦","butterfly":"🦋",
+  "bug":"🐛","bee":"🐝","ant":"🐜","snake":"🐍","turtle":"🐢","frog":"🐸",
+  "monkey":"🐵","elephant":"🐘","lion":"🦁","bear":"🐻","pig":"🐷","cow":"🐮",
+  "horse":"🐴","unicorn":"🦄","chicken":"🐔","penguin":"🐧","shark":"🦈","whale":"🐳",
+  "octopus":"🐙","crab":"🦀","spider":"🕷️","tree":"🌳","flower":"🌸","mushroom":"🍄",
+  "cactus":"🌵","leaf":"🍃","apple":"🍎","banana":"🍌","pizza":"🍕","cake":"🎂",
+  "cookie":"🍪","candy":"🍬","icecream":"🍦","taco":"🌮","hotdog":"🌭","popcorn":"🍿",
+  "donut":"🍩","watermelon":"🍉","grape":"🍇","cherry":"🍒","strawberry":"🍓",
+  "car":"🚗","truck":"🚛","bus":"🚌","train":"🚂","airplane":"✈️","plane":"✈️",
+  "boat":"⛵","ship":"🚢","bike":"🚲","helicopter":"🚁","house":"🏠","castle":"🏰",
+  "tent":"⛺","mountain":"⛰️","volcano":"🌋","ocean":"🌊","wave":"🌊","snow":"❄️",
+  "snowman":"⛄","cloud":"☁️","rain":"🌧️","lightning":"⚡","thunder":"⚡","tornado":"🌪️",
+  "wind":"💨","bomb":"💣","boom":"💥","pow":"💥","ghost":"👻","alien":"👽","robot":"🤖",
+  "skull":"💀","poop":"💩","clown":"🤡","king":"👑","queen":"👑","crown":"👑",
+  "sword":"⚔️","shield":"🛡️","gem":"💎","diamond":"💎","music":"🎵","guitar":"🎸",
+  "drum":"🥁","bell":"🔔","ball":"⚽","football":"🏈","basketball":"🏀","baseball":"⚾",
+  "trophy":"🏆","medal":"🏅","flag":"🚩","gift":"🎁","present":"🎁","balloon":"🎈",
+  "party":"🎉","confetti":"🎊","magic":"🪄","wand":"🪄","crystal":"🔮","key":"🔑",
+  "lock":"🔒","eye":"👁️","brain":"🧠","muscle":"💪","thumbsup":"👍","clap":"👏",
+  "hi":"👋","peace":"✌️","love":"💕","kiss":"💋","smile":"😊","laugh":"😂","cry":"😢",
+  "angry":"😡","cool":"😎","think":"🤔","sleep":"😴","scared":"😱","wow":"😮","yay":"🥳",
+  "ninja":"🥷","pirate":"🏴‍☠️","superhero":"🦸","fairy":"🧚","mermaid":"🧜","wizard":"🧙",
+  "vampire":"🧛","zombie":"🧟","earth":"🌍","world":"🌍","planet":"🪐","comet":"☄️",
+  "ufo":"🛸","paw":"🐾","footprint":"👣","egg":"🥚","chick":"🐥","duckling":"🐤",
+  "duck":"🦆","owl":"🦉","bat":"🦇","fox":"🦊","rabbit":"🐰","bunny":"🐰","mouse":"🐭",
+  "hamster":"🐹","panda":"🐼","koala":"🐨","tiger":"🐯","wolf":"🐺","gorilla":"🦍",
+  "deer":"🦌","giraffe":"🦒","zebra":"🦓","hippo":"🦛","crocodile":"🐊","lizard":"🦎",
+  "scorpion":"🦂","snail":"🐌","ladybug":"🐞","caterpillar":"🐛","worm":"🪱",
+  "jellyfish":"🪼","dolphin":"🐬","blowfish":"🐡","lobster":"🦞","shrimp":"🦐",
+  "squid":"🦑","flamingo":"🦩","peacock":"🦚","parrot":"🦜","swan":"🦢","eagle":"🦅",
+  "feather":"🪶",
+};
+
+function isEmoji(token) { return token.toLowerCase() in KEYWORDS; }
+function getEmoji(token) { return KEYWORDS[token.toLowerCase()] || null; }
+
+// ===================== VARIABLES =====================
+
+const varStore = new Map();
+function getVariable(name) { return varStore.get(name.toLowerCase()) || null; }
+function setVariable(name, value) { varStore.set(name.toLowerCase(), value); }
+function hasVariable(name) { return varStore.has(name.toLowerCase()); }
+
+// ===================== PARSER =====================
+
+const OPERATORS = new Set(['+', '-', 'x', '*', '/', '÷', '=']);
+function isOperator(t) { return OPERATORS.has(t); }
+function isNumber(t) { return /^\d+(\.\d+)?$/.test(t); }
+
+function tokenize(line) {
+  const raw = line.split(/\s+/).filter(Boolean);
+  const result = [];
+  for (const tok of raw) {
+    const parts = tok.split(/((?<=[0-9])[x*](?=[0-9])|[+=\-/÷])/);
+    for (const p of parts) { if (p !== '') result.push(p); }
+  }
+  return result;
+}
+
+function resolveToken(token) {
+  if (isNumber(token)) return { type: 'number', data: parseFloat(token) };
+  if (isColor(token)) return { type: 'color', data: { ...getColor(token) } };
+  if (isEmoji(token)) return { type: 'emoji', data: getEmoji(token) };
+  if (hasVariable(token)) { const v = getVariable(token); return { ...v }; }
+  return { type: 'text', data: token };
+}
+
+function arraysEqual(a, b) { return a.length === b.length && a.every((v, i) => v === b[i]); }
+
+function valueToPlainString(v) {
+  switch (v.type) {
+    case 'number': return String(v.data);
+    case 'text': return v.data;
+    case 'emoji': return v.data;
+    case 'color': return `[${v.data.name || 'mixed'}]`;
+    case 'colored_blocks': return `[${v.data.count}x ${v.data.color.name || 'mixed'}]`;
+    default: return String(v.data);
+  }
+}
+
+function concatenateValues(...values) {
+  const flat = [];
+  for (const v of values) {
+    if (v.type === 'list') flat.push(...v.data);
+    else flat.push(v);
+  }
+  if (flat.every(v => v.type === 'text' || v.type === 'emoji' || v.type === 'number')) {
+    return { type: 'text', data: flat.map(valueToPlainString).join('') };
+  }
+  return { type: 'list', data: flat };
+}
+
+function applyJuxtaposition(left, right) {
+  if (left.type === 'number') {
+    const count = Math.max(0, Math.min(Math.floor(left.data), 1000));
+    if (right.type === 'color') return { type: 'colored_blocks', data: { count, color: right.data } };
+    if (right.type === 'colored_blocks') return { type: 'colored_blocks', data: { count: count * right.data.count, color: right.data.color } };
+    if (right.type === 'emoji') return { type: 'emoji', data: right.data.repeat(count) };
+    if (right.type === 'text') return { type: 'text', data: Array(count).fill(right.data).join(' ') };
+    if (right.type === 'number') return { type: 'text', data: `${left.data} ${right.data}` };
+    if (right.type === 'list') {
+      const items = [];
+      for (let j = 0; j < count; j++) items.push(...right.data);
+      return { type: 'list', data: items };
+    }
+  }
+  if (left.type === 'color' && right.type === 'number') {
+    const count = Math.max(0, Math.min(Math.floor(right.data), 1000));
+    return { type: 'colored_blocks', data: { count, color: left.data } };
+  }
+  return concatenateValues(left, right);
+}
+
+function applyOp(left, op, right) {
+  if (op === '=') op = '+';
+  if (left.type === 'number' && right.type === 'number') {
+    switch (op) {
+      case '+': return { type: 'number', data: left.data + right.data };
+      case '-': return { type: 'number', data: left.data - right.data };
+      case 'x': case '*': return { type: 'number', data: left.data * right.data };
+      case '/': case '÷': return { type: 'number', data: right.data === 0 ? left.data : Math.floor(left.data / right.data) };
+    }
+  }
+  if (op === '+' && left.type === 'color' && right.type === 'color')
+    return { type: 'color', data: mixColors(left.data, right.data) };
+  if (op === '+' && left.type === 'colored_blocks' && right.type === 'color')
+    return { type: 'colored_blocks', data: { count: left.data.count, color: mixColors(left.data.color, right.data) } };
+  if (op === '+' && left.type === 'colored_blocks' && right.type === 'number')
+    return { type: 'colored_blocks', data: { count: left.data.count + right.data, color: left.data.color } };
+  if (op === '+' && left.type === 'number' && right.type === 'color')
+    return { type: 'colored_blocks', data: { count: left.data, color: right.data } };
+  if (op === '+' && left.type === 'number' && right.type === 'colored_blocks')
+    return { type: 'colored_blocks', data: { count: left.data + right.data.count, color: right.data.color } };
+  if (op === '+' && left.type === 'colored_blocks' && right.type === 'colored_blocks') {
+    const color = arraysEqual(left.data.color.rgb, right.data.color.rgb)
+      ? left.data.color : mixColors(left.data.color, right.data.color);
+    return { type: 'colored_blocks', data: { count: left.data.count + right.data.count, color } };
+  }
+  if ((op === 'x' || op === '*') && left.type === 'number') return applyJuxtaposition(left, right);
+  if (op === '+') return concatenateValues(left, right);
+  return concatenateValues(left, { type: 'text', data: ` ${op} ` }, right);
+}
+
+function evaluate(line) {
+  try {
+    line = line.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, '').slice(0, 1000);
+    const tokens = tokenize(line.trim());
+    if (tokens.length === 0) return { type: 'text', data: '' };
+
+    if (tokens[0].toLowerCase() === 'set' && tokens.length >= 3) {
+      const name = tokens[1];
+      const rhs = evaluate(tokens.slice(2).join(' '));
+      setVariable(name, rhs);
+      return rhs;
+    }
+
+    let acc = resolveToken(tokens[0]);
+    let i = 1;
+    while (i < tokens.length) {
+      const tok = tokens[i];
+      if (isOperator(tok)) {
+        i++;
+        if (i >= tokens.length) break;
+        acc = applyOp(acc, tok, resolveToken(tokens[i]));
+      } else {
+        acc = applyJuxtaposition(acc, resolveToken(tok));
+      }
+      i++;
+    }
+    return acc;
+  } catch {
+    return { type: 'text', data: line };
+  }
+}
+
+// ===================== RENDER (HTML) =====================
+
+function isWhiteRgb(rgb) {
+  return rgb[0] > 240 && rgb[1] > 240 && rgb[2] > 240;
+}
+
+function makeColorBlock(rgb) {
+  const span = document.createElement('span');
+  span.className = 'color-block';
+  span.style.backgroundColor = rgbStr(rgb);
+  if (isWhiteRgb(rgb)) span.style.border = '1px solid #888';
+  return span;
+}
+
+function renderToNode(value) {
+  try {
+    switch (value.type) {
+      case 'number': return document.createTextNode(String(value.data));
+      case 'text':   return document.createTextNode(value.data);
+      case 'emoji':  return document.createTextNode(value.data);
+      case 'color':  return makeColorBlock(value.data.rgb);
+      case 'colored_blocks': {
+        const frag = document.createDocumentFragment();
+        const count = Math.max(0, Math.min(value.data.count, 300));
+        for (let i = 0; i < count; i++) frag.appendChild(makeColorBlock(value.data.color.rgb));
+        return frag;
+      }
+      case 'list': {
+        const frag = document.createDocumentFragment();
+        for (const v of value.data) frag.appendChild(renderToNode(v));
+        return frag;
+      }
+      default: return document.createTextNode(String(value.data ?? ''));
+    }
+  } catch {
+    return document.createTextNode(String(value?.data ?? ''));
+  }
+}
+
+function renderToDisplay(value) {
+  // Plain-text version for logging (strips color blocks to names)
+  return valueToPlainString(value);
+}
+
+// ===================== REPL =====================
+
+const outputEl  = document.getElementById('output');
+const inputEl   = document.getElementById('input');
+let lastDrawing = null;
+
+function addLine(content, cls = 'result') {
+  const div = document.createElement('div');
+  div.className = `output-line ${cls}`;
+  if (typeof content === 'string') {
+    div.textContent = content;
+  } else {
+    div.appendChild(content);
+  }
+  outputEl.appendChild(div);
+  outputEl.scrollTop = outputEl.scrollHeight;
+}
+
+// Log session start
+serverLog({ type: 'start', version: '1.0.0' });
+
+inputEl.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter') return;
+  const raw = inputEl.value;
+  inputEl.value = '';
+
+  addLine(`> ${raw}`, 'input-echo');
+
+  const trimmed = raw.trim();
+
+  if (trimmed === '') {
+    addLine('');
+    serverLog({ type: 'input', raw: '', display: '' });
+    return;
+  }
+
+  if (trimmed.toLowerCase() === 'draw') {
+    serverLog({ type: 'input', raw: trimmed, display: '[entering drawing mode]' });
+    enterDrawMode();
+    return;
+  }
+
+  if (trimmed.toLowerCase() === 'print') {
+    if (!lastDrawing) {
+      addLine('No drawing yet! Type "draw" first.');
+      serverLog({ type: 'input', raw: trimmed, display: '[no drawing]' });
+    } else {
+      saveDrawing();
+    }
+    return;
+  }
+
+  try {
+    const result = evaluate(trimmed);
+    const display = renderToDisplay(result);
+
+    const div = document.createElement('div');
+    div.className = 'output-line result';
+    div.appendChild(renderToNode(result));
+    outputEl.appendChild(div);
+    outputEl.scrollTop = outputEl.scrollHeight;
+
+    serverLog({ type: 'input', raw: trimmed, output: result, display });
+  } catch {
+    addLine(raw);
+    serverLog({ type: 'input', raw, display: raw });
+  }
+});
+
+// ===================== DRAWING MODE =====================
+
+const replMode  = document.getElementById('repl-mode');
+const drawMode  = document.getElementById('draw-mode');
+const canvas    = document.getElementById('draw-canvas');
+const ctx       = canvas.getContext('2d');
+const elPen     = document.getElementById('status-pen');
+const elSwatch  = document.getElementById('status-swatch');
+const elColor   = document.getElementById('status-color-name');
+
+const CELL_W = 16;
+const CELL_H = 20;
+let COLS, ROWS, grid, cursorX, cursorY, colorIndex, penDown;
+
+function initGrid() {
+  const container = document.getElementById('canvas-container');
+  COLS = Math.floor(container.clientWidth / CELL_W);
+  ROWS = Math.floor(container.clientHeight / CELL_H);
+  canvas.width  = COLS * CELL_W;
+  canvas.height = ROWS * CELL_H;
+  grid = Array.from({ length: ROWS }, () =>
+    Array.from({ length: COLS }, () => ({ char: ' ', color: null }))
+  );
+  cursorX = Math.floor(COLS / 2);
+  cursorY = Math.floor(ROWS / 2);
+  colorIndex = 0;
+  penDown = false;
+}
+
+function clamp() {
+  cursorX = Math.max(0, Math.min(cursorX, COLS - 1));
+  cursorY = Math.max(0, Math.min(cursorY, ROWS - 1));
+}
+
+function stamp() {
+  if (penDown) {
+    grid[cursorY][cursorX] = { char: ' ', color: COLOR_CYCLE[colorIndex % COLOR_CYCLE.length].rgb };
+  }
+}
+
+function renderCanvas() {
+  ctx.fillStyle = '#111';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.font = `${CELL_H - 2}px monospace`;
+  ctx.textBaseline = 'top';
+
+  for (let y = 0; y < ROWS; y++) {
+    for (let x = 0; x < COLS; x++) {
+      const cell = grid[y][x];
+      const px = x * CELL_W, py = y * CELL_H;
+      if (cell.color) {
+        ctx.fillStyle = rgbStr(cell.color);
+        ctx.fillRect(px, py, CELL_W, CELL_H);
+      } else if (cell.char !== ' ') {
+        ctx.fillStyle = '#fff';
+        ctx.fillText(cell.char, px, py);
+      }
+    }
+  }
+
+  // Cursor
+  const col = COLOR_CYCLE[colorIndex % COLOR_CYCLE.length];
+  ctx.strokeStyle = rgbStr(col.rgb);
+  ctx.lineWidth = 2;
+  ctx.strokeRect(cursorX * CELL_W + 1, cursorY * CELL_H + 1, CELL_W - 2, CELL_H - 2);
+
+  // Status bar
+  elPen.textContent = penDown ? 'PEN DOWN' : 'pen up';
+  elPen.classList.toggle('down', penDown);
+  elSwatch.style.backgroundColor = rgbStr(col.rgb);
+  elSwatch.style.border = isWhiteRgb(col.rgb) ? '1px solid #888' : '1px solid #555';
+  elColor.textContent = col.name || 'mixed';
+}
+
+function enterDrawMode() {
+  replMode.style.display = 'none';
+  drawMode.style.display = 'flex';
+  initGrid();
+  renderCanvas();
+  document.addEventListener('keydown', onDrawKey, true);
+}
+
+function exitDrawMode() {
+  document.removeEventListener('keydown', onDrawKey, true);
+
+  // Snapshot grid for later use
+  lastDrawing = {
+    grid: grid.map(r => r.map(c => ({ ...c }))),
+    cols: COLS,
+    rows: ROWS,
+    canvas,       // keep live canvas reference for quick re-render
+  };
+
+  // Log the drawing (canvas data, same format as TUI)
+  const canvasData = grid.map(row => row.map(cell => ({ char: cell.char, color: cell.color })));
+  serverLog({ type: 'drawing', canvas: canvasData });
+
+  drawMode.style.display = 'none';
+  replMode.style.display = 'flex';
+  inputEl.focus();
+  saveDrawing();
+}
+
+const DRAW_PREVENT = new Set(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' ','Tab']);
+
+function onDrawKey(e) {
+  if (DRAW_PREVENT.has(e.key)) e.preventDefault();
+  switch (e.key) {
+    case 'Escape':
+      exitDrawMode(); break;
+    case 'ArrowUp':
+      stamp(); cursorY--; clamp(); stamp(); renderCanvas(); break;
+    case 'ArrowDown':
+      stamp(); cursorY++; clamp(); stamp(); renderCanvas(); break;
+    case 'ArrowRight':
+      stamp(); cursorX++; clamp(); stamp(); renderCanvas(); break;
+    case 'ArrowLeft':
+      stamp(); cursorX--; clamp(); stamp(); renderCanvas(); break;
+    case ' ':
+      penDown = !penDown;
+      if (penDown) stamp();
+      renderCanvas(); break;
+    case 'Tab':
+      colorIndex++;
+      renderCanvas(); break;
+    case 'Enter':
+      stamp(); cursorY++; cursorX = 0; clamp();
+      if (penDown) stamp();
+      renderCanvas(); break;
+    case 'Backspace':
+      grid[cursorY][cursorX] = { char: ' ', color: null };
+      renderCanvas(); break;
+    default:
+      if (e.key.length === 1 && e.key.charCodeAt(0) >= 32) {
+        grid[cursorY][cursorX] = { char: e.key, color: null };
+        cursorX++; clamp();
+        renderCanvas();
+      }
+  }
+}
+
+async function saveDrawing() {
+  const d = lastDrawing;
+
+  // Render to an off-screen canvas (cursor-free)
+  const off = document.createElement('canvas');
+  off.width  = d.cols * CELL_W;
+  off.height = d.rows * CELL_H;
+  const c = off.getContext('2d');
+  c.fillStyle = '#111';
+  c.fillRect(0, 0, off.width, off.height);
+  c.font = `${CELL_H - 2}px monospace`;
+  c.textBaseline = 'top';
+  for (let y = 0; y < d.rows; y++) {
+    for (let x = 0; x < d.cols; x++) {
+      const cell = d.grid[y][x];
+      const px = x * CELL_W, py = y * CELL_H;
+      if (cell.color) {
+        c.fillStyle = rgbStr(cell.color);
+        c.fillRect(px, py, CELL_W, CELL_H);
+      } else if (cell.char !== ' ') {
+        c.fillStyle = '#fff';
+        c.fillText(cell.char, px, py);
+      }
+    }
+  }
+
+  const dataUrl = off.toDataURL('image/png');
+
+  // Try to save via server (writes to prints/ directory)
+  const filepath = await serverSaveDrawing(dataUrl);
+
+  if (filepath) {
+    // Server saved it — show path, no forced download needed
+    addLine(`Saved! ${filepath}`, 'system');
+  } else {
+    // Server not available — fall back to browser download
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = `drawing-${new Date().toISOString().replace(/[:.]/g, '-')}.png`;
+    a.click();
+    addLine('Drawing downloaded!', 'system');
+  }
+
+  serverLog({ type: 'input', raw: 'print', display: '[print]' });
+}
+</script>
+</body>
+</html>

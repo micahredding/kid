@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 import { createServer } from 'node:http';
-import { readFileSync, appendFileSync, writeFileSync, mkdirSync } from 'node:fs';
-import { join, dirname } from 'node:path';
+import { readFileSync, appendFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
+import { join, dirname, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -28,6 +28,48 @@ console.log(`  Logging to: logs/session-${sessionTimestamp}.jsonl\n`);
 
 const html = readFileSync(join(__dirname, 'index.html'));
 
+// Static game directories (relative to kid/)
+const GAMES = {
+  'numberblocks': join(__dirname, '..', 'numberblocks'),
+  'planets':      join(__dirname, '..', 'planets'),
+  'run-around':   join(__dirname, '..', 'run-around'),
+  'letter-invaders': join(__dirname, '..', 'letter-invaders', 'dist'),
+  'family-tree':  join(__dirname, '..', 'family-tree'),
+  'powers-of-2-numberblocks': join(__dirname, '..', 'powers-of-2-numberblocks'),
+};
+
+const MIME_TYPES = {
+  '.html': 'text/html; charset=utf-8',
+  '.js':   'text/javascript',
+  '.mjs':  'text/javascript',
+  '.css':  'text/css',
+  '.png':  'image/png',
+  '.jpg':  'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.webp': 'image/webp',
+  '.gif':  'image/gif',
+  '.svg':  'image/svg+xml',
+  '.ico':  'image/x-icon',
+  '.json': 'application/json',
+  '.mp3':  'audio/mpeg',
+  '.wav':  'audio/wav',
+  '.ogg':  'audio/ogg',
+  '.wasm': 'application/wasm',
+};
+
+function serveStatic(res, dir, urlPath) {
+  // Strip leading slash and the game prefix segment
+  let filePath = urlPath === '' || urlPath === '/' ? 'index.html' : urlPath.replace(/^\//, '');
+  const fullPath = join(dir, filePath);
+  // Prevent directory traversal
+  if (!fullPath.startsWith(dir)) { res.writeHead(403); res.end('Forbidden'); return; }
+  if (!existsSync(fullPath)) { res.writeHead(404); res.end('Not found'); return; }
+  const ext = extname(fullPath).toLowerCase();
+  const mime = MIME_TYPES[ext] || 'application/octet-stream';
+  res.writeHead(200, { 'Content-Type': mime });
+  res.end(readFileSync(fullPath));
+}
+
 function readBody(req) {
   return new Promise((resolve) => {
     let body = '';
@@ -42,6 +84,18 @@ const server = createServer(async (req, res) => {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
+
+  // Serve game static files: /numberblocks/*, /planets/*, etc.
+  if (req.method === 'GET') {
+    const urlPath = req.url.split('?')[0];
+    for (const [name, dir] of Object.entries(GAMES)) {
+      if (urlPath === `/${name}` || urlPath.startsWith(`/${name}/`)) {
+        const subPath = urlPath.slice(name.length + 1) || '/';
+        serveStatic(res, dir, subPath);
+        return;
+      }
+    }
+  }
 
   // Serve the HTML app
   if (req.method === 'GET' && req.url === '/') {

@@ -27,7 +27,7 @@ export const CONFIG = {
     maxSprintSpeed: 6.5,
 
     // Jumping
-    jumpVelocity: -10.5,          // initial jump impulse
+    jumpVelocity: -12,            // initial jump impulse (apex ~4 tiles, clears high ? blocks)
     jumpCutMultiplier: 0.4,       // velocity multiplied by this when releasing jump early
     gravity: 0.55,
     fallingGravity: 0.7,          // higher gravity on descent for snappy feel

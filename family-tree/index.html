@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Asher's Family Tree</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Baloo 2', cursive, system-ui, sans-serif;
+    background: linear-gradient(135deg, #fdf6e3 0%, #e8f4f8 50%, #fce4ec 100%);
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  #header {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    text-align: center;
+    padding: 12px 20px;
+    z-index: 100;
+    pointer-events: none;
+  }
+
+  #header h1 {
+    font-size: 2rem;
+    font-weight: 800;
+    color: #5b4a3f;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.08);
+    letter-spacing: 0.5px;
+  }
+
+  #header h1 .star { color: #f0a500; }
+
+  #controls {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 100;
+    display: flex;
+    gap: 10px;
+  }
+
+  .btn {
+    font-family: 'Baloo 2', cursive;
+    font-size: 1rem;
+    font-weight: 700;
+    padding: 8px 20px;
+    border: none;
+    border-radius: 30px;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+    pointer-events: all;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.12);
+  }
+
+  .btn:hover { transform: scale(1.05); box-shadow: 0 4px 14px rgba(0,0,0,0.18); }
+  .btn:active { transform: scale(0.97); }
+
+  .btn-find {
+    background: linear-gradient(135deg, #ffd700, #ffb300);
+    color: #5b4a3f;
+  }
+
+  .btn-zoom {
+    background: white;
+    color: #5b4a3f;
+    min-width: 42px;
+  }
+
+  #info-panel {
+    position: fixed;
+    bottom: 70px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: white;
+    border-radius: 20px;
+    padding: 14px 28px;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.12);
+    z-index: 100;
+    text-align: center;
+    opacity: 0;
+    transition: opacity 0.3s, transform 0.3s;
+    pointer-events: none;
+    max-width: 90vw;
+  }
+
+  #info-panel.visible {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  #info-panel .name {
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: #5b4a3f;
+  }
+
+  #info-panel .relation {
+    font-size: 1rem;
+    font-weight: 500;
+    color: #8b7d72;
+    margin-top: 2px;
+  }
+
+  #tree-container {
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    cursor: grab;
+    position: relative;
+  }
+
+  #tree-container:active { cursor: grabbing; }
+
+  #tree-world {
+    position: absolute;
+    transform-origin: 0 0;
+    will-change: transform;
+  }
+
+  svg#connections {
+    position: absolute;
+    top: 0;
+    left: 0;
+    overflow: visible;
+    pointer-events: none;
+  }
+
+  .person {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    transition: filter 0.3s, opacity 0.3s;
+  }
+
+  .person .bubble {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .person:hover .bubble {
+    transform: scale(1.12);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.18);
+  }
+
+  .person .photo-placeholder {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.6rem;
+  }
+
+  .person .photo-img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+
+  .person .label {
+    margin-top: 4px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #5b4a3f;
+    text-align: center;
+    white-space: nowrap;
+    text-shadow: 0 1px 3px rgba(255,255,255,0.9);
+    line-height: 1.15;
+  }
+
+  .person .role-label {
+    font-size: 0.65rem;
+    font-weight: 500;
+    color: #8b7d72;
+    text-shadow: 0 1px 3px rgba(255,255,255,0.9);
+  }
+
+  /* Asher special styles */
+  .person.asher .bubble {
+    width: 90px;
+    height: 90px;
+    box-shadow: 0 0 0 4px #fff, 0 0 20px rgba(240, 165, 0, 0.5), 0 6px 20px rgba(0,0,0,0.12);
+    animation: glow 2.5s ease-in-out infinite alternate;
+  }
+
+  .person.asher .label {
+    font-size: 1.05rem;
+    font-weight: 800;
+  }
+
+  @keyframes glow {
+    0% { box-shadow: 0 0 0 4px #fff, 0 0 20px rgba(240, 165, 0, 0.3), 0 6px 20px rgba(0,0,0,0.12); }
+    100% { box-shadow: 0 0 0 4px #fff, 0 0 30px rgba(240, 165, 0, 0.6), 0 6px 20px rgba(0,0,0,0.12); }
+  }
+
+  /* Dimming when a person is selected */
+  .tree-highlight .person {
+    opacity: 0.25;
+    filter: grayscale(0.5);
+  }
+
+  .tree-highlight .person.highlighted {
+    opacity: 1;
+    filter: none;
+  }
+
+  .tree-highlight .person.highlighted .bubble {
+    transform: scale(1.1);
+    box-shadow: 0 0 0 3px #fff, 0 0 16px rgba(240, 165, 0, 0.4);
+  }
+
+  /* Connection lines */
+  .conn-line {
+    stroke: #c4b5a5;
+    stroke-width: 2.5;
+    fill: none;
+    opacity: 0.45;
+    transition: stroke 0.3s, opacity 0.3s, stroke-width 0.3s;
+  }
+
+  .tree-highlight .conn-line {
+    opacity: 0.12;
+  }
+
+  .tree-highlight .conn-line.highlighted {
+    stroke: #f0a500;
+    stroke-width: 3.5;
+    opacity: 1;
+  }
+
+  /* Couple connector */
+  .couple-line {
+    stroke: #d4c5b5;
+    stroke-width: 2;
+    stroke-dasharray: 4 4;
+    opacity: 0.5;
+  }
+
+  /* Legend */
+  #legend {
+    position: fixed;
+    top: 58px;
+    right: 14px;
+    background: rgba(255,255,255,0.92);
+    border-radius: 16px;
+    padding: 10px 14px;
+    box-shadow: 0 3px 12px rgba(0,0,0,0.08);
+    z-index: 100;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #5b4a3f;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 3px 0;
+  }
+
+  .legend-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  @media (max-width: 600px) {
+    #header h1 { font-size: 1.4rem; }
+    #legend { display: none; }
+    .person .bubble { width: 54px; height: 54px; }
+    .person.asher .bubble { width: 76px; height: 76px; }
+    .person .label { font-size: 0.68rem; }
+    .person .role-label { font-size: 0.58rem; }
+  }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <h1><span class="star">&#9733;</span> Asher's Family Tree <span class="star">&#9733;</span></h1>
+</div>
+
+<div id="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:#ffd700"></div> Asher</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#ff8a80"></div> Parents</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#80cbc4"></div> Grandparents</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#b39ddb"></div> Great-Grandparents</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#81d4fa"></div> Uncles &amp; Aunts</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#f48fb1"></div> Cousins</div>
+</div>
+
+<div id="info-panel">
+  <div class="name"></div>
+  <div class="relation"></div>
+</div>
+
+<div id="tree-container">
+  <div id="tree-world">
+    <svg id="connections" width="3200" height="900"></svg>
+    <div id="people"></div>
+  </div>
+</div>
+
+<div id="controls">
+  <button class="btn btn-zoom" onclick="zoomBy(-0.15)" title="Zoom out">&minus;</button>
+  <button class="btn btn-find" onclick="centerOnAsher()">Find Asher &#9733;</button>
+  <button class="btn btn-zoom" onclick="zoomBy(0.15)" title="Zoom in">+</button>
+</div>
+
+<script>
+// ===================== FAMILY DATA =====================
+const COLORS = {
+  asher:       { bg: 'linear-gradient(135deg, #ffd700, #ffb300)', emoji: '⭐' },
+  parent:      { bg: 'linear-gradient(135deg, #ff8a80, #ff5252)', emoji: '❤️' },
+  grandparent: { bg: 'linear-gradient(135deg, #80cbc4, #4db6ac)', emoji: '💚' },
+  greatgrand:  { bg: 'linear-gradient(135deg, #b39ddb, #9575cd)', emoji: '💜' },
+  uncle:       { bg: 'linear-gradient(135deg, #81d4fa, #4fc3f7)', emoji: '💙' },
+  aunt:        { bg: 'linear-gradient(135deg, #81d4fa, #4fc3f7)', emoji: '💙' },
+  cousin:      { bg: 'linear-gradient(135deg, #f48fb1, #f06292)', emoji: '🌸' },
+};
+
+// Row Y positions
+const Y = { greatgrand: 70, grand: 240, parentsib: 420, kids: 610 };
+
+// All people: id, name, x, y, role, relation (from Asher's POV), roleLabel
+const people = [
+  // === ASHER ===
+  { id: 'asher', name: 'Asher', x: 380, y: Y.kids, role: 'asher', relation: "That's YOU!", roleLabel: '' },
+
+  // === PARENTS ===
+  { id: 'mommy', name: 'Mommy', x: 330, y: Y.parentsib, role: 'parent', relation: "Your Mommy!", roleLabel: 'Mommy' },
+  { id: 'daddy', name: 'Daddy', x: 430, y: Y.parentsib, role: 'parent', relation: "Your Daddy!", roleLabel: 'Daddy' },
+
+  // === MOMMY'S SIDE ===
+  { id: 'nini', name: 'Nini', x: 180, y: Y.grand, role: 'grandparent', relation: "Mommy's mommy — your grandma!", roleLabel: 'Grandma' },
+  { id: 'grandpa-pat', name: 'Grandpa Pat', x: 320, y: Y.grand, role: 'grandparent', relation: "Mommy's daddy — your grandpa!", roleLabel: 'Grandpa' },
+  { id: 'ryan', name: 'Ryan', x: 150, y: Y.parentsib, role: 'uncle', relation: "Mommy's brother — your uncle!", roleLabel: 'Uncle' },
+  { id: 'sarah-d', name: 'Sarah Decker', x: 50, y: Y.parentsib, role: 'aunt', relation: "Uncle Ryan's partner!", roleLabel: '' },
+
+  // === DADDY'S SIDE — GRANDPARENTS ===
+  { id: 'grandma-reda', name: 'Grandma Reda', x: 1060, y: Y.grand, role: 'grandparent', relation: "Daddy's mommy — your grandma!", roleLabel: 'Grandma' },
+  { id: 'grandpa-lawrence', name: 'Grandpa\nLawrence', x: 1220, y: Y.grand, role: 'grandparent', relation: "Daddy's daddy — your grandpa!", roleLabel: 'Grandpa' },
+
+  // === GREAT-GRANDPARENTS ===
+  { id: 'grandmother', name: 'Grandmother', x: 1010, y: Y.greatgrand, role: 'greatgrand', relation: "Grandma Reda's mommy — your great-grandma!", roleLabel: 'Great-Grandma' },
+  { id: 'mawmaw', name: 'Mawmaw', x: 1270, y: Y.greatgrand, role: 'greatgrand', relation: "Grandpa Lawrence's mommy — your great-grandma!", roleLabel: 'Great-Grandma' },
+
+  // === DADDY'S SIBLINGS + SPOUSES ===
+  { id: 'josiah', name: 'Josiah', x: 600, y: Y.parentsib, role: 'uncle', relation: "Daddy's brother — your uncle!", roleLabel: 'Uncle' },
+  { id: 'tiffany', name: 'Tiffany', x: 700, y: Y.parentsib, role: 'aunt', relation: "Uncle Josiah's wife — your aunt!", roleLabel: 'Aunt' },
+  { id: 'isaac', name: 'Isaac', x: 830, y: Y.parentsib, role: 'uncle', relation: "Daddy's brother — your uncle!", roleLabel: 'Uncle' },
+  { id: 'gabriel', name: 'Gabriel', x: 950, y: Y.parentsib, role: 'uncle', relation: "Daddy's brother — your uncle!", roleLabel: 'Uncle' },
+  { id: 'daniel', name: 'Daniel', x: 1080, y: Y.parentsib, role: 'uncle', relation: "Daddy's brother — your uncle!", roleLabel: 'Uncle' },
+  { id: 'jess', name: 'Jess', x: 1180, y: Y.parentsib, role: 'aunt', relation: "Uncle Daniel's wife — your aunt!", roleLabel: 'Aunt' },
+  { id: 'joseph', name: 'Joseph', x: 1310, y: Y.parentsib, role: 'uncle', relation: "Daddy's brother — your uncle!", roleLabel: 'Uncle' },
+  { id: 'sarah-r', name: 'Sarah', x: 1430, y: Y.parentsib, role: 'aunt', relation: "Daddy's sister — your aunt!", roleLabel: 'Aunt' },
+  { id: 'jake', name: 'Jake', x: 1530, y: Y.parentsib, role: 'uncle', relation: "Aunt Sarah's husband — your uncle!", roleLabel: 'Uncle' },
+  { id: 'john-mark', name: 'John Mark', x: 1660, y: Y.parentsib, role: 'uncle', relation: "Daddy's brother — your uncle!", roleLabel: 'Uncle' },
+  { id: 'hannah', name: 'Hannah', x: 1790, y: Y.parentsib, role: 'aunt', relation: "Daddy's sister — your aunt!", roleLabel: 'Aunt' },
+  { id: 'daniel-g', name: 'Daniel\nGarza', x: 1900, y: Y.parentsib, role: 'uncle', relation: "Aunt Hannah's husband — your uncle!", roleLabel: 'Uncle' },
+  { id: 'james', name: 'James', x: 2030, y: Y.parentsib, role: 'uncle', relation: "Daddy's brother — your uncle!", roleLabel: 'Uncle' },
+  { id: 'esther', name: 'Esther', x: 2150, y: Y.parentsib, role: 'aunt', relation: "Daddy's sister — your aunt!", roleLabel: 'Aunt' },
+  { id: 'spencer', name: 'Spencer\nParker', x: 2260, y: Y.parentsib, role: 'uncle', relation: "Aunt Esther's husband — your uncle!", roleLabel: 'Uncle' },
+
+  // === COUSINS ===
+  { id: 'anya', name: 'Anya', x: 600, y: Y.kids, role: 'cousin', relation: "Uncle Josiah & Aunt Tiffany's daughter — your cousin!", roleLabel: 'Cousin' },
+  { id: 'jonas', name: 'Jonas', x: 700, y: Y.kids, role: 'cousin', relation: "Uncle Josiah & Aunt Tiffany's son — your cousin!", roleLabel: 'Cousin' },
+  { id: 'ember', name: 'Ember', x: 800, y: Y.kids, role: 'cousin', relation: "Uncle Josiah & Aunt Tiffany's daughter — your cousin!", roleLabel: 'Cousin' },
+  { id: 'eowyn', name: 'Eowyn', x: 1480, y: Y.kids, role: 'cousin', relation: "Aunt Sarah & Uncle Jake's daughter — your cousin!", roleLabel: 'Cousin' },
+  { id: 'dani', name: 'Dani', x: 1790, y: Y.kids, role: 'cousin', relation: "Aunt Hannah & Uncle Daniel Garza's daughter — your cousin!", roleLabel: 'Cousin' },
+  { id: 'izzie', name: 'Izzie', x: 1900, y: Y.kids, role: 'cousin', relation: "Aunt Hannah & Uncle Daniel Garza's daughter — your cousin!", roleLabel: 'Cousin' },
+  { id: 'millie', name: 'Millie', x: 2150, y: Y.kids, role: 'cousin', relation: "Aunt Esther & Uncle Spencer's daughter — your cousin!", roleLabel: 'Cousin' },
+  { id: 'warren', name: 'Warren', x: 2260, y: Y.kids, role: 'cousin', relation: "Aunt Esther & Uncle Spencer's son — your cousin!", roleLabel: 'Cousin' },
+];
+
+// Couple connectors (dashed line between partners)
+const couples = [
+  ['mommy', 'daddy'],
+  ['nini', 'grandpa-pat'],
+  ['ryan', 'sarah-d'],
+  ['grandma-reda', 'grandpa-lawrence'],
+  ['josiah', 'tiffany'],
+  ['daniel', 'jess'],
+  ['sarah-r', 'jake'],
+  ['hannah', 'daniel-g'],
+  ['esther', 'spencer'],
+];
+
+// Parent-child connections: [parentId(s), childId]
+// For couple→child, we use the midpoint of the couple
+const parentChildLinks = [
+  // Asher's parents
+  { parents: ['mommy', 'daddy'], child: 'asher' },
+  // Mommy's parents → Mommy and Ryan
+  { parents: ['nini', 'grandpa-pat'], child: 'mommy' },
+  { parents: ['nini', 'grandpa-pat'], child: 'ryan' },
+  // Daddy's parents → Daddy and all siblings
+  { parents: ['grandma-reda', 'grandpa-lawrence'], child: 'daddy' },
+  { parents: ['grandma-reda', 'grandpa-lawrence'], child: 'josiah' },
+  { parents: ['grandma-reda', 'grandpa-lawrence'], child: 'isaac' },
+  { parents: ['grandma-reda', 'grandpa-lawrence'], child: 'gabriel' },
+  { parents: ['grandma-reda', 'grandpa-lawrence'], child: 'daniel' },
+  { parents: ['grandma-reda', 'grandpa-lawrence'], child: 'joseph' },
+  { parents: ['grandma-reda', 'grandpa-lawrence'], child: 'sarah-r' },
+  { parents: ['grandma-reda', 'grandpa-lawrence'], child: 'john-mark' },
+  { parents: ['grandma-reda', 'grandpa-lawrence'], child: 'hannah' },
+  { parents: ['grandma-reda', 'grandpa-lawrence'], child: 'james' },
+  { parents: ['grandma-reda', 'grandpa-lawrence'], child: 'esther' },
+  // Great-grandparents
+  { parents: ['grandmother'], child: 'grandma-reda' },
+  { parents: ['mawmaw'], child: 'grandpa-lawrence' },
+  // Cousins
+  { parents: ['josiah', 'tiffany'], child: 'anya' },
+  { parents: ['josiah', 'tiffany'], child: 'jonas' },
+  { parents: ['josiah', 'tiffany'], child: 'ember' },
+  { parents: ['sarah-r', 'jake'], child: 'eowyn' },
+  { parents: ['hannah', 'daniel-g'], child: 'dani' },
+  { parents: ['hannah', 'daniel-g'], child: 'izzie' },
+  { parents: ['esther', 'spencer'], child: 'millie' },
+  { parents: ['esther', 'spencer'], child: 'warren' },
+];
+
+// Photo map: person id → image filename (only for people who have photos)
+const photos = {
+  'asher': 'asher.jpg',
+  'daniel': 'daniel.jpg',
+  'eowyn': 'eowyn.jpg',
+  'esther': 'esther.jpg',
+  'gabriel': 'gabriel.jpg',
+  'grandma-reda': 'grandma-reda.jpg',
+  'grandpa-lawrence': 'grandpa-lawrence.jpg',
+  'hannah': 'hannah.jpg',
+  'isaac': 'isaac.jpg',
+  'james': 'james.jpg',
+  'john-mark': 'john-mark.jpg',
+  'joseph': 'joseph.jpg',
+  'josiah': 'josiah.jpg',
+  'millie': 'millie.jpg',
+  'sarah-r': 'sarah.jpg',
+  'warren': 'warren.jpg',
+};
+
+// Build lookup
+const pMap = {};
+people.forEach(p => pMap[p.id] = p);
+
+// ===================== RENDERING =====================
+const svgNS = 'http://www.w3.org/2000/svg';
+const svg = document.getElementById('connections');
+const peopleContainer = document.getElementById('people');
+
+// Track all connection line elements for highlighting
+const lineElements = []; // { el, from, to, parents, child }
+
+function getCenter(p) {
+  const size = p.id === 'asher' ? 90 : 64;
+  return { x: p.x, y: p.y + size / 2 };
+}
+
+function drawCoupleLine(p1, p2) {
+  const c1 = getCenter(p1);
+  const c2 = getCenter(p2);
+  const line = document.createElementNS(svgNS, 'line');
+  line.setAttribute('x1', c1.x);
+  line.setAttribute('y1', c1.y);
+  line.setAttribute('x2', c2.x);
+  line.setAttribute('y2', c2.y);
+  line.setAttribute('class', 'couple-line');
+  svg.appendChild(line);
+  return line;
+}
+
+function drawParentChildLine(parentIds, childId) {
+  const child = pMap[childId];
+  const cc = getCenter(child);
+  // Parent midpoint
+  let px, py;
+  if (parentIds.length === 2) {
+    const p1 = pMap[parentIds[0]];
+    const p2 = pMap[parentIds[1]];
+    const c1 = getCenter(p1);
+    const c2 = getCenter(p2);
+    px = (c1.x + c2.x) / 2;
+    py = (c1.y + c2.y) / 2;
+  } else {
+    const p1 = pMap[parentIds[0]];
+    const c1 = getCenter(p1);
+    px = c1.x;
+    py = c1.y;
+  }
+  // Draw a path: vertical down from parent midpoint, then to child
+  const midY = (py + cc.y) / 2;
+  const d = `M${px},${py} L${px},${midY} L${cc.x},${midY} L${cc.x},${cc.y}`;
+  const path = document.createElementNS(svgNS, 'path');
+  path.setAttribute('d', d);
+  path.setAttribute('class', 'conn-line');
+  path.dataset.parents = parentIds.join(',');
+  path.dataset.child = childId;
+  svg.appendChild(path);
+  lineElements.push({ el: path, parents: parentIds, child: childId });
+  return path;
+}
+
+function renderPeople() {
+  people.forEach(p => {
+    const div = document.createElement('div');
+    div.className = 'person' + (p.id === 'asher' ? ' asher' : '');
+    div.dataset.id = p.id;
+    const size = p.id === 'asher' ? 90 : 64;
+    div.style.left = (p.x - size / 2) + 'px';
+    div.style.top = p.y + 'px';
+    div.style.width = size + 'px';
+
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    bubble.style.background = COLORS[p.role].bg;
+    bubble.style.width = size + 'px';
+    bubble.style.height = size + 'px';
+
+    if (photos[p.id]) {
+      const img = document.createElement('img');
+      img.className = 'photo-img';
+      img.src = photos[p.id];
+      img.alt = p.name.replace('\n', ' ');
+      bubble.appendChild(img);
+    } else {
+      const placeholder = document.createElement('div');
+      placeholder.className = 'photo-placeholder';
+      placeholder.textContent = COLORS[p.role].emoji;
+      placeholder.style.fontSize = p.id === 'asher' ? '2.2rem' : '1.6rem';
+      bubble.appendChild(placeholder);
+    }
+
+    const label = document.createElement('div');
+    label.className = 'label';
+    label.textContent = p.name.replace('\n', ' ');
+
+    div.appendChild(bubble);
+    div.appendChild(label);
+
+    if (p.roleLabel) {
+      const role = document.createElement('div');
+      role.className = 'role-label';
+      role.textContent = p.roleLabel;
+      div.appendChild(role);
+    }
+
+    div.addEventListener('click', (e) => {
+      e.stopPropagation();
+      selectPerson(p.id);
+    });
+
+    peopleContainer.appendChild(div);
+  });
+}
+
+function renderConnections() {
+  // Draw couple connectors
+  couples.forEach(([id1, id2]) => {
+    drawCoupleLine(pMap[id1], pMap[id2]);
+  });
+  // Draw parent-child lines
+  parentChildLinks.forEach(link => {
+    drawParentChildLine(link.parents, link.child);
+  });
+}
+
+// ===================== PATH FINDING =====================
+// BFS from a person to Asher through parent-child links
+function findPathToAsher(personId) {
+  if (personId === 'asher') return ['asher'];
+
+  // Build adjacency list (undirected, through family links)
+  const adj = {};
+  people.forEach(p => adj[p.id] = []);
+
+  parentChildLinks.forEach(link => {
+    // Connect each parent to child
+    link.parents.forEach(pid => {
+      adj[pid].push(link.child);
+      adj[link.child].push(pid);
+    });
+  });
+  // Also connect couples
+  couples.forEach(([a, b]) => {
+    adj[a].push(b);
+    adj[b].push(a);
+  });
+
+  // BFS
+  const visited = new Set();
+  const queue = [[personId, [personId]]];
+  visited.add(personId);
+
+  while (queue.length > 0) {
+    const [current, path] = queue.shift();
+    if (current === 'asher') return path;
+    for (const neighbor of adj[current]) {
+      if (!visited.has(neighbor)) {
+        visited.add(neighbor);
+        queue.push([neighbor, [...path, neighbor]]);
+      }
+    }
+  }
+  return [personId]; // fallback
+}
+
+// ===================== INTERACTION =====================
+let selectedPerson = null;
+
+function selectPerson(id) {
+  const world = document.getElementById('tree-world');
+  const panel = document.getElementById('info-panel');
+
+  if (selectedPerson === id) {
+    // Deselect
+    selectedPerson = null;
+    world.classList.remove('tree-highlight');
+    document.querySelectorAll('.person').forEach(el => el.classList.remove('highlighted'));
+    document.querySelectorAll('.conn-line').forEach(el => el.classList.remove('highlighted'));
+    panel.classList.remove('visible');
+    return;
+  }
+
+  selectedPerson = id;
+  const person = pMap[id];
+  const path = findPathToAsher(id);
+  const pathSet = new Set(path);
+
+  world.classList.add('tree-highlight');
+
+  // Highlight people on the path
+  document.querySelectorAll('.person').forEach(el => {
+    el.classList.toggle('highlighted', pathSet.has(el.dataset.id));
+  });
+
+  // Highlight connection lines on the path
+  lineElements.forEach(({ el, parents, child }) => {
+    const involvesBoth = parents.some(pid => pathSet.has(pid)) && pathSet.has(child);
+    el.classList.toggle('highlighted', involvesBoth);
+  });
+
+  // Show info panel
+  panel.querySelector('.name').textContent = person.name.replace('\n', ' ');
+  panel.querySelector('.relation').textContent = person.relation;
+  panel.classList.add('visible');
+}
+
+// Click on background to deselect
+document.getElementById('tree-container').addEventListener('click', () => {
+  if (selectedPerson) {
+    selectPerson(selectedPerson); // toggle off
+  }
+});
+
+// ===================== PAN & ZOOM =====================
+let scale = 1;
+let panX = 0;
+let panY = 0;
+let isDragging = false;
+let dragStartX, dragStartY, panStartX, panStartY;
+
+const world = document.getElementById('tree-world');
+const container = document.getElementById('tree-container');
+
+function applyTransform() {
+  world.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
+}
+
+container.addEventListener('mousedown', (e) => {
+  if (e.target.closest('.person')) return;
+  isDragging = true;
+  dragStartX = e.clientX;
+  dragStartY = e.clientY;
+  panStartX = panX;
+  panStartY = panY;
+});
+
+window.addEventListener('mousemove', (e) => {
+  if (!isDragging) return;
+  panX = panStartX + (e.clientX - dragStartX);
+  panY = panStartY + (e.clientY - dragStartY);
+  applyTransform();
+});
+
+window.addEventListener('mouseup', () => { isDragging = false; });
+
+container.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  const delta = e.deltaY > 0 ? -0.08 : 0.08;
+  const newScale = Math.max(0.25, Math.min(2, scale + delta));
+  // Zoom toward cursor
+  const rect = container.getBoundingClientRect();
+  const cx = e.clientX - rect.left;
+  const cy = e.clientY - rect.top;
+  panX = cx - (cx - panX) * (newScale / scale);
+  panY = cy - (cy - panY) * (newScale / scale);
+  scale = newScale;
+  applyTransform();
+}, { passive: false });
+
+// Touch support
+let lastTouchDist = 0;
+let lastTouchMid = null;
+
+container.addEventListener('touchstart', (e) => {
+  if (e.target.closest('.person')) return;
+  if (e.touches.length === 1) {
+    isDragging = true;
+    dragStartX = e.touches[0].clientX;
+    dragStartY = e.touches[0].clientY;
+    panStartX = panX;
+    panStartY = panY;
+  } else if (e.touches.length === 2) {
+    isDragging = false;
+    const dx = e.touches[0].clientX - e.touches[1].clientX;
+    const dy = e.touches[0].clientY - e.touches[1].clientY;
+    lastTouchDist = Math.sqrt(dx * dx + dy * dy);
+    lastTouchMid = {
+      x: (e.touches[0].clientX + e.touches[1].clientX) / 2,
+      y: (e.touches[0].clientY + e.touches[1].clientY) / 2
+    };
+  }
+}, { passive: true });
+
+container.addEventListener('touchmove', (e) => {
+  if (e.touches.length === 1 && isDragging) {
+    panX = panStartX + (e.touches[0].clientX - dragStartX);
+    panY = panStartY + (e.touches[0].clientY - dragStartY);
+    applyTransform();
+  } else if (e.touches.length === 2) {
+    e.preventDefault();
+    const dx = e.touches[0].clientX - e.touches[1].clientX;
+    const dy = e.touches[0].clientY - e.touches[1].clientY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const mid = {
+      x: (e.touches[0].clientX + e.touches[1].clientX) / 2,
+      y: (e.touches[0].clientY + e.touches[1].clientY) / 2
+    };
+    if (lastTouchDist > 0) {
+      const newScale = Math.max(0.25, Math.min(2, scale * (dist / lastTouchDist)));
+      const rect = container.getBoundingClientRect();
+      const cx = mid.x - rect.left;
+      const cy = mid.y - rect.top;
+      panX = cx - (cx - panX) * (newScale / scale);
+      panY = cy - (cy - panY) * (newScale / scale);
+      scale = newScale;
+      applyTransform();
+    }
+    lastTouchDist = dist;
+    lastTouchMid = mid;
+  }
+}, { passive: false });
+
+container.addEventListener('touchend', () => {
+  isDragging = false;
+  lastTouchDist = 0;
+});
+
+function zoomBy(delta) {
+  const newScale = Math.max(0.25, Math.min(2, scale + delta));
+  const rect = container.getBoundingClientRect();
+  const cx = rect.width / 2;
+  const cy = rect.height / 2;
+  panX = cx - (cx - panX) * (newScale / scale);
+  panY = cy - (cy - panY) * (newScale / scale);
+  scale = newScale;
+  applyTransform();
+}
+
+function centerOnAsher() {
+  const asher = pMap['asher'];
+  const rect = container.getBoundingClientRect();
+  const targetScale = 0.85;
+  scale = targetScale;
+  panX = rect.width / 2 - asher.x * scale;
+  panY = rect.height / 2 - (asher.y + 45) * scale;
+  applyTransform();
+
+  // Brief highlight
+  const asherEl = document.querySelector('.person.asher .bubble');
+  asherEl.style.transform = 'scale(1.3)';
+  setTimeout(() => { asherEl.style.transform = ''; }, 400);
+}
+
+// ===================== INIT =====================
+function init() {
+  renderConnections();
+  renderPeople();
+
+  // Initial view: fit the tree in viewport, centered on Asher
+  const rect = container.getBoundingClientRect();
+  // Calculate bounding box of all people
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  people.forEach(p => {
+    const s = p.id === 'asher' ? 90 : 64;
+    minX = Math.min(minX, p.x - s/2);
+    maxX = Math.max(maxX, p.x + s/2);
+    minY = Math.min(minY, p.y);
+    maxY = Math.max(maxY, p.y + s + 30); // include label
+  });
+
+  const treeW = maxX - minX + 80;
+  const treeH = maxY - minY + 80;
+  scale = Math.min(rect.width / treeW, rect.height / treeH, 1);
+  scale = Math.max(scale, 0.3);
+
+  const treeCenterX = (minX + maxX) / 2;
+  const treeCenterY = (minY + maxY) / 2;
+  panX = rect.width / 2 - treeCenterX * scale;
+  panY = rect.height / 2 - treeCenterY * scale;
+
+  applyTransform();
+}
+
+init();
+</script>
+</body>
+</html>

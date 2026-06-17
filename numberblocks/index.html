@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Numberblocks!</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  #prompt {
+    font-size: clamp(24px, 5vw, 48px);
+    color: white;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    text-align: center;
+    padding: 10px 20px;
+    min-height: 60px;
+    font-weight: bold;
+  }
+
+  #equation-display {
+    font-size: clamp(20px, 4vw, 36px);
+    color: #FFD700;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    text-align: center;
+    min-height: 40px;
+    font-weight: bold;
+  }
+
+  #numberblock-area {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    min-height: 300px;
+    padding: 20px;
+    position: relative;
+  }
+
+  #combine-stage {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 20px;
+    min-width: 80vw;
+  }
+
+  .operand-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+    transition: transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.4s;
+  }
+
+  .operand-grid {
+    display: inline-grid;
+    gap: 3px;
+    padding: 6px;
+  }
+
+  .operand-label {
+    font-size: clamp(20px, 5vw, 36px);
+    font-weight: 900;
+    color: white;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    text-align: center;
+    margin-top: 4px;
+  }
+
+  .operator-symbol {
+    font-size: clamp(30px, 7vw, 60px);
+    font-weight: 900;
+    color: #FFD700;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    padding: 0 5px;
+    align-self: center;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .operator-symbol.visible {
+    opacity: 1;
+  }
+
+  #numberblock-grid {
+    display: inline-grid;
+    gap: 4px;
+    padding: 8px;
+  }
+
+  .walk-in-left {
+    animation: walkLeft 1.8s ease-out forwards;
+  }
+
+  .walk-in-right {
+    animation: walkRight 1.8s ease-out forwards;
+  }
+
+  @keyframes walkLeft {
+    0%  { transform: translateX(-110vw) rotate(0deg); }
+    8%  { transform: translateX(-90vw) translateY(-12px) rotate(-10deg); }
+    16% { transform: translateX(-70vw) translateY(0px) rotate(8deg); }
+    24% { transform: translateX(-50vw) translateY(-12px) rotate(-10deg); }
+    32% { transform: translateX(-30vw) translateY(0px) rotate(8deg); }
+    40% { transform: translateX(-10vw) translateY(-12px) rotate(-10deg); }
+    48% { transform: translateX(0) translateY(0px) rotate(5deg); }
+    54% { transform: translateX(0) translateY(-4px) rotate(-3deg); }
+    60% { transform: translateX(0) translateY(0) rotate(0deg); }
+    100% { transform: translateX(0) translateY(0) rotate(0deg); }
+  }
+
+  @keyframes walkRight {
+    0%  { transform: translateX(110vw) rotate(0deg); }
+    8%  { transform: translateX(90vw) translateY(-12px) rotate(10deg); }
+    16% { transform: translateX(70vw) translateY(0px) rotate(-8deg); }
+    24% { transform: translateX(50vw) translateY(-12px) rotate(10deg); }
+    32% { transform: translateX(30vw) translateY(0px) rotate(-8deg); }
+    40% { transform: translateX(10vw) translateY(-12px) rotate(10deg); }
+    48% { transform: translateX(0) translateY(0px) rotate(-5deg); }
+    54% { transform: translateX(0) translateY(-4px) rotate(3deg); }
+    60% { transform: translateX(0) translateY(0) rotate(0deg); }
+    100% { transform: translateX(0) translateY(0) rotate(0deg); }
+  }
+
+  .block-cell {
+    border-radius: 6px;
+    border: 2px solid rgba(0,0,0,0.2);
+    opacity: 0;
+    transform: translateY(-300px);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .block-cell.visible {
+    opacity: 1;
+    transform: translateY(0);
+    animation: dropBounce 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+
+  @keyframes dropBounce {
+    0% { opacity: 0; transform: translateY(-300px) rotate(-10deg); }
+    60% { opacity: 1; transform: translateY(10px) rotate(2deg); }
+    80% { transform: translateY(-5px) rotate(-1deg); }
+    100% { opacity: 1; transform: translateY(0) rotate(0deg); }
+  }
+
+  .block-cell::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 50%; bottom: 50%;
+    background: rgba(255,255,255,0.25);
+    border-radius: 4px 0 0 0;
+    z-index: 0;
+  }
+
+  /* --- Face on top block --- */
+  .nb-face {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    z-index: 1;
+    pointer-events: none;
+  }
+  .nb-eye {
+    width: 24%;
+    height: 30%;
+    background: white;
+    border-radius: 50%;
+    position: absolute;
+    top: 12%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 1px rgba(0,0,0,0.3);
+  }
+  .nb-eye::after {
+    content: '';
+    width: 45%;
+    height: 45%;
+    background: #222;
+    border-radius: 50%;
+  }
+  .nb-eye-left { left: 14%; }
+  .nb-eye-right { right: 14%; }
+  .nb-mouth {
+    position: absolute;
+    bottom: 14%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 36%;
+    height: 18%;
+    border: 2px solid #333;
+    border-top: none;
+    border-radius: 0 0 50% 50%;
+    background: transparent;
+  }
+
+  #number-label {
+    font-size: clamp(40px, 10vw, 80px);
+    font-weight: 900;
+    color: white;
+    text-shadow: 3px 3px 6px rgba(0,0,0,0.4);
+    text-align: center;
+    min-height: 60px;
+  }
+
+  #input-area {
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  #user-input {
+    font-size: clamp(24px, 5vw, 40px);
+    padding: 10px 20px;
+    border: 4px solid white;
+    border-radius: 16px;
+    outline: none;
+    text-align: center;
+    width: clamp(150px, 40vw, 300px);
+    background: rgba(255,255,255,0.9);
+    color: #333;
+    font-weight: bold;
+  }
+
+  #user-input:focus {
+    border-color: #FFD700;
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+  }
+
+  #feedback {
+    font-size: clamp(28px, 6vw, 56px);
+    font-weight: 900;
+    text-align: center;
+    min-height: 70px;
+    color: white;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+  }
+
+  .celebrate {
+    animation: celebrate 0.5s ease-in-out;
+  }
+
+  @keyframes celebrate {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.3) rotate(5deg); }
+    100% { transform: scale(1); }
+  }
+
+  .shake {
+    animation: shake 0.4s ease-in-out;
+  }
+
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-10px); }
+    75% { transform: translateX(10px); }
+  }
+
+  #fireworks-canvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 1000;
+  }
+
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<div id="prompt"></div>
+<div id="equation-display"></div>
+<div id="numberblock-area">
+  <div id="combine-stage"></div>
+  <div id="numberblock-grid"></div>
+</div>
+<div id="number-label"></div>
+<div id="input-area">
+  <input id="user-input" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+</div>
+<div id="feedback"></div>
+<canvas id="fireworks-canvas"></canvas>
+
+<script>
+// --- COLORS (show-accurate) ---
+const BASE_COLORS = {
+  1: '#DE151D', // red
+  2: '#E89223', // orange
+  3: '#E6C40C', // yellow
+  4: '#38B500', // green
+  5: '#23B0DB', // cyan
+  6: '#5A35C3', // purple
+  7: 'rainbow',
+  8: '#FD40A4', // pink
+  9: 'grey3',   // 3-shade grey
+  10: '#EEEEEE', // white
+};
+
+// Lighter "tens" colors — cycle 1-10 pattern in lighter shades
+const TENS_COLORS = {
+  1: '#EEEEEE', // 10-19: white with red border
+  2: '#F4A0A0', // 20-29: light red
+  3: '#F5E6A0', // 30-39: light yellow
+  4: '#B8F0A0', // 40-49: light green
+  5: '#A0E4F0', // 50-59: light cyan
+  6: '#C4A0F0', // 60-69: light purple
+  7: 'rainbow-light',
+  8: '#F0A0D4', // 80-89: light pink
+  9: '#C4C8CB', // 90-99: light grey
+  10: '#F4A0A0', // 100: light red
+};
+
+// Tens border colors
+const TENS_BORDERS = {
+  1: '#DE151D', // teens: red border
+  2: '#DE151D', // 20s: red border
+  3: '#C4A000', // 30s
+  4: '#2A8000', // 40s
+  5: '#1A8AAA', // 50s
+  6: '#4A2A9A', // 60s
+  7: '#AA77CC', // 70s
+  8: '#CC70A4', // 80s
+  9: '#999999', // 90s
+  10: '#DE151D', // 100
+};
+
+const RAINBOW = ['#DE151D','#E89223','#E6C40C','#38B500','#23B0DB','#4B0082','#8B00FF'];
+const RAINBOW_LIGHT = ['#F4A0A0','#F5CCA0','#F5E6A0','#B8F0A0','#A0E4F0','#B0A0D0','#D0A0F0'];
+const GREY_SHADES = ['#8A8B8F','#A5A9AC','#C4C8CB'];
+
+function getBlockColorAndBorder(n, blockIndex) {
+  // 1-10: simple base colors
+  if (n <= 10) {
+    if (n === 7) return { bg: RAINBOW[blockIndex % RAINBOW.length], border: null };
+    if (n === 9) return { bg: GREY_SHADES[blockIndex % 3], border: null };
+    if (n === 10) return { bg: '#EEEEEE', border: '#DE151D' };
+    return { bg: BASE_COLORS[n], border: null };
+  }
+
+  // 11-100: two-tone (tens portion + ones portion)
+  const tensDigit = Math.floor(n / 10);  // 1-10
+  const onesDigit = n % 10;              // 0-9
+  const tensCount = tensDigit * 10;       // how many blocks are "tens" colored
+
+  // Is this block in the tens portion or the ones portion?
+  if (onesDigit === 0 || blockIndex < tensCount) {
+    // Tens portion
+    const td = onesDigit === 0 ? tensDigit : tensDigit;
+    if (td === 7) return { bg: RAINBOW_LIGHT[blockIndex % RAINBOW_LIGHT.length], border: TENS_BORDERS[7] };
+    if (td === 9) return { bg: '#C4C8CB', border: TENS_BORDERS[9] };
+    return { bg: TENS_COLORS[td], border: TENS_BORDERS[td] };
+  } else {
+    // Ones portion
+    const onesIndex = blockIndex - tensCount;
+    if (onesDigit === 7) return { bg: RAINBOW[onesIndex % RAINBOW.length], border: null };
+    if (onesDigit === 9) return { bg: GREY_SHADES[onesIndex % 3], border: null };
+    return { bg: BASE_COLORS[onesDigit], border: null };
+  }
+}
+
+// --- SHAPES ---
+function getShape(n) {
+  if (n <= 0) return { rows: 0, cols: 0, lastRowCols: 0 };
+  if (n <= 7) return { rows: n, cols: 1, lastRowCols: 1 };
+
+  // Find the most square-like exact factorization (upright: rows >= cols)
+  let cols = 1;
+  for (let c = 2; c * c <= n; c++) {
+    if (n % c === 0) cols = c;
+  }
+
+  if (cols >= 2) {
+    // Nice rectangle
+    return { rows: n / cols, cols, lastRowCols: cols };
+  }
+
+  // Prime > 5: use same column width as (n-1), with partial top row
+  cols = getShape(n - 1).cols;
+  if (cols < 2) cols = 2;
+  let rows = Math.ceil(n / cols);
+  let lastRowCols = n % cols || cols;
+  return { rows, cols, lastRowCols };
+}
+
+// --- RENDERING ---
+const grid = document.getElementById('numberblock-grid');
+const combineStage = document.getElementById('combine-stage');
+const promptEl = document.getElementById('prompt');
+const equationEl = document.getElementById('equation-display');
+const labelEl = document.getElementById('number-label');
+const feedbackEl = document.getElementById('feedback');
+const input = document.getElementById('user-input');
+let labelTimeoutId = null; // track pending label display
+const BLOCK_REVEAL_STAGGER_MS = 60;
+const BLOCK_REVEAL_START_OFFSET_MS = 50;
+const BLOCK_DROP_DURATION_MS = 500;
+const BLOCK_REVEAL_LEAD_MS = 200;
+const WALK_IN_LABEL_DELAY_MS = 1200;
+const POST_LABEL_HOLD_MS = 2500;
+
+function getNumberblockLabelDelay(n, animate = true, walkDir = null) {
+  const walking = walkDir === 'left' || walkDir === 'right';
+  if (walking) return WALK_IN_LABEL_DELAY_MS;
+  if (!animate) return 0;
+  const finalBlockVisibleAt = Math.max(0, (n - 1) * BLOCK_REVEAL_STAGGER_MS) + BLOCK_REVEAL_START_OFFSET_MS;
+  return finalBlockVisibleAt + BLOCK_DROP_DURATION_MS + BLOCK_REVEAL_LEAD_MS;
+}
+
+function getNumberblockDisplayDuration(n, animate = true, walkDir = null) {
+  return getNumberblockLabelDelay(n, animate, walkDir) + POST_LABEL_HOLD_MS;
+}
+
+// walkDir: null (drop animation), 'left', 'right' (walk onto screen)
+function renderNumberblock(n, animate = true, showLabel = true, walkDir = null) {
+  grid.innerHTML = '';
+  grid.classList.remove('walk-in-left', 'walk-in-right');
+  if (labelTimeoutId) { clearTimeout(labelTimeoutId); labelTimeoutId = null; }
+  labelEl.textContent = '';
+  if (n <= 0 || n > 100) return;
+
+  const { rows, cols, lastRowCols } = getShape(n);
+
+  // Dynamic cell size: fit within available space
+  const cellSize = Math.max(24, Math.min(64, Math.floor(380 / rows), Math.floor(400 / cols)));
+  grid.style.gridTemplateColumns = `repeat(${cols}, ${cellSize}px)`;
+  grid.style.gridTemplateRows = `repeat(${rows}, ${cellSize}px)`;
+
+  const walking = walkDir === 'left' || walkDir === 'right';
+  let topLeftCell = null;
+
+  let blockIndex = 0;
+  // Build from bottom row to top
+  for (let r = 0; r < rows; r++) {
+    const colsInRow = (r === rows - 1) ? lastRowCols : cols;
+    for (let c = 0; c < colsInRow; c++) {
+      const cell = document.createElement('div');
+      cell.className = 'block-cell';
+      cell.style.width = cellSize + 'px';
+      cell.style.height = cellSize + 'px';
+      const { bg, border } = getBlockColorAndBorder(n, blockIndex);
+      cell.style.background = bg;
+      if (border) cell.style.borderColor = border;
+      // Place in grid: top-left is row 1, but we want to fill bottom-up
+      cell.style.gridRow = rows - r;
+      cell.style.gridColumn = c + 1;
+      // Track the top-left cell (row 1, col 1) for the face
+      if (rows - r === 1 && c === 0) topLeftCell = cell;
+      grid.appendChild(cell);
+
+      if (walking) {
+        // Blocks are instantly visible; the grid itself walks in
+        cell.classList.add('visible');
+      } else if (animate) {
+        const delay = blockIndex * BLOCK_REVEAL_STAGGER_MS;
+        setTimeout(() => cell.classList.add('visible'), delay + BLOCK_REVEAL_START_OFFSET_MS);
+      } else {
+        cell.classList.add('visible');
+      }
+      blockIndex++;
+    }
+  }
+
+  // Add face to the top-left block
+  if (topLeftCell) {
+    topLeftCell.style.overflow = 'visible';
+    topLeftCell.innerHTML = `<div class="nb-face">
+      <div class="nb-eye nb-eye-left"></div>
+      <div class="nb-eye nb-eye-right"></div>
+      <div class="nb-mouth"></div>
+    </div>`;
+  }
+
+  // Trigger walk animation on the grid container
+  if (walking) {
+    // Force reflow so re-adding the class restarts the animation
+    void grid.offsetWidth;
+    grid.classList.add(walkDir === 'right' ? 'walk-in-right' : 'walk-in-left');
+  }
+
+  // Show number label after all blocks appear (unless hidden for quiz)
+  if (showLabel) {
+    const totalDelay = getNumberblockLabelDelay(n, animate, walkDir);
+    labelTimeoutId = setTimeout(() => {
+      labelTimeoutId = null;
+      labelEl.textContent = n;
+      if (animate || walking) labelEl.classList.add('celebrate');
+      setTimeout(() => labelEl.classList.remove('celebrate'), 600);
+    }, totalDelay);
+  }
+}
+
+// --- MINI NUMBERBLOCK (for operands in combine animation) ---
+function renderMiniNumberblock(container, n) {
+  container.innerHTML = '';
+  if (n <= 0 || n > 100) return;
+
+  const { rows, cols, lastRowCols } = getShape(n);
+  const cellSize = Math.max(18, Math.min(44, Math.floor(240 / rows), Math.floor(220 / cols)));
+
+  container.style.gridTemplateColumns = `repeat(${cols}, ${cellSize}px)`;
+  container.style.gridTemplateRows = `repeat(${rows}, ${cellSize}px)`;
+
+  let topLeftCell = null;
+  let blockIndex = 0;
+
+  for (let r = 0; r < rows; r++) {
+    const colsInRow = (r === rows - 1) ? lastRowCols : cols;
+    for (let c = 0; c < colsInRow; c++) {
+      const cell = document.createElement('div');
+      cell.className = 'block-cell visible'; // instantly visible, wrapper walks
+      cell.style.width = cellSize + 'px';
+      cell.style.height = cellSize + 'px';
+      const { bg, border } = getBlockColorAndBorder(n, blockIndex);
+      cell.style.background = bg;
+      if (border) cell.style.borderColor = border;
+      cell.style.gridRow = rows - r;
+      cell.style.gridColumn = c + 1;
+      if (rows - r === 1 && c === 0) topLeftCell = cell;
+      container.appendChild(cell);
+      blockIndex++;
+    }
+  }
+
+  // Add face to top-left block
+  if (topLeftCell) {
+    topLeftCell.style.overflow = 'visible';
+    topLeftCell.innerHTML = `<div class="nb-face">
+      <div class="nb-eye nb-eye-left"></div>
+      <div class="nb-eye nb-eye-right"></div>
+      <div class="nb-mouth"></div>
+    </div>`;
+  }
+}
+
+// --- PARSE SIMPLE EXPRESSION ---
+function parseSimpleExpression(expr) {
+  // Match patterns like "4+4", "3*5", "10-2", "12/3"
+  const trimmed = expr.replace(/\s/g, '');
+  const match = trimmed.match(/^(\d+)([+\-*/])(\d+)$/);
+  if (!match) return null;
+  const a = parseInt(match[1], 10);
+  const op = match[2];
+  const b = parseInt(match[3], 10);
+  const opDisplay = op === '*' ? '\u00D7' : op === '/' ? '\u00F7' : op;
+  let result;
+  switch (op) {
+    case '+': result = a + b; break;
+    case '-': result = a - b; break;
+    case '*': result = a * b; break;
+    case '/': result = a / b; break;
+  }
+  if (!Number.isInteger(result) || result < 1 || result > 100) return null;
+  return { a, b, op: opDisplay, result };
+}
+
+// --- COMBINE ANIMATION ---
+function runCombineAnimation(a, opSymbol, b, result, onDone) {
+  // Clear everything
+  grid.innerHTML = '';
+  grid.style.display = 'none';
+  combineStage.innerHTML = '';
+  combineStage.style.display = 'flex';
+  labelEl.textContent = '';
+
+  // Build left operand
+  const leftWrapper = document.createElement('div');
+  leftWrapper.className = 'operand-wrapper';
+  const leftGrid = document.createElement('div');
+  leftGrid.className = 'operand-grid';
+  const leftLabel = document.createElement('div');
+  leftLabel.className = 'operand-label';
+  leftLabel.textContent = a;
+  leftWrapper.appendChild(leftGrid);
+  leftWrapper.appendChild(leftLabel);
+
+  // Build operator
+  const opEl = document.createElement('div');
+  opEl.className = 'operator-symbol';
+  opEl.textContent = opSymbol;
+
+  // Build right operand
+  const rightWrapper = document.createElement('div');
+  rightWrapper.className = 'operand-wrapper';
+  const rightGrid = document.createElement('div');
+  rightGrid.className = 'operand-grid';
+  const rightLabel = document.createElement('div');
+  rightLabel.className = 'operand-label';
+  rightLabel.textContent = b;
+  rightWrapper.appendChild(rightGrid);
+  rightWrapper.appendChild(rightLabel);
+
+  combineStage.appendChild(leftWrapper);
+  combineStage.appendChild(opEl);
+  combineStage.appendChild(rightWrapper);
+
+  // Step 1: Left operand walks in from left
+  renderMiniNumberblock(leftGrid, a);
+  leftWrapper.classList.add('walk-in-left');
+
+  // Step 2: Operator appears after left arrives
+  setTimeout(() => {
+    opEl.classList.add('visible');
+  }, 1400);
+
+  // Step 3: Right operand walks in from right
+  setTimeout(() => {
+    renderMiniNumberblock(rightGrid, b);
+    rightWrapper.classList.add('walk-in-right');
+  }, 1700);
+
+  const meetTime = 3200; // both have arrived
+
+  // Step 4: Slide together
+  setTimeout(() => {
+    leftWrapper.style.transform = 'translateX(60px) scale(0.8)';
+    rightWrapper.style.transform = 'translateX(-60px) scale(0.8)';
+    opEl.style.opacity = '0';
+    leftLabel.style.opacity = '0';
+    rightLabel.style.opacity = '0';
+  }, meetTime + 400);
+
+  // Step 5: Fade out operands, show result
+  setTimeout(() => {
+    leftWrapper.style.opacity = '0';
+    rightWrapper.style.opacity = '0';
+  }, meetTime + 900);
+
+  setTimeout(() => {
+    combineStage.style.display = 'none';
+    combineStage.innerHTML = '';
+    grid.style.display = '';
+    renderNumberblock(result, true);
+    equationEl.textContent = a + ' ' + opSymbol + ' ' + b + ' = ' + result + '!';
+    runFireworks();
+    if (onDone) onDone();
+  }, meetTime + 1300);
+}
+
+// --- PLACE VALUE / BREAK APART ---
+// Add a numberblock face to a single cell
+function addFace(cell) {
+  if (!cell) return;
+  cell.style.overflow = 'visible';
+  cell.innerHTML = `<div class="nb-face">
+    <div class="nb-eye nb-eye-left"></div>
+    <div class="nb-eye nb-eye-right"></div>
+    <div class="nb-mouth"></div>
+  </div>`;
+}
+
+// Break a number into its non-zero place-value parts (largest first)
+// 243 -> [{kind:'hundreds',value:200,digit:2},{kind:'tens',value:40,digit:4},{kind:'ones',value:3,digit:3}]
+function getPlaceParts(n) {
+  const H = Math.floor(n / 100);
+  const T = Math.floor(n / 10) % 10;
+  const O = n % 10;
+  const parts = [];
+  if (H > 0) parts.push({ kind: 'hundreds', value: H * 100, digit: H });
+  if (T > 0) parts.push({ kind: 'tens', value: T * 10, digit: T });
+  if (O > 0) parts.push({ kind: 'ones', value: O, digit: O });
+  return parts;
+}
+
+// Grid dimensions for a place part using base-ten blocks
+// ones: 1 wide x digit tall | tens: digit wide x 10 tall (rods) | hundreds: digit*10 wide x 10 tall (flats)
+function placeDims(part) {
+  if (part.kind === 'ones') return { cols: 1, rows: part.digit };
+  if (part.kind === 'tens') return { cols: part.digit, rows: 10 };
+  return { cols: part.digit * 10, rows: 10 };
+}
+
+// Per-cell color for a place part. Ones/tens reuse the show-accurate palette via the
+// part's value; hundreds use the leading digit's bold base color.
+function placeColorFn(part) {
+  if (part.kind === 'hundreds') return (i) => getBlockColorAndBorder(part.digit, i);
+  return (i) => getBlockColorAndBorder(part.value, i);
+}
+
+// Fill a container grid bottom-up; returns the top-left cell (for the face)
+function fillPlaceGrid(container, cols, rows, cellSize, colorFn) {
+  container.innerHTML = '';
+  container.style.gridTemplateColumns = `repeat(${cols}, ${cellSize}px)`;
+  container.style.gridTemplateRows = `repeat(${rows}, ${cellSize}px)`;
+  let topLeftCell = null;
+  let idx = 0;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const cell = document.createElement('div');
+      cell.className = 'block-cell visible'; // drops in immediately (build-up)
+      cell.style.width = cellSize + 'px';
+      cell.style.height = cellSize + 'px';
+      const { bg, border } = colorFn(idx);
+      cell.style.background = bg;
+      if (border) cell.style.borderColor = border;
+      cell.style.gridRow = rows - r;
+      cell.style.gridColumn = c + 1;
+      if (rows - r === 1 && c === 0) topLeftCell = cell;
+      container.appendChild(cell);
+      idx++;
+    }
+  }
+  return topLeftCell;
+}
+
+const BREAK_SPLIT_DELAY_MS = 1700;
+const BREAK_HOLD_MS = 2800;
+
+// Build the number as base-ten blocks (flush, one face), then spread the
+// place-groups apart into expanded form. Handles single-part numbers (e.g. 200)
+// by just showing them with no split.
+function runBreakApartAnimation(n, onDone) {
+  if (labelTimeoutId) { clearTimeout(labelTimeoutId); labelTimeoutId = null; }
+  grid.innerHTML = '';
+  grid.style.display = 'none';
+  combineStage.innerHTML = '';
+  combineStage.style.display = 'flex';
+  combineStage.style.gap = '0px';
+  combineStage.style.transition = 'gap 0.8s ease';
+  combineStage.style.transform = '';
+  labelEl.textContent = '';
+  equationEl.textContent = '';
+
+  const parts = getPlaceParts(n);
+  const willSplit = parts.length >= 2;
+  promptEl.textContent = willSplit ? "Let's break it apart!" : 'There it is!';
+
+  // Uniform cell size so a ten-rod equals one column of a hundred-flat.
+  // Budget for the ~3px inter-cell gap and the gaps that open between groups on split.
+  const CELL_GAP = 3;
+  const totalCols = parts.reduce((s, p) => s + placeDims(p).cols, 0);
+  const maxRows = Math.max(...parts.map((p) => placeDims(p).rows));
+  const splitGaps = (parts.length - 1) * 34;
+  const targetW = window.innerWidth * 0.92 - splitGaps - 40;
+  const availH = 300;
+  let cellSize = Math.floor(Math.min(availH / maxRows, targetW / totalCols - CELL_GAP));
+  cellSize = Math.max(5, Math.min(cellSize, 30));
+
+  const topLefts = [];
+
+  parts.forEach((part, pi) => {
+    if (pi > 0) {
+      const op = document.createElement('div');
+      op.className = 'operator-symbol';
+      op.textContent = '+';
+      op.style.display = 'none'; // collapsed until split
+      combineStage.appendChild(op);
+      part._op = op;
+    }
+    const wrapper = document.createElement('div');
+    wrapper.className = 'operand-wrapper';
+    wrapper.style.flex = '0 0 auto';
+    const gridEl = document.createElement('div');
+    gridEl.className = 'operand-grid';
+    const { cols, rows } = placeDims(part);
+    topLefts.push(fillPlaceGrid(gridEl, cols, rows, cellSize, placeColorFn(part)));
+    const lbl = document.createElement('div');
+    lbl.className = 'operand-label';
+    lbl.textContent = part.value;
+    lbl.style.opacity = '0';
+    lbl.style.transition = 'opacity 0.5s';
+    wrapper.appendChild(gridEl);
+    wrapper.appendChild(lbl);
+    combineStage.appendChild(wrapper);
+    part._label = lbl;
+  });
+
+  // Scale-to-fit using the FINAL (fully split) width, computed analytically so it
+  // doesn't depend on mid-transition measurements. Applied once and held steady.
+  const innerGaps = (totalCols - parts.length) * CELL_GAP; // gaps between cells within groups
+  const gridPad = parts.length * 12;                       // operand-grid padding (6px each side)
+  const opsW = (parts.length - 1) * 44;                    // "+" symbols
+  const finalW = totalCols * cellSize + innerGaps + gridPad + opsW + splitGaps + 60;
+  const scale = Math.min(1, (window.innerWidth * 0.96) / finalW);
+  combineStage.style.transformOrigin = 'center center';
+  combineStage.style.transform = scale < 1 ? `scale(${scale})` : '';
+
+  // Assembled: read as one number with one face and a big numeral
+  addFace(topLefts[0]);
+  labelEl.textContent = n;
+  labelEl.classList.add('celebrate');
+  setTimeout(() => labelEl.classList.remove('celebrate'), 600);
+
+  if (!willSplit) {
+    setTimeout(() => { if (onDone) onDone(); }, BREAK_HOLD_MS);
+    return;
+  }
+
+  // Split: spread the groups, reveal + signs, per-part labels, faces, expanded form
+  setTimeout(() => {
+    combineStage.style.gap = '34px';
+    labelEl.textContent = '';
+    equationEl.textContent = n + ' = ' + parts.map((p) => p.value).join(' + ');
+    parts.forEach((part, pi) => {
+      if (part._op) {
+        part._op.style.display = '';
+        requestAnimationFrame(() => part._op.classList.add('visible'));
+      }
+      part._label.style.opacity = '1';
+      if (pi > 0) addFace(topLefts[pi]);
+    });
+    runFireworks();
+  }, BREAK_SPLIT_DELAY_MS);
+
+  setTimeout(() => { if (onDone) onDone(); }, BREAK_SPLIT_DELAY_MS + BREAK_HOLD_MS);
+}
+
+// --- MATH EXPRESSION EVALUATION ---
+function evaluateExpression(expr) {
+  // Sanitize: only allow digits, +, -, *, /, (, ), spaces
+  const sanitized = expr.replace(/\s/g, '');
+  if (!/^[0-9+\-*/().]+$/.test(sanitized)) return null;
+  // Prevent empty or dangerous patterns
+  if (sanitized.length === 0) return null;
+  try {
+    const result = Function('"use strict"; return (' + sanitized + ')')();
+    if (typeof result !== 'number' || !isFinite(result)) return null;
+    return result;
+  } catch {
+    return null;
+  }
+}
+
+function formatExpression(expr) {
+  return expr.replace(/\*/g, ' \u00D7 ').replace(/\//g, ' \u00F7 ').replace(/\+/g, ' + ').replace(/-/g, ' - ');
+}
+
+function isExpression(str) {
+  return /[+\-*/x]/.test(str);
+}
+
+// Normalize 'x' to '*' for evaluation
+function normalizeExpr(str) {
+  return str.replace(/x/gi, '*');
+}
+
+// --- FIREWORKS ---
+const canvas = document.getElementById('fireworks-canvas');
+const ctx = canvas.getContext('2d');
+let particles = [];
+let fireworksRunning = false;
+
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+function createBurst(x, y) {
+  const count = 40;
+  const burstColors = ['#FF6B6B','#FFD93D','#6BCB77','#4D96FF','#FF6FB7','#C084FC','#FFA94D'];
+  for (let i = 0; i < count; i++) {
+    const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.5;
+    const speed = 2 + Math.random() * 4;
+    particles.push({
+      x, y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      life: 1,
+      decay: 0.015 + Math.random() * 0.01,
+      color: burstColors[Math.floor(Math.random() * burstColors.length)],
+      size: 3 + Math.random() * 4,
+    });
+  }
+}
+
+function runFireworks() {
+  if (fireworksRunning) return;
+  fireworksRunning = true;
+  particles = [];
+
+  // Create several bursts
+  const burstCount = 5;
+  for (let i = 0; i < burstCount; i++) {
+    setTimeout(() => {
+      createBurst(
+        canvas.width * (0.2 + Math.random() * 0.6),
+        canvas.height * (0.2 + Math.random() * 0.4)
+      );
+    }, i * 300);
+  }
+
+  function animate() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    particles = particles.filter(p => p.life > 0);
+
+    for (const p of particles) {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.05; // gravity
+      p.life -= p.decay;
+
+      ctx.globalAlpha = p.life;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    if (particles.length > 0) {
+      requestAnimationFrame(animate);
+    } else {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      fireworksRunning = false;
+    }
+  }
+  requestAnimationFrame(animate);
+}
+
+// --- GAME STATE ---
+let mode = 'quiz'; // 'quiz' or 'freeplay'
+let currentQuizNumber = 0;
+let maxQuizRange = 10;
+
+function randomInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function startQuizRound() {
+  mode = 'quiz';
+  if (labelTimeoutId) { clearTimeout(labelTimeoutId); labelTimeoutId = null; }
+  feedbackEl.textContent = '';
+  equationEl.textContent = '';
+  labelEl.textContent = '';
+  combineStage.innerHTML = '';
+  combineStage.style.display = 'none';
+  combineStage.style.transform = '';
+  combineStage.style.gap = '';
+  grid.style.display = '';
+  currentQuizNumber = randomInt(1, maxQuizRange);
+  promptEl.textContent = 'What number is this?';
+  const walkSide = Math.random() < 0.5 ? 'left' : 'right';
+  renderNumberblock(currentQuizNumber, true, false, walkSide);
+  input.value = '';
+  input.placeholder = '???';
+  input.focus();
+}
+
+function startFreePlayRound() {
+  mode = 'freeplay';
+  if (labelTimeoutId) { clearTimeout(labelTimeoutId); labelTimeoutId = null; }
+  feedbackEl.textContent = '';
+  equationEl.textContent = '';
+  combineStage.innerHTML = '';
+  combineStage.style.display = 'none';
+  combineStage.style.transform = '';
+  combineStage.style.gap = '';
+  grid.style.display = '';
+  grid.innerHTML = '';
+  labelEl.textContent = '';
+  promptEl.textContent = 'Type a number!';
+  input.value = '';
+  input.placeholder = '43  or  20 + 23';
+  input.focus();
+}
+
+function handleQuizInput(value) {
+  const num = parseInt(value, 10);
+  if (isNaN(num)) return;
+
+  if (num === currentQuizNumber) {
+    labelEl.textContent = currentQuizNumber;
+    labelEl.classList.add('celebrate');
+    setTimeout(() => labelEl.classList.remove('celebrate'), 600);
+    feedbackEl.textContent = 'YES!!!';
+    feedbackEl.classList.add('celebrate');
+    setTimeout(() => feedbackEl.classList.remove('celebrate'), 600);
+    runFireworks();
+    input.disabled = true;
+
+    // Expand range if they got it right
+    if (maxQuizRange < 20) maxQuizRange = Math.min(maxQuizRange + 1, 20);
+
+    setTimeout(() => {
+      input.disabled = false;
+      startFreePlayRound();
+    }, 3000);
+  } else {
+    feedbackEl.textContent = 'Try again!';
+    feedbackEl.classList.add('shake');
+    setTimeout(() => feedbackEl.classList.remove('shake'), 500);
+    input.value = '';
+    input.focus();
+  }
+}
+
+function handleFreePlayInput(value) {
+  const trimmed = normalizeExpr(value.trim());
+  if (!trimmed) return;
+
+  let result;
+  let wasExpression = isExpression(trimmed);
+
+  if (wasExpression) {
+    result = evaluateExpression(trimmed);
+    if (result === null) {
+      feedbackEl.textContent = 'Hmm, try again!';
+      feedbackEl.classList.add('shake');
+      setTimeout(() => feedbackEl.classList.remove('shake'), 500);
+      input.value = '';
+      return;
+    }
+    result = Math.round(result);
+  } else {
+    result = parseInt(trimmed, 10);
+  }
+
+  if (isNaN(result) || result < 1 || result > 999) {
+    feedbackEl.textContent = 'Try a number from 1 to 999!';
+    feedbackEl.classList.add('shake');
+    setTimeout(() => feedbackEl.classList.remove('shake'), 500);
+    input.value = '';
+    return;
+  }
+
+  input.disabled = true;
+
+  const goQuiz = () => setTimeout(() => {
+    input.disabled = false;
+    startQuizRound();
+  }, 1200);
+
+  const willBreak = getPlaceParts(result).length >= 2;
+
+  // Try combine animation for simple "a op b" expressions
+  const parsed = wasExpression ? parseSimpleExpression(trimmed) : null;
+
+  if (parsed) {
+    // Merge the operands, then (if multi-place) break the result into place values
+    runCombineAnimation(parsed.a, parsed.op, parsed.b, parsed.result, () => {
+      if (willBreak) {
+        setTimeout(() => runBreakApartAnimation(result, goQuiz), 1800);
+      } else {
+        // Wait for the full block-reveal animation (long for big results like 100)
+        setTimeout(() => { input.disabled = false; startQuizRound(); }, getNumberblockDisplayDuration(result, true));
+      }
+    });
+  } else if (willBreak || result > 100) {
+    // Build the number as base-ten blocks, then break it apart (or just show 3-digit tens/hundreds)
+    runBreakApartAnimation(result, goQuiz);
+  } else {
+    if (wasExpression) {
+      equationEl.textContent = formatExpression(trimmed) + ' = ' + result + '!';
+    }
+    renderNumberblock(result, true);
+    runFireworks();
+
+    setTimeout(() => {
+      input.disabled = false;
+      startQuizRound();
+    }, getNumberblockDisplayDuration(result, true));
+  }
+}
+
+// --- INPUT HANDLING ---
+input.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    const value = input.value.trim();
+    if (!value) return;
+
+    if (mode === 'quiz') {
+      handleQuizInput(value);
+    } else {
+      handleFreePlayInput(value);
+    }
+  }
+});
+
+// --- START ---
+startQuizRound();
+</script>
+</body>
+</html>

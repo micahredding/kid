@@ -7,15 +7,20 @@
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
-  body {
-    background: #1a1a2e;
-    color: #e0e0e0;
-    font-family: 'Courier New', Courier, monospace;
-    font-size: 20px;
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
+	  body {
+	    background: #1a1a2e;
+	    color: #e0e0e0;
+	    font-family: 'Courier New', Courier, monospace;
+	    font-size: 26px;
+	    height: 100vh;
+	    display: flex;
+	    flex-direction: column;
+	    overflow: hidden;
+	  }
+
+  body.light-mode {
+    background: #fff;
+    color: #000;
   }
 
   /* ---- REPL ---- */
@@ -45,7 +50,51 @@
   .output-line.welcome { color: #7ec8e3; }
   .output-line.input-echo { color: #888; }
   .output-line.result { color: #fff; font-size: 1.1em; }
-  .output-line.system { color: #aaa; font-style: italic; }
+	  .output-line.system { color: #aaa; font-style: italic; }
+  body.light-mode .output-line.welcome,
+  body.light-mode .output-line.input-echo,
+  body.light-mode .output-line.result,
+  body.light-mode .output-line.system {
+    color: #000;
+  }
+	  .emoji { font-size: 1.6em; line-height: 1; }
+	  .emoji-action { display: inline-block; will-change: transform; transform-origin: 50% 70%; }
+	  .emoji-action--jump { animation: emoji-jump 700ms ease-in-out infinite; }
+	  .emoji-action--bounce { animation: emoji-bounce 520ms ease-in-out infinite; }
+	  .emoji-action--spin { animation: emoji-spin 900ms linear infinite; }
+	  .emoji-action--wiggle { animation: emoji-wiggle 420ms ease-in-out infinite; }
+	  .emoji-action--float { animation: emoji-float 1900ms ease-in-out infinite; }
+	  .emoji-action--dance { animation: emoji-dance 780ms ease-in-out infinite; }
+
+	  @keyframes emoji-jump {
+	    0%, 100% { transform: translateY(0); }
+	    50%      { transform: translateY(-0.65em); }
+	  }
+	  @keyframes emoji-bounce {
+	    0%, 100% { transform: translateY(0) scaleY(0.95); }
+	    50%      { transform: translateY(-0.35em) scaleY(1.05); }
+	  }
+	  @keyframes emoji-spin {
+	    to { transform: rotate(360deg); }
+	  }
+	  @keyframes emoji-wiggle {
+	    0%, 100% { transform: rotate(-10deg); }
+	    50%      { transform: rotate(10deg); }
+	  }
+	  @keyframes emoji-float {
+	    0%, 100% { transform: translateY(0); }
+	    50%      { transform: translateY(-0.45em); }
+	  }
+	  @keyframes emoji-dance {
+	    0%, 100% { transform: translateY(0) rotate(-6deg); }
+	    25%      { transform: translateY(-0.15em) rotate(7deg); }
+	    50%      { transform: translateY(0) rotate(-7deg); }
+	    75%      { transform: translateY(-0.2em) rotate(6deg); }
+	  }
+
+	  @media (prefers-reduced-motion: reduce) {
+	    .emoji-action { animation: none !important; }
+	  }
 
   .color-block {
     display: inline-block;
@@ -66,6 +115,9 @@
 
   #prompt { color: #7ec8e3; font-weight: bold; user-select: none; }
 
+  body.light-mode #input-row { border-top-color: #bbb; }
+  body.light-mode #prompt { color: #000; }
+
   #input {
     flex: 1;
     background: transparent;
@@ -75,6 +127,11 @@
     font-family: inherit;
     font-size: inherit;
     caret-color: #7ec8e3;
+  }
+
+  body.light-mode #input {
+    color: #000;
+    caret-color: #000;
   }
 
   /* ---- DRAWING MODE ---- */
@@ -98,17 +155,17 @@
     cursor: crosshair;
   }
 
-  #draw-status {
-    background: #222;
-    color: #ddd;
-    padding: 5px 10px;
-    font-size: 15px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    white-space: nowrap;
-    border-top: 1px solid #444;
-  }
+	  #draw-status {
+	    background: #222;
+	    color: #ddd;
+	    padding: 5px 10px;
+	    font-size: 0.85em;
+	    display: flex;
+	    align-items: center;
+	    gap: 10px;
+	    white-space: nowrap;
+	    border-top: 1px solid #444;
+	  }
 
   #status-pen { font-weight: bold; color: #7ec8e3; min-width: 8ch; }
   #status-pen.down { color: #f0c040; }
@@ -133,6 +190,7 @@
     <div class="output-line welcome">Welcome! Type anything and press Enter.</div>
     <div class="output-line welcome">Try: 4 + 4 &nbsp; 3 trex &nbsp; 5 red &nbsp; red + blue</div>
     <div class="output-line welcome">Type "draw" to draw, "print" to save!</div>
+    <div class="output-line welcome">Try: white &nbsp; dark &nbsp; red screen &nbsp; blue+green screen</div>
     <div class="output-line welcome">&nbsp;</div>
   </div>
   <div id="input-row">
@@ -157,10 +215,33 @@
 </div>
 
 <script>
+// ===================== GAMES =====================
+
+const GAMES = {
+  'numberblocks':    '/numberblocks/',
+  'planets':         '/planets/',
+  'run-around':      '/run-around/',
+  'letter-invaders': '/letter-invaders/',
+};
+
+function tryLaunchGame(trimmed) {
+  const key = trimmed.toLowerCase();
+  if (key === 'games') {
+    addLine('Games you can play:', 'system');
+    for (const name of Object.keys(GAMES)) addLine(`  ${name}`, 'system');
+    serverLog({ type: 'input', raw: trimmed, display: '[list games]' });
+    return true;
+  }
+  if (!(key in GAMES)) return false;
+  window.open(GAMES[key], '_blank');
+  return true;
+}
+
 // ===================== SERVER BRIDGE =====================
 // Fire-and-forget: works whether or not the server is running.
 
-const SERVER = 'http://localhost:3131';
+// Use same-origin so this works from other devices on the LAN (not just the host machine).
+const SERVER = window.location.origin;
 
 function serverLog(entry) {
   fetch(`${SERVER}/log`, {
@@ -291,6 +372,133 @@ const KEYWORDS = {
 function isEmoji(token) { return token.toLowerCase() in KEYWORDS; }
 function getEmoji(token) { return KEYWORDS[token.toLowerCase()] || null; }
 
+// ===================== EMOJI ACTIONS =====================
+
+const EMOJI_ACTIONS = {
+  jump:   { cls: 'emoji-action--jump' },
+  bounce: { cls: 'emoji-action--bounce' },
+  spin:   { cls: 'emoji-action--spin' },
+  wiggle: { cls: 'emoji-action--wiggle' },
+  float:  { cls: 'emoji-action--float' },
+  dance:  { cls: 'emoji-action--dance' },
+};
+
+const EMOJI_ACTION_ALIASES = {
+  jump: 'jump', jumps: 'jump', hopping: 'jump', hop: 'jump',
+  bounce: 'bounce', bounces: 'bounce',
+  spin: 'spin', spins: 'spin', rotate: 'spin', rotates: 'spin',
+  wiggle: 'wiggle', wiggles: 'wiggle', shake: 'wiggle', shakes: 'wiggle',
+  float: 'float', floats: 'float',
+  dance: 'dance', dances: 'dance',
+};
+
+// ===================== SPEECH =====================
+
+function trySayCommand(trimmed) {
+  const lower = trimmed.toLowerCase();
+  if (!(lower === 'say' || lower.startsWith('say '))) return false;
+  const phrase = trimmed.slice(3).trim();
+  if (!phrase) {
+    addLine('Try: say apple', 'system');
+    serverLog({ type: 'input', raw: trimmed, display: '[say help]' });
+    return true;
+  }
+
+  if (!('speechSynthesis' in window) || typeof window.SpeechSynthesisUtterance !== 'function') {
+    addLine('Speech not supported in this browser.', 'system');
+    serverLog({ type: 'input', raw: trimmed, display: '[say unsupported]' });
+    return true;
+  }
+
+  try {
+    // Cancel anything already speaking so rapid "say ..." feels responsive.
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(phrase);
+    u.lang = 'en-US';
+    // Slightly slower, clearer default for kids.
+    u.rate = 0.95;
+    u.pitch = 1.05;
+    window.speechSynthesis.speak(u);
+
+    addLine(`Saying: ${phrase}`, 'system');
+    serverLog({
+      type: 'input',
+      raw: trimmed,
+      output: { type: 'say', data: { phrase } },
+      display: `[say ${phrase}]`,
+    });
+  } catch {
+    addLine('Could not speak that.', 'system');
+    serverLog({ type: 'input', raw: trimmed, display: '[say error]' });
+  }
+  return true;
+}
+
+function tryEmojiAction(trimmed) {
+  const parts = trimmed.split(/\s+/).filter(Boolean);
+  if (parts.length !== 2) return false;
+  const [thing, actionRaw] = parts;
+  const emoji = getEmoji(thing);
+  if (!emoji) return false;
+  const action = EMOJI_ACTION_ALIASES[actionRaw.toLowerCase()];
+  if (!action) return false;
+
+  const span = document.createElement('span');
+  span.className = `emoji emoji-action ${EMOJI_ACTIONS[action].cls}`;
+  span.textContent = emoji;
+  addLine(span);
+  serverLog({
+    type: 'input',
+    raw: trimmed,
+    output: { type: 'emoji_action', data: { emoji, action } },
+    display: `${emoji} ${action}`,
+  });
+  return true;
+}
+
+function tryThemeCommand(trimmed) {
+  const theme = trimmed.toLowerCase();
+  let color = null;
+  if (theme === 'dark') {
+    document.body.style.backgroundColor = '';
+    document.body.classList.remove('light-mode');
+    addLine('Dark background on.', 'system');
+    serverLog({ type: 'input', raw: trimmed, display: '[dark background on]' });
+    return true;
+  }
+
+  if (theme === 'white') {
+    color = COLORS.white;
+  } else {
+    const match = theme.match(/^(.+?)\s+screen$/);
+    if (!match) return false;
+    const result = evaluate(match[1]);
+    if (result.type !== 'color') return false;
+    color = result.data;
+  }
+
+  const toLinear = (channel) => {
+    const value = channel / 255;
+    return value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+  };
+  const [r, g, b] = color.rgb.map(toLinear);
+  const useDarkText = (0.2126 * r + 0.7152 * g + 0.0722 * b) > 0.179;
+  document.body.style.backgroundColor = rgbStr(color.rgb);
+  document.body.classList.toggle('light-mode', useDarkText);
+  const screenName = color.name || matchScreenColorName(color.rgb);
+  const display = `[${screenName} screen]`;
+  addLine(`${screenName[0].toUpperCase()}${screenName.slice(1)} screen on.`, 'system');
+  serverLog({ type: 'input', raw: trimmed, display });
+  return true;
+}
+
+function matchScreenColorName(rgb) {
+  for (const color of Object.values(COLORS)) {
+    if (arraysEqual(color.rgb, rgb)) return color.name;
+  }
+  return 'mixed color';
+}
+
 // ===================== VARIABLES =====================
 
 const varStore = new Map();
@@ -303,18 +511,126 @@ function hasVariable(name) { return varStore.has(name.toLowerCase()); }
 const OPERATORS = new Set(['+', '-', 'x', '*', '/', '÷', '=']);
 function isOperator(t) { return OPERATORS.has(t); }
 function isNumber(t) { return /^\d+(\.\d+)?$/.test(t); }
+function isFraction(t) { return /^\d+(\.\d+)?\/\d+(\.\d+)?$/.test(t); }
+
+function formatNumber(value) {
+  return Number.isInteger(value) ? String(value) : String(Number(value.toPrecision(12)));
+}
+
+function countDecimalPlaces(value) {
+  const text = String(value);
+  if (!text.includes('e')) return (text.split('.')[1] || '').length;
+
+  const [coefficient, exponentText] = text.split('e');
+  const decimals = (coefficient.split('.')[1] || '').length;
+  return Math.max(0, decimals - Number(exponentText));
+}
+
+function gcd(a, b) {
+  a = Math.abs(a);
+  b = Math.abs(b);
+  while (b !== 0) {
+    const next = a % b;
+    a = b;
+    b = next;
+  }
+  return a || 1;
+}
+
+function makeFraction(numerator, denominator) {
+  const value = denominator === 0 ? numerator : numerator / denominator;
+  const originalText = `${formatNumber(numerator)}/${formatNumber(denominator)}`;
+  const scale = 10 ** Math.max(countDecimalPlaces(numerator), countDecimalPlaces(denominator));
+  let reducedNumerator = Math.round(numerator * scale);
+  let reducedDenominator = Math.round(denominator * scale);
+  const divisor = gcd(reducedNumerator, reducedDenominator);
+
+  reducedNumerator /= divisor;
+  reducedDenominator /= divisor;
+
+  if (reducedDenominator < 0) {
+    reducedNumerator *= -1;
+    reducedDenominator *= -1;
+  }
+
+  if (reducedDenominator === 1) {
+    return { type: 'number', data: reducedNumerator };
+  }
+
+  return {
+    type: 'fraction',
+    data: {
+      numerator: reducedNumerator,
+      denominator: reducedDenominator,
+      value,
+      originalNumerator: numerator,
+      originalDenominator: denominator,
+      text: [
+        originalText,
+        `${formatNumber(reducedNumerator)}/${formatNumber(reducedDenominator)}`,
+        formatNumber(value),
+      ].filter((part, index, parts) => index === 0 || part !== parts[index - 1]).join(' = '),
+    },
+  };
+}
+
+function numericValue(value) {
+  if (value.type === 'number') return value.data;
+  if (value.type === 'fraction') return value.data.value;
+  return null;
+}
 
 function tokenize(line) {
+  // Avoid regex lookbehind so this runs on older browsers (e.g. older Safari).
+  // Behavior:
+  // - Split on +, -, /, ÷, =, *
+  // - Treat "x" as multiplication only when it's between digits (e.g. 3x4)
   const raw = line.split(/\s+/).filter(Boolean);
   const result = [];
+
+  const isDigit = (c) => c >= '0' && c <= '9';
+  const isAlpha = (c) => (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
+  const isOp = (c) => c === '+' || c === '-' || c === '/' || c === '÷' || c === '=' || c === '*';
+
   for (const tok of raw) {
-    const parts = tok.split(/((?<=[0-9])[x*](?=[0-9])|[+=\-/÷])/);
-    for (const p of parts) { if (p !== '') result.push(p); }
+    if (isFraction(tok)) {
+      result.push(tok);
+      continue;
+    }
+
+    let buf = '';
+    for (let i = 0; i < tok.length; i++) {
+      const ch = tok[i];
+      const prev = tok[i - 1];
+      const next = tok[i + 1];
+      const isXMul = ch === 'x' && isDigit(prev) && isDigit(next);
+      const isNumToWordBoundary =
+        i > 0 &&
+        isAlpha(ch) &&
+        (isDigit(prev) || (prev === '.' && i >= 2 && isDigit(tok[i - 2])));
+
+      if (isOp(ch) || isXMul) {
+        if (buf) result.push(buf);
+        buf = '';
+        result.push(ch);
+      } else if (isNumToWordBoundary) {
+        // Split "2car" => "2", "car" and "2.5car" => "2.5", "car"
+        if (buf) result.push(buf);
+        buf = ch;
+      } else {
+        buf += ch;
+      }
+    }
+    if (buf) result.push(buf);
   }
   return result;
 }
 
 function resolveToken(token) {
+  if (isFraction(token)) {
+    const [numerator, denominator] = token.split('/').map(Number);
+    return makeFraction(numerator, denominator);
+  }
   if (isNumber(token)) return { type: 'number', data: parseFloat(token) };
   if (isColor(token)) return { type: 'color', data: { ...getColor(token) } };
   if (isEmoji(token)) return { type: 'emoji', data: getEmoji(token) };
@@ -327,6 +643,7 @@ function arraysEqual(a, b) { return a.length === b.length && a.every((v, i) => v
 function valueToPlainString(v) {
   switch (v.type) {
     case 'number': return String(v.data);
+    case 'fraction': return v.data.text;
     case 'text': return v.data;
     case 'emoji': return v.data;
     case 'color': return `[${v.data.name || 'mixed'}]`;
@@ -341,7 +658,7 @@ function concatenateValues(...values) {
     if (v.type === 'list') flat.push(...v.data);
     else flat.push(v);
   }
-  if (flat.every(v => v.type === 'text' || v.type === 'emoji' || v.type === 'number')) {
+  if (flat.every(v => v.type === 'text' || v.type === 'emoji' || v.type === 'number' || v.type === 'fraction')) {
     return { type: 'text', data: flat.map(valueToPlainString).join('') };
   }
   return { type: 'list', data: flat };
@@ -361,6 +678,7 @@ function applyJuxtaposition(left, right) {
       return { type: 'list', data: items };
     }
   }
+  if (left.type === 'fraction') return concatenateValues(left, right);
   if (left.type === 'color' && right.type === 'number') {
     const count = Math.max(0, Math.min(Math.floor(right.data), 1000));
     return { type: 'colored_blocks', data: { count, color: left.data } };
@@ -370,12 +688,15 @@ function applyJuxtaposition(left, right) {
 
 function applyOp(left, op, right) {
   if (op === '=') op = '+';
-  if (left.type === 'number' && right.type === 'number') {
+  const leftNumber = numericValue(left);
+  const rightNumber = numericValue(right);
+  if (leftNumber !== null && rightNumber !== null) {
     switch (op) {
-      case '+': return { type: 'number', data: left.data + right.data };
-      case '-': return { type: 'number', data: left.data - right.data };
-      case 'x': case '*': return { type: 'number', data: left.data * right.data };
-      case '/': case '÷': return { type: 'number', data: right.data === 0 ? left.data : Math.floor(left.data / right.data) };
+      case '+': return { type: 'number', data: leftNumber + rightNumber };
+      case '-': return { type: 'number', data: leftNumber - rightNumber };
+      case 'x': case '*': return { type: 'number', data: leftNumber * rightNumber };
+      case '/': return makeFraction(leftNumber, rightNumber);
+      case '÷': return { type: 'number', data: rightNumber === 0 ? leftNumber : leftNumber / rightNumber };
     }
   }
   if (op === '+' && left.type === 'color' && right.type === 'color')
@@ -444,16 +765,22 @@ function makeColorBlock(rgb) {
   return span;
 }
 
-function renderToNode(value) {
-  try {
-    switch (value.type) {
-      case 'number': return document.createTextNode(String(value.data));
-      case 'text':   return document.createTextNode(value.data);
-      case 'emoji':  return document.createTextNode(value.data);
-      case 'color':  return makeColorBlock(value.data.rgb);
-      case 'colored_blocks': {
-        const frag = document.createDocumentFragment();
-        const count = Math.max(0, Math.min(value.data.count, 300));
+	function renderToNode(value) {
+	  try {
+	    switch (value.type) {
+	      case 'number': return document.createTextNode(String(value.data));
+	      case 'fraction': return document.createTextNode(value.data.text);
+	      case 'text':   return document.createTextNode(value.data);
+	      case 'emoji': {
+	        const span = document.createElement('span');
+	        span.className = 'emoji';
+	        span.textContent = value.data;
+	        return span;
+	      }
+	      case 'color':  return makeColorBlock(value.data.rgb);
+	      case 'colored_blocks': {
+	        const frag = document.createDocumentFragment();
+	        const count = Math.max(0, Math.min(value.data.count, 300));
         for (let i = 0; i < count; i++) frag.appendChild(makeColorBlock(value.data.color.rgb));
         return frag;
       }
@@ -496,7 +823,13 @@ function addLine(content, cls = 'result') {
 serverLog({ type: 'start', version: '1.0.0' });
 
 inputEl.addEventListener('keydown', (e) => {
-  if (e.key !== 'Enter') return;
+  const isEnter =
+    e.key === 'Enter' ||
+    e.key === 'NumpadEnter' ||
+    e.code === 'Enter' ||
+    e.code === 'NumpadEnter';
+  if (!isEnter) return;
+  e.preventDefault();
   const raw = inputEl.value;
   inputEl.value = '';
 
@@ -509,6 +842,18 @@ inputEl.addEventListener('keydown', (e) => {
     serverLog({ type: 'input', raw: '', display: '' });
     return;
   }
+
+  if (trySayCommand(trimmed)) return;
+
+  if (tryLaunchGame(trimmed)) {
+    addLine(`Opening ${trimmed.toLowerCase()}...`, 'system');
+    serverLog({ type: 'input', raw: trimmed, display: `[launch ${trimmed.toLowerCase()}]` });
+    return;
+  }
+
+  if (tryEmojiAction(trimmed)) return;
+
+  if (tryThemeCommand(trimmed)) return;
 
   if (trimmed.toLowerCase() === 'draw') {
     serverLog({ type: 'input', raw: trimmed, display: '[entering drawing mode]' });
@@ -669,6 +1014,7 @@ function onDrawKey(e) {
       colorIndex++;
       renderCanvas(); break;
     case 'Enter':
+    case 'NumpadEnter':
       stamp(); cursorY++; cursorX = 0; clamp();
       if (penDown) stamp();
       renderCanvas(); break;

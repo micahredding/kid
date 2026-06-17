@@ -12,6 +12,77 @@ function isNumber(token) {
   return /^\d+(\.\d+)?$/.test(token);
 }
 
+function isFraction(token) {
+  return /^\d+(\.\d+)?\/\d+(\.\d+)?$/.test(token);
+}
+
+function formatNumber(value) {
+  return Number.isInteger(value) ? String(value) : String(Number(value.toPrecision(12)));
+}
+
+function countDecimalPlaces(value) {
+  const text = String(value);
+  if (!text.includes('e')) return (text.split('.')[1] || '').length;
+
+  const [coefficient, exponentText] = text.split('e');
+  const decimals = (coefficient.split('.')[1] || '').length;
+  return Math.max(0, decimals - Number(exponentText));
+}
+
+function gcd(a, b) {
+  a = Math.abs(a);
+  b = Math.abs(b);
+  while (b !== 0) {
+    const next = a % b;
+    a = b;
+    b = next;
+  }
+  return a || 1;
+}
+
+function makeFraction(numerator, denominator) {
+  const value = denominator === 0 ? numerator : numerator / denominator;
+  const originalText = `${formatNumber(numerator)}/${formatNumber(denominator)}`;
+  const scale = 10 ** Math.max(countDecimalPlaces(numerator), countDecimalPlaces(denominator));
+  let reducedNumerator = Math.round(numerator * scale);
+  let reducedDenominator = Math.round(denominator * scale);
+  const divisor = gcd(reducedNumerator, reducedDenominator);
+
+  reducedNumerator /= divisor;
+  reducedDenominator /= divisor;
+
+  if (reducedDenominator < 0) {
+    reducedNumerator *= -1;
+    reducedDenominator *= -1;
+  }
+
+  if (reducedDenominator === 1) {
+    return { type: 'number', data: reducedNumerator };
+  }
+
+  return {
+    type: 'fraction',
+    data: {
+      numerator: reducedNumerator,
+      denominator: reducedDenominator,
+      value,
+      originalNumerator: numerator,
+      originalDenominator: denominator,
+      text: [
+        originalText,
+        `${formatNumber(reducedNumerator)}/${formatNumber(reducedDenominator)}`,
+        formatNumber(value),
+      ].filter((part, index, parts) => index === 0 || part !== parts[index - 1]).join(' = '),
+    },
+  };
+}
+
+function numericValue(value) {
+  if (value.type === 'number') return value.data;
+  if (value.type === 'fraction') return value.data.value;
+  return null;
+}
+
 // Tokenize input, splitting on whitespace AND around operators even without spaces.
 // "4+4" → ["4", "+", "4"], "4 + 4" → ["4", "+", "4"], "4x4" → ["4", "x", "4"]
 // But "trex" should NOT split on "x" — only split "x" when between digits.
@@ -21,6 +92,11 @@ function tokenize(line) {
   const result = [];
 
   for (const raw of rawTokens) {
+    if (isFraction(raw)) {
+      result.push(raw);
+      continue;
+    }
+
     // Split around +, -, /, ÷ (always operator characters)
     // Split around * only when adjacent to digits
     // Split around x only when between digits (to avoid splitting "trex")
@@ -34,6 +110,10 @@ function tokenize(line) {
 }
 
 function resolveToken(token) {
+  if (isFraction(token)) {
+    const [numerator, denominator] = token.split('/').map(Number);
+    return makeFraction(numerator, denominator);
+  }
   if (isNumber(token)) {
     return { type: 'number', data: parseFloat(token) };
   }
@@ -55,15 +135,19 @@ function applyOp(left, op, right) {
   // = is the unshifted + key, treat as +
   if (op === '=') op = '+';
 
-  // Number + Number arithmetic
-  if (left.type === 'number' && right.type === 'number') {
+  const leftNumber = numericValue(left);
+  const rightNumber = numericValue(right);
+
+  // Numeric arithmetic
+  if (leftNumber !== null && rightNumber !== null) {
     switch (op) {
-      case '+': return { type: 'number', data: left.data + right.data };
-      case '-': return { type: 'number', data: left.data - right.data };
+      case '+': return { type: 'number', data: leftNumber + rightNumber };
+      case '-': return { type: 'number', data: leftNumber - rightNumber };
       case 'x':
-      case '*': return { type: 'number', data: left.data * right.data };
+      case '*': return { type: 'number', data: leftNumber * rightNumber };
       case '/':
-      case '÷': return { type: 'number', data: right.data === 0 ? left.data : Math.floor(left.data / right.data) };
+        return makeFraction(leftNumber, rightNumber);
+      case '÷': return { type: 'number', data: rightNumber === 0 ? leftNumber : leftNumber / rightNumber };
     }
   }
 
@@ -152,6 +236,10 @@ function applyJuxtaposition(left, right) {
     }
   }
 
+  if (left.type === 'fraction') {
+    return concatenateValues(left, right);
+  }
+
   // Color followed by number = colored blocks
   if (left.type === 'color' && right.type === 'number') {
     const count = Math.max(0, Math.min(Math.floor(right.data), 1000));
@@ -173,8 +261,8 @@ function concatenateValues(...values) {
     }
   }
 
-  // If all items are simple text/emoji/number, collapse to a single text
-  if (flat.every(v => v.type === 'text' || v.type === 'emoji' || v.type === 'number')) {
+  // If all items are simple text/emoji/number/fraction, collapse to a single text
+  if (flat.every(v => v.type === 'text' || v.type === 'emoji' || v.type === 'number' || v.type === 'fraction')) {
     return { type: 'text', data: flat.map(v => valueToPlainString(v)).join('') };
   }
 
@@ -184,6 +272,7 @@ function concatenateValues(...values) {
 function valueToPlainString(v) {
   switch (v.type) {
     case 'number': return String(v.data);
+    case 'fraction': return v.data.text;
     case 'text': return v.data;
     case 'emoji': return v.data;
     case 'color': return `[${v.data.name || 'mixed'}]`;

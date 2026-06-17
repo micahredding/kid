@@ -6,6 +6,9 @@ export function render(value) {
       case 'number':
         return String(value.data);
 
+      case 'fraction':
+        return value.data.text;
+
       case 'text':
         return value.data;
 

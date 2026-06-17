@@ -162,6 +162,9 @@ export class Engine {
           this.selectedCharacter = (this.selectedCharacter + 1) % this.characters.length;
         }
         if (this.input.jumpPressed || this.input.wasPressed('Enter')) {
+          // Fresh game: drop the previous player so lives/score/coins reset to
+          // starting values instead of carrying over a game-over (0 lives) state.
+          this.player = null;
           this.startLevel(0);
         }
         break;

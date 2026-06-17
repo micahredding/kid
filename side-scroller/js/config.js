@@ -50,7 +50,7 @@ export const CONFIG = {
     height: 32,
 
     // Lives
-    startingLives: 3,
+    startingLives: 10,
 
     // Invincibility frames after taking damage
     invincibilityFrames: 90,

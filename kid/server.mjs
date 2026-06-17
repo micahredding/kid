@@ -36,6 +36,7 @@ const GAMES = {
   'letter-invaders': join(__dirname, '..', 'letter-invaders', 'dist'),
   'family-tree':  join(__dirname, '..', 'family-tree'),
   'powers-of-2-numberblocks': join(__dirname, '..', 'powers-of-2-numberblocks'),
+  'side-scroller': join(__dirname, '..', 'side-scroller'),
 };
 
 const MIME_TYPES = {

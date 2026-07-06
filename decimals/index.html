@@ -215,15 +215,21 @@
   .chip.tour.on { background: #ff8a8a; box-shadow: 0 3px 0 #b34a4a; color: #5a1616; }
   .chip.reset { background: #ffffff; box-shadow: 0 3px 0 #b0b0c0; color: #444; }
 
-  @media (max-width: 700px), (max-aspect-ratio: 3/4) {
-    #main { flex-direction: column; gap: 6px; }
-    #info { width: 100%; flex-direction: row; flex-wrap: wrap; align-items: baseline;
-      justify-content: center; text-align: center; gap: 4px 12px; padding-left: 0; }
-    #decimal-display { font-size: clamp(40px, 14vw, 84px); margin: 0; }
-    #subtitle { width: 100%; min-height: 1.4em; }
-    #fraction { margin-top: 0; }
-    #breakdown { width: 100%; }
-    #title { width: 100%; }
+  /* Portrait / narrow: collapse the info column into a short header so the
+     Numberblocks stage gets the bulk of the screen (numbers stay big). */
+  @media (max-width: 760px), (max-aspect-ratio: 4/5) {
+    body { padding: 8px; gap: 3px; }
+    #main { flex-direction: column; align-items: stretch; gap: 2px; }
+    #info { display: block; width: 100%; flex: 0 0 auto; text-align: center; padding: 0 6px; }
+    #title { display: none; }
+    #decimal-display { font-size: clamp(30px, 9vw, 58px); margin: 0; line-height: 1; }
+    #subtitle { min-height: 0; font-size: clamp(12px, 3.2vw, 16px); overflow-wrap: anywhere; }
+    #fraction { margin-top: 0; min-height: 0; font-size: clamp(15px, 4.2vw, 22px); }
+    #breakdown { min-height: 0; font-size: clamp(11px, 3vw, 15px); }
+    #stage-wrap { width: 100%; flex: 1 1 auto; }
+    #controls { gap: 5px; }
+    .chip { padding: 6px 12px; font-size: clamp(13px, 3.4vw, 18px); }
+    #num-input { width: min(72vw, 300px); }
   }
 </style>
 </head>
@@ -265,9 +271,10 @@
     <button class="chip" data-v="102">102</button>
     <button class="chip" data-v="1+2">1+2</button>
     <button class="chip" data-v="10-3">10-3</button>
+    <button class="chip" data-v="3×4">3×4</button>
+    <button class="chip" data-v="12÷3">12÷3</button>
     <button class="chip" data-v="3=1+2">3=1+2</button>
     <button class="chip" data-v="0.5">0.5</button>
-    <button class="chip" data-v="0.25">0.25</button>
     <button class="chip" data-v="1.5">1.5</button>
     <button class="chip tour" id="tour-btn">▶ Tour</button>
     <button class="chip reset" id="reset-btn">↺ Reset</button>
@@ -699,7 +706,7 @@ function fitCellSize(n, shape) {
   return Math.max(4, Math.min(cs, 46));
 }
 function shapeText(n, shape) {
-  const hint = shape.__count > 1 ? ' &nbsp;<span style="opacity:.7">(tap the block to re-shape)</span>' : '';
+  const hint = shape.__count > 1 ? ' <span style="opacity:.7">· tap to reshape</span>' : '';
   if (shape.kind === 'place') {
     const parts = getPlaceParts(n);
     subtitleEl.innerHTML = `<b>${n}</b> in place value: ${parts.map(p => p.value).join(' + ')}${hint}`;
@@ -936,6 +943,96 @@ async function runSplit(total, a, opSym, b) {
     `<span class="reduced">${a} ${opSym} ${b}</span>`;
 }
 
+// ===================== MULTIPLY (array of groups) & DIVIDE (sharing) =====================
+// A mini Numberblock of `value` sized so `groupCount` of them fit across the stage.
+function groupCellSize(value, groupCount) {
+  const s = getShape(value);
+  const perW = (stageWrap.clientWidth * 0.9) / groupCount - 14;
+  const availH = stageWrap.clientHeight * 0.6;
+  return Math.max(8, Math.min(Math.floor(Math.min(perW / s.cols, availH / s.rows)), 38));
+}
+function buildMiniGroup(value, cs) {
+  const w = mkOperand(); w.l.textContent = value;
+  const s = getShape(value);
+  w.g.style.gridTemplateColumns = `repeat(${s.cols}, ${cs}px)`;
+  w.g.style.gridTemplateRows = `repeat(${s.rows}, ${cs}px)`;
+  let idx = 0, topLeft = null;
+  for (let r = 0; r < s.rows; r++) {
+    const cir = (r === s.rows - 1) ? s.lastRowCols : s.cols;
+    for (let c = 0; c < cir; c++) {
+      const cell = document.createElement('div'); cell.className = 'mcell';
+      cell.style.width = cs + 'px'; cell.style.height = cs + 'px';
+      const col = getBlockColorAndBorder(value, idx);
+      cell.style.background = col.bg; if (col.border) cell.style.borderColor = col.border;
+      cell.style.gridRow = s.rows - r; cell.style.gridColumn = c + 1;
+      if (s.rows - r === 1 && c === 0) topLeft = cell;
+      w.g.appendChild(cell); idx++;
+    }
+  }
+  if (topLeft) { topLeft.style.overflow = 'visible'; topLeft.innerHTML = faceHTML(value === 1); }
+  return w;
+}
+
+// a × b = a groups of b, stamped out and then merged into the product array.
+async function runMultiply(a, b, result) {
+  token++; const tk = token;
+  showCombineStage(); combineEl.innerHTML = ''; combineEl.style.gap = '14px';
+  divided = false; mode = 'combine';
+  decimalEl.textContent = `${a} × ${b}`;
+  fractionEl.innerHTML = ''; breakEl.innerHTML = '';
+  serverLog({ type: 'demo', kind: 'multiply', value: `${a}x${b}=${result}` });
+
+  if (a > 8) {   // too many groups to show tidily — jump to the product
+    await renderWhole(result, true, { a, op: '×', b });
+    return;
+  }
+  subtitleEl.innerHTML = `<b>${a}</b> group${a > 1 ? 's' : ''} of <b>${b}</b>...`;
+  const cs = groupCellSize(b, a);
+  const groups = [];
+  for (let i = 0; i < a; i++) { const w = buildMiniGroup(b, cs); w.w.style.opacity = '0';
+    w.w.style.transform = 'translateY(-30px) scale(0.6)'; w.w.style.transition = 'opacity .3s, transform .4s cubic-bezier(0.34,1.56,0.64,1)';
+    combineEl.appendChild(w.w); groups.push(w.w); }
+  groups.forEach((g, i) => setTimeout(() => { if (tk === token) { g.style.opacity = '1'; g.style.transform = ''; } }, 250 + i * 380));
+  if (!(await sleep(250 + a * 380 + 500, tk))) return;
+
+  subtitleEl.innerHTML = `<b>${a}</b> × <b>${b}</b> = <b>${a}</b> groups of <b>${b}</b> = <b>${result}</b>!`;
+  if (!(await sleep(1100, tk))) return;
+  groups.forEach(g => { g.style.transition = 'opacity .4s'; g.style.opacity = '0'; });
+  if (!(await sleep(420, tk))) return;
+  await renderWhole(result, true, { a, op: '×', b });
+}
+
+// a ÷ b = share a into b equal groups; each group is the answer.
+async function runDivide(a, b, result) {
+  token++; const tk = token;
+  showCombineStage(); combineEl.innerHTML = ''; combineEl.style.gap = '14px';
+  divided = false; mode = 'combine';
+  decimalEl.textContent = `${a} ÷ ${b}`;
+  fractionEl.innerHTML = ''; breakEl.innerHTML = '';
+  serverLog({ type: 'demo', kind: 'divide', value: `${a}/${b}=${result}` });
+
+  // Phase 1: the whole number arrives
+  const whole = buildMiniGroup(a, Math.max(8, Math.min(groupCellSize(a, 1), 30)));
+  combineEl.appendChild(whole.w); whole.w.classList.add('walk-in-left');
+  subtitleEl.innerHTML = `Share <b>${a}</b> into <b>${b}</b> equal groups...`;
+  if (!(await sleep(1500, tk))) return;
+
+  if (b > 8) { await renderWhole(result, true, { a, op: '÷', b }); return; }
+  // Phase 2: split into b groups of `result`
+  combineEl.innerHTML = '';
+  const cs = groupCellSize(result, b);
+  const groups = [];
+  for (let i = 0; i < b; i++) { const w = buildMiniGroup(result, cs);
+    w.w.style.opacity = '0'; w.w.style.transform = 'scale(0.5)'; w.w.style.transition = 'opacity .3s, transform .4s cubic-bezier(0.34,1.56,0.64,1)';
+    combineEl.appendChild(w.w); groups.push(w.w); }
+  groups.forEach((g, i) => setTimeout(() => { if (tk === token) { g.style.opacity = '1'; g.style.transform = ''; } }, 150 + i * 300));
+  if (!(await sleep(150 + b * 300 + 400, tk))) return;
+
+  subtitleEl.innerHTML = `<b>${a}</b> ÷ <b>${b}</b> = <b>${result}</b> in each group!`;
+  fractionEl.innerHTML = `<span class="frac">${a} ÷ ${b}</span><span class="eq">=</span><span class="reduced">${result}</span>`;
+  breakEl.innerHTML = `<span class="p">${b} groups of ${result}</span>`;
+}
+
 // ===================== MIXED-NUMBER RENDER (whole + fractional block) =====================
 function buildUnitSquare(size, opts) {
   // opts: { solid:true } | { n:hundredths } ; face:boolean
@@ -1019,12 +1116,16 @@ async function present(raw) {
   if (eq) {
     if (eq.type === 'split') await runSplit(eq.total, eq.a, eq.op, eq.b);
     else if (eq.op === '-') await runSubtract(eq.a, eq.b, eq.result);
+    else if (eq.op === '*') await runMultiply(eq.a, eq.b, eq.result);
+    else if (eq.op === '/') await runDivide(eq.a, eq.b, eq.result);
     else await runCombine(eq.a, eq.sym, eq.b, eq.result);
     return;
   }
   const combo = parseBinary(raw);
   if (combo) {
     if (combo.opRaw === '-') await runSubtract(combo.a, combo.b, combo.result);
+    else if (combo.opRaw === '*') await runMultiply(combo.a, combo.b, combo.result);
+    else if (combo.opRaw === '/') await runDivide(combo.a, combo.b, combo.result);
     else await runCombine(combo.a, combo.op, combo.b, combo.result);
     return;
   }
@@ -1045,7 +1146,7 @@ function backToOne() {
 }
 
 // ===================== TOUR =====================
-const TOUR = ['0.5', '0.25', '7', '25', '34', '102', '1+2', '10-3', '3=1+2', '1.5', '0.33'];
+const TOUR = ['0.5', '25', '34', '102', '1+2', '10-3', '3×4', '12÷3', '3=1+2', '1.5', '0.33'];
 let tourRunning = false, tourTimer = null;
 async function runTour() {
   const btn = document.getElementById('tour-btn');
@@ -1082,7 +1183,10 @@ document.getElementById('num-input').addEventListener('keydown', e => { if (e.ke
 square.addEventListener('click', () => { if (mode === 'decimal') { stopTour(); demonstrateDecimal(currentDecimalN, true); } });
 
 let rT = null;
-window.addEventListener('resize', () => { clearTimeout(rT); rT = setTimeout(sizeSquare, 150); });
+window.addEventListener('resize', () => { clearTimeout(rT); rT = setTimeout(() => {
+  sizeSquare();
+  if (mode === 'whole' && current) drawCurrent(false);   // re-fit blocks on rotate
+}, 200); });
 sizeSquare();
 </script>
 </body>

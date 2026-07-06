@@ -2,315 +2,314 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Decimals — Numberblocks One in 100 pieces</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Numberblocks — whole numbers & decimals</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   :root {
-    --sq: min(74vmin, 500px);
     --red:    #DE151D;
     --orange: #E89223;
     --yellow: #E6C40C;
-    --gap: 0px;          /* animates 0 -> grid lines when divided */
-    --face: 100%;        /* face size: full block (whole) -> one cell (divided) */
+    --gap: 0px;          /* animates 0 -> grid lines when the square divides */
+    --face: 100%;        /* One's face: full block (whole) -> one cell (divided) */
+    --sq: 300px;         /* decimal square size, set by JS to fit the stage */
   }
 
+  html, body { height: 100%; }
   body {
     font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    min-height: 100vh;
+    color: white;
+    overflow: hidden;
+    user-select: none;
     display: flex;
     flex-direction: column;
+    padding: 10px 12px;
+    gap: 6px;
+  }
+
+  /* ===== top area: info (left) + stage (right) ===== */
+  #main {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
     align-items: center;
-    overflow-x: hidden;
-    user-select: none;
-    color: white;
-    padding: 12px;
+    gap: 16px;
   }
 
+  #info {
+    flex: 0 0 auto;
+    width: clamp(180px, 26vw, 320px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    text-align: left;
+    padding-left: 6px;
+  }
   #title {
-    font-size: clamp(20px, 4vw, 34px);
-    font-weight: 900;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-    text-align: center;
-    margin-top: 4px;
+    font-size: clamp(15px, 1.8vw, 22px);
+    font-weight: 800;
+    text-shadow: 1px 1px 3px rgba(0,0,0,0.3);
+    opacity: 0.95;
+    line-height: 1.1;
   }
-
   #decimal-display {
-    font-size: clamp(48px, 12vw, 120px);
+    font-size: clamp(52px, 9vw, 120px);
     font-weight: 900;
     color: #FFD700;
     text-shadow: 3px 3px 6px rgba(0,0,0,0.35);
     line-height: 1;
-    margin: 4px 0;
-    letter-spacing: 2px;
-    min-height: 1.1em;
+    margin: 2px 0 4px;
+    letter-spacing: 1px;
+    word-break: break-word;
   }
-
   #subtitle {
-    font-size: clamp(15px, 3vw, 24px);
+    font-size: clamp(13px, 1.5vw, 19px);
     font-weight: 600;
     text-shadow: 1px 1px 3px rgba(0,0,0,0.3);
-    text-align: center;
-    min-height: 1.6em;
-    padding: 0 10px;
-    transition: opacity 0.3s;
+    min-height: 2.6em;
   }
+  #fraction {
+    font-size: clamp(17px, 2.2vw, 30px);
+    font-weight: 900;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    min-height: 1.2em;
+    margin-top: 6px;
+  }
+  #fraction .frac { color: #fff; }
+  #fraction .reduced { color: #7CFF9B; }
+  #fraction .eq { color: #FFD700; margin: 0 6px; }
+  #breakdown {
+    font-size: clamp(13px, 1.6vw, 20px);
+    font-weight: 700;
+    min-height: 1.3em;
+    margin-top: 2px;
+  }
+  #breakdown .t { color: #FF8A8A; }
+  #breakdown .h { color: #FFE873; }
+  #breakdown .q, #breakdown .p { color: #FFFFFF; }
 
-  /* --- The square stage --- */
+  /* ===== the stage ===== */
   #stage-wrap {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+    height: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
-    height: var(--sq);
-    margin: 10px 0 6px;
+    position: relative;
   }
 
+  /* --- decimal square --- */
   #square {
     position: relative;
     width: var(--sq);
     height: var(--sq);
-    transform: scale(0.34);
+    transform: scale(0.32);
     transform-origin: center center;
-    transition: transform 0.9s cubic-bezier(0.34, 1.4, 0.64, 1);
+    transition: transform 0.85s cubic-bezier(0.34, 1.45, 0.64, 1);
     filter: drop-shadow(0 12px 18px rgba(0,0,0,0.35));
   }
   #square.enlarged { transform: scale(1); }
+  #square.hidden, #whole.hidden { display: none; }
 
   #grid {
-    width: 100%;
-    height: 100%;
+    width: 100%; height: 100%;
     display: grid;
     grid-template-columns: repeat(10, 1fr);
     grid-template-rows: repeat(10, 1fr);
     gap: var(--gap);
-    background: rgba(0,0,0,0.28);      /* shows through as grid lines when gap opens */
+    background: rgba(0,0,0,0.28);
     border: 4px solid rgba(0,0,0,0.28);
     border-radius: 12px;
     padding: var(--gap);
-    transition: gap 0.7s ease, padding 0.7s ease, background 0.7s ease;
+    transition: gap 0.65s ease, padding 0.65s ease, background 0.65s ease;
   }
-
   .cell {
     background: var(--red);
     border-radius: 0;
     position: relative;
-    transition: background-color 0.35s ease, border-radius 0.6s ease;
+    transition: background-color 0.35s ease, border-radius 0.55s ease;
   }
   #grid.divided .cell { border-radius: 3px; }
-
-  /* highlight shine on each cell */
   .cell::after {
     content: '';
-    position: absolute;
-    top: 0; left: 0; right: 55%; bottom: 55%;
+    position: absolute; top: 0; left: 0; right: 55%; bottom: 55%;
     background: rgba(255,255,255,0.22);
     border-radius: 3px 0 0 0;
     pointer-events: none;
   }
-
-  /* states once divided */
   .cell.empty      { background: rgba(255,255,255,0.13); }
   .cell.empty::after { opacity: 0; }
   .cell.tenth      { background: var(--red); }
   .cell.hundredth  { background: var(--yellow); }
   .cell.quarter    { background: var(--red); }
 
-  /* pop when a cell fills */
   @keyframes pop {
-    0% { transform: scale(0.4); }
-    60% { transform: scale(1.12); }
-    100% { transform: scale(1); }
+    0% { transform: scale(0.4); } 60% { transform: scale(1.12); } 100% { transform: scale(1); }
   }
   .cell.filling { animation: pop 0.3s ease; z-index: 2; }
 
-  /* --- Quarter guide: a faint cross showing the 4 quadrants (quarter demos) --- */
+  /* quarter guide cross */
   #quarter-guide {
-    position: absolute;
-    inset: 4px;
-    z-index: 4;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.5s ease;
+    position: absolute; inset: 4px; z-index: 4; pointer-events: none;
+    opacity: 0; transition: opacity 0.5s ease;
   }
   #quarter-guide.on { opacity: 1; }
   #quarter-guide::before, #quarter-guide::after {
-    content: '';
-    position: absolute;
-    background: rgba(255,255,255,0.9);
-    box-shadow: 0 0 6px rgba(0,0,0,0.45);
-    border-radius: 2px;
+    content: ''; position: absolute; background: rgba(255,255,255,0.9);
+    box-shadow: 0 0 6px rgba(0,0,0,0.45); border-radius: 2px;
   }
   #quarter-guide::before { left: 50%; top: 0; bottom: 0; width: 4px; transform: translateX(-50%); }
   #quarter-guide::after  { top: 50%; left: 0; right: 0; height: 4px; transform: translateY(-50%); }
 
-  /* --- Numberblock face --- */
+  /* One's face on the square */
   #face {
-    position: absolute;
-    top: 0; left: 0;
-    width: var(--face);
-    height: var(--face);
-    z-index: 6;
-    pointer-events: none;
-    transition: width 0.7s ease, height 0.7s ease;
+    position: absolute; top: 0; left: 0;
+    width: var(--face); height: var(--face);
+    z-index: 6; pointer-events: none;
+    transition: width 0.65s ease, height 0.65s ease;
   }
+
+  /* --- whole-number stage --- */
+  #whole {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 18px;
+    max-width: 100%;
+    max-height: 100%;
+  }
+  .wgroup { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .wgrid  { display: grid; filter: drop-shadow(0 8px 12px rgba(0,0,0,0.3)); }
+  .wlabel { font-size: clamp(12px, 1.6vw, 20px); font-weight: 900; color: #fff;
+            text-shadow: 2px 2px 3px rgba(0,0,0,0.35); }
+  .wplus  { align-self: center; font-size: clamp(20px,3vw,44px); font-weight: 900;
+            color: #FFD700; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); padding-bottom: 22px; }
+
+  .wcell {
+    border-radius: 3px;
+    border: 2px solid rgba(0,0,0,0.2);
+    position: relative;
+    opacity: 0;
+    transform: translateY(-40px) scale(0.6);
+    transition: opacity 0.25s ease, transform 0.35s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  .wcell.show { opacity: 1; transform: none; }
+  .wcell::after {
+    content: ''; position: absolute; top: 0; left: 0; right: 55%; bottom: 55%;
+    background: rgba(255,255,255,0.22); border-radius: 3px 0 0 0; pointer-events: none;
+  }
+
+  /* --- shared face (used on square and whole blocks) --- */
+  .nb-face { position: absolute; inset: 0; z-index: 3; pointer-events: none; overflow: visible; }
   .nb-eye {
-    width: 22%; height: 28%;
-    background: white;
-    border-radius: 50%;
-    position: absolute;
-    top: 22%;
+    width: 22%; height: 28%; background: white; border-radius: 50%;
+    position: absolute; top: 22%;
     display: flex; align-items: center; justify-content: center;
     box-shadow: 0 0 2px rgba(0,0,0,0.3);
   }
-  .nb-eye::after {
-    content: '';
-    width: 45%; height: 45%;
-    background: #222;
-    border-radius: 50%;
-  }
+  .nb-eye::after { content: ''; width: 45%; height: 45%; background: #222; border-radius: 50%; }
   .nb-eye-left  { left: 20%; }
   .nb-eye-right { right: 20%; }
+  .nb-eye-single { width: 34%; height: 42%; left: 50%; top: 25%; transform: translateX(-50%); }
+  .nb-eye-single::after { width: 42%; height: 42%; }
   .nb-mouth {
-    position: absolute;
-    bottom: 24%; left: 50%;
-    transform: translateX(-50%);
-    width: 30%; height: 16%;
-    border: 3px solid #333;
-    border-top: none;
-    border-radius: 0 0 60% 60%;
-    background: rgba(255,255,255,0.15);
+    position: absolute; bottom: 22%; left: 50%; transform: translateX(-50%);
+    width: 30%; height: 16%; border: 3px solid #333; border-top: none;
+    border-radius: 0 0 60% 60%; background: rgba(255,255,255,0.15);
   }
 
-  /* --- Fraction equivalence --- */
-  #fraction {
-    font-size: clamp(20px, 5vw, 40px);
-    font-weight: 900;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-    text-align: center;
-    min-height: 1.3em;
-    margin: 4px 0 2px;
-  }
-  #fraction .frac { color: #fff; }
-  #fraction .reduced { color: #7CFF9B; }
-  #fraction .eq { color: #FFD700; margin: 0 6px; }
-
-  #breakdown {
-    font-size: clamp(14px, 3vw, 22px);
-    font-weight: 700;
-    min-height: 1.4em;
-    text-align: center;
-  }
-  #breakdown .t { color: #FF8A8A; }
-  #breakdown .h { color: #FFE873; }
-  #breakdown .q { color: #FFFFFF; }
-
-  /* --- Controls --- */
+  /* ===== controls ===== */
   #controls {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 10px;
-    margin-top: 8px;
-    width: 100%;
-    max-width: 640px;
+    flex: 0 0 auto;
+    display: flex; flex-direction: column; align-items: center; gap: 7px;
   }
-
-  #entry {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-  }
+  #entry { display: flex; gap: 8px; align-items: center; }
   #num-input {
-    font-size: clamp(20px, 5vw, 30px);
-    font-weight: 800;
-    text-align: center;
-    width: min(52vw, 230px);
-    padding: 8px 12px;
-    border: 3px solid #FFD700;
-    border-radius: 12px;
-    outline: none;
-    background: rgba(255,255,255,0.95);
-    color: #333;
+    font-size: clamp(18px, 3vw, 28px); font-weight: 800; text-align: center;
+    width: min(60vw, 300px); padding: 7px 12px;
+    border: 3px solid #FFD700; border-radius: 12px; outline: none;
+    background: rgba(255,255,255,0.96); color: #333;
   }
-  #num-input::placeholder { color: #999; font-weight: 600; }
+  #num-input::placeholder { color: #999; font-weight: 600; font-size: 0.8em; }
   #go {
-    font-size: clamp(18px, 4vw, 26px);
-    font-weight: 900;
-    color: white;
-    background: var(--red);
-    border: none;
-    border-radius: 12px;
-    padding: 9px 20px;
-    cursor: pointer;
-    box-shadow: 0 3px 0 #9a0f14;
+    font-size: clamp(16px, 2.6vw, 24px); font-weight: 900; color: white;
+    background: var(--red); border: none; border-radius: 12px; padding: 8px 18px;
+    cursor: pointer; box-shadow: 0 3px 0 #9a0f14;
   }
   #go:active { transform: translateY(2px); box-shadow: 0 1px 0 #9a0f14; }
-
-  #presets {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    justify-content: center;
-  }
+  #presets { display: flex; flex-wrap: wrap; gap: 7px; justify-content: center; }
   .chip {
-    font-size: clamp(15px, 3.4vw, 22px);
-    font-weight: 800;
-    color: #4a2c73;
-    background: #FFD700;
-    border: none;
-    border-radius: 999px;
-    padding: 8px 16px;
-    cursor: pointer;
-    box-shadow: 0 3px 0 #b89b00;
-    transition: transform 0.1s, box-shadow 0.1s;
+    font-size: clamp(13px, 2.2vw, 20px); font-weight: 800; color: #4a2c73;
+    background: #FFD700; border: none; border-radius: 999px; padding: 6px 14px;
+    cursor: pointer; box-shadow: 0 3px 0 #b89b00; transition: transform 0.1s, box-shadow 0.1s;
   }
   .chip:hover { transform: translateY(-2px); }
   .chip:active { transform: translateY(2px); box-shadow: 0 1px 0 #b89b00; }
   .chip.tour { background: #7CFF9B; box-shadow: 0 3px 0 #3aa055; color: #164d29; }
   .chip.tour.on { background: #ff8a8a; box-shadow: 0 3px 0 #b34a4a; color: #5a1616; }
   .chip.reset { background: #ffffff; box-shadow: 0 3px 0 #b0b0c0; color: #444; }
-  .hint { font-size: 13px; opacity: 0.85; text-align: center; }
+
+  /* narrow screens: stack info above the stage, keep everything on screen */
+  @media (max-width: 700px), (max-aspect-ratio: 3/4) {
+    #main { flex-direction: column; gap: 6px; }
+    #info {
+      width: 100%; flex-direction: row; flex-wrap: wrap; align-items: baseline;
+      justify-content: center; text-align: center; gap: 4px 12px; padding-left: 0;
+    }
+    #decimal-display { font-size: clamp(40px, 15vw, 90px); margin: 0; }
+    #subtitle { width: 100%; min-height: 1.4em; }
+    #fraction { margin-top: 0; }
+    #breakdown { width: 100%; }
+    #title { width: 100%; }
+  }
 </style>
 </head>
 <body>
 
-<div id="title">Numberblocks One = 100 tiny pieces</div>
-<div id="decimal-display">1</div>
-<div id="subtitle">This is <b>One</b>. Type a number to see it split into pieces!</div>
+<div id="main">
+  <div id="info">
+    <div id="title">Numberblocks</div>
+    <div id="decimal-display">1</div>
+    <div id="subtitle">Type a number — a whole number like <b>102</b>, or a decimal like <b>0.42</b>.</div>
+    <div id="fraction"></div>
+    <div id="breakdown"></div>
+  </div>
 
-<div id="stage-wrap">
-  <div id="square">
-    <div id="grid"></div>
-    <div id="quarter-guide"></div>
-    <div id="face">
-      <div class="nb-eye nb-eye-left"></div>
-      <div class="nb-eye nb-eye-right"></div>
-      <div class="nb-mouth"></div>
+  <div id="stage-wrap">
+    <div id="square">
+      <div id="grid"></div>
+      <div id="quarter-guide"></div>
+      <div id="face">
+        <div class="nb-eye nb-eye-single"></div>
+        <div class="nb-mouth"></div>
+      </div>
     </div>
+    <div id="whole" class="hidden"></div>
   </div>
 </div>
 
-<div id="fraction"></div>
-<div id="breakdown"></div>
-
 <div id="controls">
   <div id="entry">
-    <input id="num-input" type="text" inputmode="decimal"
-      placeholder="type any number, e.g. 0.42" spellcheck="false" />
+    <input id="num-input" type="text" inputmode="text"
+      placeholder="type e.g. 102, 0.42, 3/4, 51*2" spellcheck="false"
+      autocomplete="off" autocorrect="off" autocapitalize="off" />
     <button id="go">Show!</button>
   </div>
-  <div class="hint">Any decimal from 0 to 1 — or a fraction like 3/4, or a percent like 60%</div>
   <div id="presets">
+    <button class="chip" data-v="1">1</button>
+    <button class="chip" data-v="7">7</button>
+    <button class="chip" data-v="100">100</button>
+    <button class="chip" data-v="102">102</button>
     <button class="chip" data-v="0.5">0.5</button>
-    <button class="chip" data-v="0.1">0.1</button>
-    <button class="chip" data-v="0.01">0.01</button>
     <button class="chip" data-v="0.25">0.25</button>
     <button class="chip" data-v="0.75">0.75</button>
-    <button class="chip" data-v="0.9">0.9</button>
-    <button class="chip tour" id="tour-btn">▶ Play tour</button>
-    <button class="chip reset" id="reset-btn">↺ Back to One</button>
+    <button class="chip" data-v="0.01">0.01</button>
+    <button class="chip tour" id="tour-btn">▶ Tour</button>
+    <button class="chip reset" id="reset-btn">↺ Reset</button>
   </div>
 </div>
 
@@ -319,241 +318,389 @@
 const SERVER = window.location.origin;
 function serverLog(entry) {
   try {
-    fetch(`${SERVER}/log`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(entry),
-    }).catch(() => {});
+    fetch(`${SERVER}/log`, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(entry) }).catch(() => {});
   } catch {}
 }
 
-// ===================== BUILD THE 100-CELL GRID =====================
-// Grid coordinates: col 0..9 left->right, row 0..9 bottom->top.
-// cellAt(col,row) returns the DOM cell for that coordinate.
-const grid = document.getElementById('grid');
-const square = document.getElementById('square');
-const cellMap = {}; // "col,row" -> element
+// ===================== NUMBERBLOCKS COLORS (show-accurate, ported) =====================
+const BASE_COLORS = { 1:'#DE151D',2:'#E89223',3:'#E6C40C',4:'#38B500',5:'#23B0DB',
+  6:'#5A35C3',7:'rainbow',8:'#FD40A4',9:'grey3',10:'#EEEEEE' };
+const TENS_COLORS = { 1:'#EEEEEE',2:'#F4A0A0',3:'#F5E6A0',4:'#B8F0A0',5:'#A0E4F0',
+  6:'#C4A0F0',7:'rainbow-light',8:'#F0A0D4',9:'#C4C8CB',10:'#F4A0A0' };
+const TENS_BORDERS = { 1:'#DE151D',2:'#DE151D',3:'#C4A000',4:'#2A8000',5:'#1A8AAA',
+  6:'#4A2A9A',7:'#AA77CC',8:'#CC70A4',9:'#999999',10:'#DE151D' };
+const RAINBOW = ['#DE151D','#E89223','#E6C40C','#38B500','#23B0DB','#4B0082','#8B00FF'];
+const RAINBOW_LIGHT = ['#F4A0A0','#F5CCA0','#F5E6A0','#B8F0A0','#A0E4F0','#B0A0D0','#D0A0F0'];
+const GREY_SHADES = ['#8A8B8F','#A5A9AC','#C4C8CB'];
 
-for (let col = 0; col < 10; col++) {
+function getBlockColorAndBorder(n, i) {
+  if (n <= 10) {
+    if (n === 7) return { bg: RAINBOW[i % RAINBOW.length], border: null };
+    if (n === 9) return { bg: GREY_SHADES[i % 3], border: null };
+    if (n === 10) return { bg: '#EEEEEE', border: '#DE151D' };
+    return { bg: BASE_COLORS[n], border: null };
+  }
+  const tensDigit = Math.floor(n / 10), onesDigit = n % 10, tensCount = tensDigit * 10;
+  if (onesDigit === 0 || i < tensCount) {
+    const td = tensDigit;
+    if (td === 7) return { bg: RAINBOW_LIGHT[i % RAINBOW_LIGHT.length], border: TENS_BORDERS[7] };
+    if (td === 9) return { bg: '#C4C8CB', border: TENS_BORDERS[9] };
+    return { bg: TENS_COLORS[td], border: TENS_BORDERS[td] };
+  } else {
+    const oi = i - tensCount;
+    if (onesDigit === 7) return { bg: RAINBOW[oi % RAINBOW.length], border: null };
+    if (onesDigit === 9) return { bg: GREY_SHADES[oi % 3], border: null };
+    return { bg: BASE_COLORS[onesDigit], border: null };
+  }
+}
+
+// Break a number into place-value parts (largest first)
+function getPlaceParts(n) {
+  const H = Math.floor(n / 100), T = Math.floor(n / 10) % 10, O = n % 10;
+  const parts = [];
+  if (H > 0) parts.push({ kind: 'hundreds', value: H * 100, digit: H });
+  if (T > 0) parts.push({ kind: 'tens', value: T * 10, digit: T });
+  if (O > 0) parts.push({ kind: 'ones', value: O, digit: O });
+  return parts;
+}
+// base-ten block dims: ones 1xd, tens dx10 rods, hundreds (d*10)x10 flats
+function placeDims(p) {
+  if (p.kind === 'ones') return { cols: 1, rows: p.digit };
+  if (p.kind === 'tens') return { cols: p.digit, rows: 10 };
+  return { cols: p.digit * 10, rows: 10 };
+}
+function placeColorFn(p) {
+  if (p.kind === 'hundreds') return (i) => getBlockColorAndBorder(p.digit, i);
+  return (i) => getBlockColorAndBorder(p.value, i);
+}
+
+// ===================== INPUT PARSING (math, fractions, percents) =====================
+// Accepts + - * / ( ), ×, ÷, decimals, fractions (a/b), percents (60%).
+function evalExpr(raw) {
+  let s = String(raw).trim().toLowerCase();
+  if (s === '') return null;
+  s = s.replace(/×/g, '*').replace(/÷/g, '/').replace(/\s+/g, '');
+  s = s.replace(/(\d+(?:\.\d+)?)%/g, '($1/100)');   // percent -> /100
+  if (!/^[0-9.+\-*/()]+$/.test(s)) return null;      // whitelist only
+  if (/[+\-*/.]{3,}/.test(s)) return null;           // reject obvious garbage
+  try {
+    const v = Function('"use strict";return (' + s + ')')();
+    return (typeof v === 'number' && isFinite(v)) ? v : null;
+  } catch { return null; }
+}
+
+const MAX_WHOLE = 1000;
+// Returns { mode:'whole'|'decimal', k, n, exact } or null.
+function routeValue(val) {
+  if (val == null || !isFinite(val) || val < 0) return null;
+  if (val >= 1) {
+    let k = Math.round(val);
+    if (k > MAX_WHOLE) k = MAX_WHOLE;
+    if (Number.isInteger(val) && val <= MAX_WHOLE)
+      return { mode: 'whole', k, exact: true };
+    return { mode: 'whole', k, exact: Number.isInteger(val) };
+  }
+  // 0 <= val < 1
+  let n = Math.round(val * 100);
+  if (n >= 100) return { mode: 'whole', k: 1, exact: true };
+  const exact = Math.abs(val * 100 - n) < 1e-9;
+  return { mode: 'decimal', n, exact };
+}
+
+// ===================== SHARED HELPERS =====================
+function gcd(a, b) { return b === 0 ? a : gcd(b, a % b); }
+function fmtDecimal(n) { return n === 0 ? '0' : '0.' + String(n).padStart(2, '0'); }
+function faceHTML(single) {
+  return single
+    ? `<div class="nb-face"><div class="nb-eye nb-eye-single"></div><div class="nb-mouth"></div></div>`
+    : `<div class="nb-face"><div class="nb-eye nb-eye-left"></div><div class="nb-eye nb-eye-right"></div><div class="nb-mouth"></div></div>`;
+}
+
+// ===================== DOM =====================
+const square    = document.getElementById('square');
+const gridEl     = document.getElementById('grid');
+const guideEl    = document.getElementById('quarter-guide');
+const wholeEl    = document.getElementById('whole');
+const stageWrap  = document.getElementById('stage-wrap');
+const decimalEl  = document.getElementById('decimal-display');
+const subtitleEl = document.getElementById('subtitle');
+const fractionEl = document.getElementById('fraction');
+const breakEl    = document.getElementById('breakdown');
+
+// ===================== BUILD 100-CELL DECIMAL GRID =====================
+// col 0..9 left->right, row 0..9 bottom->top
+const cellMap = {};
+for (let col = 0; col < 10; col++)
   for (let row = 0; row < 10; row++) {
     const cell = document.createElement('div');
     cell.className = 'cell';
-    cell.style.gridColumn = (col + 1);
-    cell.style.gridRow = (10 - row);   // row 0 = bottom (gridRow 10)
-    grid.appendChild(cell);
+    cell.style.gridColumn = col + 1;
+    cell.style.gridRow = 10 - row;
+    gridEl.appendChild(cell);
     cellMap[col + ',' + row] = cell;
   }
-}
-const cellAt = (col, row) => cellMap[col + ',' + row];
+const cellAt = (c, r) => cellMap[c + ',' + r];
 const allCells = Object.values(cellMap);
 
-// ===================== FILL PLANS =====================
-// Return an ordered list of { col, row, cat } cells to light up for n hundredths.
-// - Quarters (n divisible by 25): fill whole 5x5 quadrants, so 0.25 is a corner
-//   square, 0.5 is the left half, 0.75 is three quadrants (an L).
-// - Everything else: fill full columns (each = one tenth) left->right, then the
-//   leftover hundredths in the next column.
 const QUADRANTS = [
-  { c0: 0, c1: 4, r0: 0, r1: 4 }, // bottom-left
-  { c0: 0, c1: 4, r0: 5, r1: 9 }, // top-left     (BL+TL = left half)
-  { c0: 5, c1: 9, r0: 0, r1: 4 }, // bottom-right
-  { c0: 5, c1: 9, r0: 5, r1: 9 }, // top-right
+  { c0:0,c1:4,r0:0,r1:4 }, // BL
+  { c0:0,c1:4,r0:5,r1:9 }, // TL  (BL+TL = left half)
+  { c0:5,c1:9,r0:0,r1:4 }, // BR
+  { c0:5,c1:9,r0:5,r1:9 }, // TR
 ];
-
 function buildFillPlan(n) {
   const plan = [];
   if (n > 0 && n % 25 === 0) {
-    const count = n / 25; // 1..4 quadrants
-    for (let q = 0; q < count; q++) {
+    for (let q = 0; q < n / 25; q++) {
       const Q = QUADRANTS[q];
       for (let col = Q.c0; col <= Q.c1; col++)
-        for (let row = Q.r0; row <= Q.r1; row++)
-          plan.push({ col, row, cat: 'quarter' });
+        for (let row = Q.r0; row <= Q.r1; row++) plan.push({ col, row, cat: 'quarter' });
     }
     plan.isQuarter = true;
     return plan;
   }
-  const fullCols = Math.floor(n / 10);
-  const rem = n % 10;
+  const fullCols = Math.floor(n / 10), rem = n % 10;
   for (let col = 0; col < fullCols; col++)
-    for (let row = 0; row < 10; row++)
-      plan.push({ col, row, cat: 'tenth' });
-  for (let row = 0; row < rem; row++)
-    plan.push({ col: fullCols, row, cat: 'hundredth' });
+    for (let row = 0; row < 10; row++) plan.push({ col, row, cat: 'tenth' });
+  for (let row = 0; row < rem; row++) plan.push({ col: fullCols, row, cat: 'hundredth' });
   return plan;
 }
 
-// ===================== HELPERS =====================
-function gcd(a, b) { return b === 0 ? a : gcd(b, a % b); }
-
-// Returns { n, exact } where n = hundredths (0..100), exact = typed value landed
-// exactly on a hundredth. Accepts decimals, fractions (3/4), and percents (60%).
-function parseValue(raw) {
-  if (raw == null) return null;
-  let s = String(raw).trim().toLowerCase();
-  if (s === '') return null;
-  let val;
-  if (s.includes('/')) {
-    const [a, b] = s.split('/').map(x => parseFloat(x));
-    if (!isFinite(a) || !isFinite(b) || b === 0) return null;
-    val = a / b;
-  } else if (s.includes('%')) {
-    val = parseFloat(s) / 100;
-  } else {
-    val = parseFloat(s);
-  }
-  if (!isFinite(val)) return null;
-  let n = Math.round(val * 100);
-  if (n < 0) n = 0;
-  if (n > 100) n = 100;
-  const exact = Math.abs(val * 100 - n) < 1e-9;
-  return { n, exact };
-}
-
-function fmtDecimal(n) {
-  if (n === 100) return '1';
-  if (n === 0) return '0';
-  return '0.' + String(n).padStart(2, '0');
-}
-
 // ===================== STATE =====================
-let divided = false;   // has the block been split into 100 yet?
-let token = 0;         // cancels an in-flight animation if a new one starts
-
-const decimalEl   = document.getElementById('decimal-display');
-const subtitleEl  = document.getElementById('subtitle');
-const fractionEl  = document.getElementById('fraction');
-const breakdownEl = document.getElementById('breakdown');
-const gridEl      = document.getElementById('grid');
-const guideEl     = document.getElementById('quarter-guide');
-
+let mode = 'idle';      // 'idle' | 'decimal' | 'whole'
+let divided = false;    // decimal square has grown & split into 100
+let token = 0;
 const sleep = (ms, tk) => new Promise(res => setTimeout(() => res(tk === token), ms));
 
-function clearAllCells() {
-  for (const c of allCells) c.className = 'cell empty';
+function sizeSquare() {
+  const w = stageWrap.clientWidth, h = stageWrap.clientHeight;
+  const s = Math.max(120, Math.floor(Math.min(w, h) * 0.94));
+  document.documentElement.style.setProperty('--sq', s + 'px');
 }
+
+// ===================== DECIMAL RENDER =====================
+function clearAllCells() { for (const c of allCells) c.className = 'cell empty'; }
 
 function showFraction(n) {
-  if (n === 100) {
-    fractionEl.innerHTML = `<span class="frac">100/100</span><span class="eq">=</span><span class="reduced">1 whole</span>`;
-    return;
-  }
   if (n === 0) { fractionEl.innerHTML = `<span class="reduced">0</span>`; return; }
-  const g = gcd(n, 100);
-  const rn = n / g, rd = 100 / g;
-  const reduced = (rd === 1) ? `<span class="reduced">${rn}</span>` : `<span class="reduced">${rn}/${rd}</span>`;
-  fractionEl.innerHTML =
-    `<span class="frac">${n}/100</span>` +
-    (g > 1 ? `<span class="eq">=</span>${reduced}` : '');
+  const g = gcd(n, 100), rn = n / g, rd = 100 / g;
+  const reduced = rd === 1 ? `<span class="reduced">${rn}</span>` : `<span class="reduced">${rn}/${rd}</span>`;
+  fractionEl.innerHTML = `<span class="frac">${n}/100</span>` + (g > 1 ? `<span class="eq">=</span>${reduced}` : '');
 }
-
-function showBreakdown(n, isQuarter) {
-  if (n === 0) { breakdownEl.innerHTML = ''; return; }
+function showDecimalBreakdown(n, isQuarter) {
+  if (n === 0) { breakEl.innerHTML = ''; return; }
   if (isQuarter) {
     const q = n / 25;
-    breakdownEl.innerHTML = `<span class="q">${q} quarter${q > 1 ? 's' : ''} of the square</span>`;
+    breakEl.innerHTML = `<span class="q">${q} quarter${q > 1 ? 's' : ''} of the square</span>`;
     return;
   }
-  const tenths = Math.floor(n / 10);
-  const hundredths = n % 10;
-  const parts = [];
-  if (tenths > 0) parts.push(`<span class="t">${tenths} tenth${tenths > 1 ? 's' : ''}</span>`);
-  if (hundredths > 0) parts.push(`<span class="h">${hundredths} hundredth${hundredths > 1 ? 's' : ''}</span>`);
-  breakdownEl.innerHTML = parts.join(' + ');
+  const t = Math.floor(n / 10), h = n % 10, parts = [];
+  if (t) parts.push(`<span class="t">${t} tenth${t > 1 ? 's' : ''}</span>`);
+  if (h) parts.push(`<span class="h">${h} hundredth${h > 1 ? 's' : ''}</span>`);
+  breakEl.innerHTML = parts.join(' + ');
 }
 
-// ===================== MAIN ANIMATION =====================
-async function demonstrate(n, exact = true) {
-  token++;
-  const tk = token;
-
-  decimalEl.textContent = fmtDecimal(n);
-  fractionEl.innerHTML = '';
-  breakdownEl.innerHTML = '';
-  serverLog({ type: 'demo', value: fmtDecimal(n), hundredths: n });
-
-  const plan = buildFillPlan(n);
-  const isQuarter = !!plan.isQuarter;
-
-  // --- Phase 1: enlarge + divide (only the first time) ---
-  if (!divided) {
-    subtitleEl.textContent = 'Watch One grow BIG...';
-    square.classList.add('enlarged');
-    if (!(await sleep(950, tk))) return;
-
-    subtitleEl.innerHTML = 'One splits into <b>100</b> equal pieces — each piece is <b>0.01</b>';
-    document.documentElement.style.setProperty('--gap', '3px');
-    gridEl.classList.add('divided');
-    document.documentElement.style.setProperty('--face', '10%'); // face shrinks to one cell
-    divided = true;
-    if (!(await sleep(1100, tk))) return;
-  }
-
-  guideEl.classList.toggle('on', isQuarter);
-  clearAllCells();
-  if (!(await sleep(90, tk))) return;
-
-  // Subtitle describing the fill
-  if (n === 0) {
-    subtitleEl.innerHTML = '<b>Zero</b> — none of the 100 pieces';
-  } else if (n === 100) {
-    subtitleEl.innerHTML = 'All 100 pieces together make <b>1 whole</b> again!';
-  } else if (isQuarter) {
-    const q = n / 25;
-    subtitleEl.innerHTML = `Shade <b>${q}</b> quarter${q > 1 ? 's' : ''} of the whole square`;
-  } else {
-    const tenths = Math.floor(n / 10), hundredths = n % 10;
-    if (tenths && hundredths)
-      subtitleEl.innerHTML = `Fill <b>${tenths}</b> whole column${tenths > 1 ? 's' : ''} (tenths) + <b>${hundredths}</b> more piece${hundredths > 1 ? 's' : ''}`;
-    else if (tenths)
-      subtitleEl.innerHTML = `Fill <b>${tenths}</b> whole column${tenths > 1 ? 's' : ''} of ten`;
-    else
-      subtitleEl.innerHTML = `Fill just <b>${hundredths}</b> tiny piece${hundredths > 1 ? 's' : ''}`;
-  }
-  if (!exact) subtitleEl.innerHTML += ` &nbsp;<span style="opacity:.85">(rounded to the nearest hundredth)</span>`;
-
-  // --- Phase 2: fill the planned cells one at a time ---
-  const step = plan.length > 60 ? 16 : 30;
-  for (const p of plan) {
-    cellAt(p.col, p.row).className = 'cell filling ' + p.cat;
-    if (!(await sleep(step, tk))) return;
-  }
-
-  showFraction(n);
-  showBreakdown(n, isQuarter);
-}
-
-function backToOne() {
-  token++;
+function resetSquareToOne() {
   divided = false;
   square.classList.remove('enlarged');
   gridEl.classList.remove('divided');
   guideEl.classList.remove('on');
   document.documentElement.style.setProperty('--gap', '0px');
   document.documentElement.style.setProperty('--face', '100%');
+  document.querySelector('#face').innerHTML =
+    '<div class="nb-eye nb-eye-single"></div><div class="nb-mouth"></div>';
   for (const c of allCells) c.className = 'cell';
-  decimalEl.textContent = '1';
+}
+
+async function demonstrateDecimal(n, exact) {
+  token++; const tk = token;
+  // make sure decimal stage is the one showing
+  wholeEl.classList.add('hidden');
+  square.classList.remove('hidden');
+  sizeSquare();
+
+  decimalEl.textContent = fmtDecimal(n);
+  fractionEl.innerHTML = ''; breakEl.innerHTML = '';
+  serverLog({ type: 'demo', kind: 'decimal', value: fmtDecimal(n), hundredths: n });
+
+  const plan = buildFillPlan(n);
+  const isQuarter = !!plan.isQuarter;
+
+  // Phase 1: grow the small One block and split it into 100 (whenever not already divided)
+  if (!divided) {
+    resetSquareToOne();
+    if (!(await sleep(30, tk))) return;
+    subtitleEl.innerHTML = 'Watch <b>One</b> grow big...';
+    square.classList.add('enlarged');
+    if (!(await sleep(880, tk))) return;
+    subtitleEl.innerHTML = 'One splits into <b>100</b> equal pieces — each is <b>0.01</b>';
+    document.documentElement.style.setProperty('--gap', '3px');
+    gridEl.classList.add('divided');
+    document.documentElement.style.setProperty('--face', '10%');
+    divided = true;
+    if (!(await sleep(1000, tk))) return;
+  }
+
+  guideEl.classList.toggle('on', isQuarter);
+  clearAllCells();
+  if (!(await sleep(80, tk))) return;
+
+  if (n === 0) subtitleEl.innerHTML = '<b>Zero</b> — none of the 100 pieces';
+  else if (isQuarter) { const q = n / 25; subtitleEl.innerHTML = `Shade <b>${q}</b> quarter${q > 1 ? 's' : ''} of the whole square`; }
+  else {
+    const t = Math.floor(n / 10), h = n % 10;
+    if (t && h) subtitleEl.innerHTML = `Fill <b>${t}</b> column${t > 1 ? 's' : ''} (tenths) + <b>${h}</b> more piece${h > 1 ? 's' : ''}`;
+    else if (t) subtitleEl.innerHTML = `Fill <b>${t}</b> whole column${t > 1 ? 's' : ''} of ten`;
+    else subtitleEl.innerHTML = `Fill just <b>${h}</b> tiny piece${h > 1 ? 's' : ''}`;
+  }
+  if (!exact) subtitleEl.innerHTML += ` <span style="opacity:.85">(rounded to the nearest hundredth)</span>`;
+
+  const step = plan.length > 60 ? 15 : 28;
+  for (const p of plan) {
+    cellAt(p.col, p.row).className = 'cell filling ' + p.cat;
+    if (!(await sleep(step, tk))) return;
+  }
+  showFraction(n);
+  showDecimalBreakdown(n, isQuarter);
+  mode = 'decimal';
+}
+
+// ===================== WHOLE-NUMBER RENDER =====================
+function wholeCellSize(parts) {
+  const availW = stageWrap.clientWidth * 0.95;
+  const availH = stageWrap.clientHeight * 0.92;
+  const GAP = 2, GROUP = 18;
+  const totalCols = parts.reduce((s, p) => s + placeDims(p).cols, 0);
+  const maxRows = Math.max(...parts.map(p => placeDims(p).rows), 1);
+  const groupGaps = (parts.length - 1) * (GROUP + 30); // group gaps + "+" symbols + labels slack
+  let cs = Math.floor(Math.min(availH / maxRows, (availW - groupGaps) / totalCols - GAP));
+  return Math.max(4, Math.min(cs, 40));
+}
+
+function renderWhole(k, exact) {
+  token++; const tk = token;
+  square.classList.add('hidden');
+  wholeEl.classList.remove('hidden');
+  wholeEl.innerHTML = '';
+  mode = 'whole';
+
+  decimalEl.textContent = String(k);
   fractionEl.innerHTML = '';
-  breakdownEl.innerHTML = '';
-  subtitleEl.innerHTML = 'This is <b>One</b>. Type a number to see it split into pieces!';
+  serverLog({ type: 'demo', kind: 'whole', value: k });
+
+  const parts = getPlaceParts(k);
+  if (parts.length === 0) {           // k === 0
+    subtitleEl.innerHTML = '<b>Zero</b> — no blocks at all!';
+    breakEl.innerHTML = '';
+    return;
+  }
+  const cs = wholeCellSize(parts);
+  const GAP = 2;
+  const single = (k === 1);
+  let firstTopLeft = null;
+  const allWCells = [];
+
+  parts.forEach((part, pi) => {
+    if (pi > 0) {
+      const plus = document.createElement('div');
+      plus.className = 'wplus'; plus.textContent = '+';
+      wholeEl.appendChild(plus);
+    }
+    const group = document.createElement('div');
+    group.className = 'wgroup';
+    const g = document.createElement('div');
+    g.className = 'wgrid';
+    const { cols, rows } = placeDims(part);
+    g.style.gridTemplateColumns = `repeat(${cols}, ${cs}px)`;
+    g.style.gridTemplateRows = `repeat(${rows}, ${cs}px)`;
+    g.style.gap = GAP + 'px';
+    const colorFn = placeColorFn(part);
+    let idx = 0, topLeft = null;
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const cell = document.createElement('div');
+        cell.className = 'wcell';
+        cell.style.width = cs + 'px'; cell.style.height = cs + 'px';
+        const { bg, border } = colorFn(idx);
+        cell.style.background = bg;
+        if (border) cell.style.borderColor = border;
+        cell.style.gridRow = rows - r;
+        cell.style.gridColumn = c + 1;
+        if (rows - r === 1 && c === 0) topLeft = cell;
+        g.appendChild(cell);
+        allWCells.push(cell);
+        idx++;
+      }
+    }
+    if (pi === 0) firstTopLeft = topLeft;
+    const lbl = document.createElement('div');
+    lbl.className = 'wlabel'; lbl.textContent = part.value;
+    group.appendChild(g);
+    group.appendChild(lbl);
+    wholeEl.appendChild(group);
+  });
+
+  // one face on the whole composition
+  if (firstTopLeft) {
+    firstTopLeft.style.overflow = 'visible';
+    firstTopLeft.innerHTML = faceHTML(single);
+  }
+
+  // grow-in: stagger the blocks
+  const step = Math.max(6, Math.min(24, Math.floor(600 / allWCells.length)));
+  allWCells.forEach((cell, i) => {
+    setTimeout(() => { if (tk === token) cell.classList.add('show'); }, 40 + i * step);
+  });
+
+  // text
+  if (k === 1) subtitleEl.innerHTML = 'This is <b>One</b> — a single block.';
+  else if (parts.length === 1) subtitleEl.innerHTML = `That's <b>${k}</b> as a Numberblock!`;
+  else subtitleEl.innerHTML = `Built from place-value blocks — see how it breaks apart!`;
+  if (!exact) subtitleEl.innerHTML += ` <span style="opacity:.85">(rounded to a whole number)</span>`;
+  breakEl.innerHTML = parts.map(p => {
+    const cls = p.kind === 'hundreds' ? 'p' : p.kind === 'tens' ? 't' : 'h';
+    const unit = p.kind === 'hundreds' ? 'hundred' : p.kind === 'tens' ? 'ten' : 'one';
+    return `<span class="${cls}">${p.digit} ${unit}${p.digit > 1 ? 's' : ''}</span>`;
+  }).join(' + ');
+}
+
+// ===================== TOP-LEVEL ROUTER =====================
+function run(val, exact = true) {
+  const r = routeValue(val);
+  if (!r) { subtitleEl.textContent = 'Try 102, 0.42, 3/4, or 51*2'; return; }
+  if (r.mode === 'whole') renderWhole(r.k, r.exact);
+  else demonstrateDecimal(r.n, r.exact);
+}
+
+function backToOne() {
+  token++;
+  mode = 'idle';
+  wholeEl.classList.add('hidden'); wholeEl.innerHTML = '';
+  square.classList.remove('hidden');
+  resetSquareToOne();
+  sizeSquare();
+  decimalEl.textContent = '1';
+  fractionEl.innerHTML = ''; breakEl.innerHTML = '';
+  subtitleEl.innerHTML = 'Type a number — a whole number like <b>102</b>, or a decimal like <b>0.42</b>.';
 }
 
 // ===================== TOUR =====================
-const TOUR = ['0.5', '0.1', '0.01', '0.25', '0.75', '0.9', '0.33', '0.6'];
-let tourRunning = false;
-let tourTimer = null;
-
+const TOUR = ['0.5', '0.1', '0.01', '0.25', '0.75', '7', '100', '102', '0.33'];
+let tourRunning = false, tourTimer = null;
 async function runTour() {
   const btn = document.getElementById('tour-btn');
-  tourRunning = true;
-  btn.classList.add('on');
-  btn.textContent = '■ Stop tour';
+  tourRunning = true; btn.classList.add('on'); btn.textContent = '■ Stop';
   let i = 0;
   while (tourRunning) {
-    const p = parseValue(TOUR[i % TOUR.length]);
-    await demonstrate(p.n, p.exact);
+    const val = evalExpr(TOUR[i % TOUR.length]);
+    const r = routeValue(val);
+    if (r) {
+      if (r.mode === 'whole') renderWhole(r.k, r.exact);
+      else await demonstrateDecimal(r.n, r.exact);
+    }
     if (!tourRunning) break;
-    await new Promise(res => { tourTimer = setTimeout(res, 2600); });
+    await new Promise(res => { tourTimer = setTimeout(res, 2800); });
     i++;
   }
 }
@@ -561,38 +708,36 @@ function stopTour() {
   tourRunning = false;
   if (tourTimer) clearTimeout(tourTimer);
   const btn = document.getElementById('tour-btn');
-  btn.classList.remove('on');
-  btn.textContent = '▶ Play tour';
+  btn.classList.remove('on'); btn.textContent = '▶ Tour';
 }
 
 // ===================== WIRING =====================
 document.querySelectorAll('.chip[data-v]').forEach(btn => {
-  btn.addEventListener('click', () => {
-    stopTour();
-    const p = parseValue(btn.dataset.v);
-    if (p) demonstrate(p.n, p.exact);
-  });
+  btn.addEventListener('click', () => { stopTour(); run(evalExpr(btn.dataset.v)); });
 });
-
-document.getElementById('tour-btn').addEventListener('click', () => {
-  if (tourRunning) stopTour(); else runTour();
-});
-
-document.getElementById('reset-btn').addEventListener('click', () => {
-  stopTour();
-  backToOne();
-});
-
+document.getElementById('tour-btn').addEventListener('click', () => { tourRunning ? stopTour() : runTour(); });
+document.getElementById('reset-btn').addEventListener('click', () => { stopTour(); backToOne(); });
 function submitInput() {
   stopTour();
-  const p = parseValue(document.getElementById('num-input').value);
-  if (p) demonstrate(p.n, p.exact);
-  else subtitleEl.textContent = 'Try a number like 0.42, a fraction like 3/4, or 60%';
+  const raw = document.getElementById('num-input').value;
+  const val = evalExpr(raw);
+  if (val == null) { subtitleEl.textContent = 'Hmm — try 102, 0.42, 3/4, or 51*2'; return; }
+  run(val);
 }
 document.getElementById('go').addEventListener('click', submitInput);
-document.getElementById('num-input').addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') submitInput();
+document.getElementById('num-input').addEventListener('keydown', e => { if (e.key === 'Enter') submitInput(); });
+
+// relayout on resize (no re-animation)
+let rT = null;
+window.addEventListener('resize', () => {
+  clearTimeout(rT);
+  rT = setTimeout(() => {
+    sizeSquare();
+    if (mode === 'whole') { const k = parseInt(decimalEl.textContent, 10); if (k >= 0) renderWhole(k, true); }
+  }, 150);
 });
+
+sizeSquare();
 </script>
 </body>
 </html>

@@ -130,6 +130,16 @@
   .wcell.show { opacity: 1; transform: none; }
   .wcell::after { content: ''; position: absolute; top: 0; left: 0; right: 55%; bottom: 55%;
     background: rgba(255,255,255,0.22); border-radius: 3px 0 0 0; pointer-events: none; }
+  .wcell.subtracted { outline: 3px solid #fff; outline-offset: -1px; z-index: 3; }
+
+  /* Numberblocks dance gently at rest */
+  @keyframes idleBob {
+    0%,100% { transform: translateY(0) rotate(0deg); }
+    22% { transform: translateY(-5px) rotate(-1.6deg); }
+    50% { transform: translateY(0) rotate(0deg); }
+    72% { transform: translateY(-5px) rotate(1.6deg); }
+  }
+  .dancing { animation: idleBob 2.6s ease-in-out infinite; transform-origin: 50% 100%; }
 
   /* combine (a + b) animation */
   #combine { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; max-height: 100%; }
@@ -246,18 +256,18 @@
 <div id="controls">
   <div id="entry">
     <input id="num-input" type="text" inputmode="text"
-      placeholder="type e.g. 102, 0.42, 1.5, 3/4, 1+2" spellcheck="false"
+      placeholder="type e.g. 102, 1.5, 1+2, 10-3, 3=1+2" spellcheck="false"
       autocomplete="off" autocorrect="off" autocapitalize="off" />
     <button id="go">Show!</button>
   </div>
   <div id="presets">
     <button class="chip" data-v="25">25</button>
-    <button class="chip" data-v="34">34</button>
     <button class="chip" data-v="102">102</button>
     <button class="chip" data-v="1+2">1+2</button>
+    <button class="chip" data-v="10-3">10-3</button>
+    <button class="chip" data-v="3=1+2">3=1+2</button>
     <button class="chip" data-v="0.5">0.5</button>
     <button class="chip" data-v="0.25">0.25</button>
-    <button class="chip" data-v="0.75">0.75</button>
     <button class="chip" data-v="1.5">1.5</button>
     <button class="chip tour" id="tour-btn">▶ Tour</button>
     <button class="chip reset" id="reset-btn">↺ Reset</button>
@@ -384,6 +394,7 @@ function hundredsCell(d, i, r, c) {
   if (d === 7) { base = RAINBOW[i % 7]; pastel = RAINBOW_LIGHT[i % 7]; }
   else if (d === 9) { base = GREY_SHADES[i % 3]; pastel = '#D8DADC'; }
   else if (d === 10) { base = '#EEEEEE'; pastel = '#F7C6C6'; border = '#DE151D'; }
+  else if (d === 1) { base = '#DE151D'; pastel = '#FA8072'; }   // Hundred: salmon + red
   else { base = BASE_COLORS[d]; pastel = TENS_COLORS[d]; }
   return { bg: ((r + c) % 2 === 1) ? pastel : base, border };
 }
@@ -423,7 +434,33 @@ function parseBinary(raw) {
     case '*': result = a*b; break; case '/': result = a/b; break; }
   if (!Number.isInteger(result) || result < 1) return null;
   const sym = op === '*' ? '×' : op === '/' ? '÷' : op;
-  return { a, b, op: sym, result };
+  return { a, b, op: sym, opRaw: op, result };
+}
+
+// Equations: "a op b = c" (combine/subtract) or "c = a + b" (split). Returns a
+// descriptor or null. Splits only make sense for addition.
+function parseEquation(raw) {
+  let s = String(raw).trim().toLowerCase()
+    .replace(/×/g, '*').replace(/÷/g, '/').replace(/x/g, '*').replace(/\s+/g, '');
+  const m = s.match(/^([^=]+)=([^=]+)$/);
+  if (!m) return null;
+  const numRe = /^\d+$/, binRe = /^(\d+)([+\-*/])(\d+)$/;
+  const doOp = (bm) => { const a = +bm[1], b = +bm[3], op = bm[2];
+    const r = op === '+' ? a+b : op === '-' ? a-b : op === '*' ? a*b : a/b; return { a, b, op, r }; };
+  if (numRe.test(m[1]) && binRe.test(m[2])) {         // total = a + b  -> split
+    const e = doOp(m[2].match(binRe));
+    if (e.op !== '+' || +m[1] !== e.r) return null;
+    if (e.a < 1 || e.b < 1 || e.a > 100 || e.b > 100 || +m[1] > 200) return null;
+    return { type: 'split', total: +m[1], a: e.a, b: e.b, op: '+' };
+  }
+  if (numRe.test(m[2]) && binRe.test(m[1])) {         // a op b = c  -> combine/subtract
+    const e = doOp(m[1].match(binRe));
+    if (!Number.isInteger(e.r) || e.r < 1 || +m[2] !== e.r) return null;
+    if (e.a < 1 || e.b < 1 || e.a > 100 || e.b > 100) return null;
+    return { type: 'op', a: e.a, b: e.b, op: e.op, result: e.r,
+      sym: e.op === '*' ? '×' : e.op === '/' ? '÷' : e.op };
+  }
+  return null;
 }
 
 const MAX_WHOLE = 1000, MAX_MIXED = 50;
@@ -722,6 +759,7 @@ async function renderWhole(k, exact, combo) {
 
   const shapes = allShapes(k);
   const box = document.createElement('div');
+  box.className = 'dancing';
   box.style.cursor = shapes.length > 1 ? 'pointer' : 'default';
   box.title = shapes.length > 1 ? 'Tap to change shape' : '';
   box.addEventListener('click', rotateShape);
@@ -766,6 +804,13 @@ function renderMini(container, n) {
   if (topLeft) { topLeft.style.overflow = 'visible'; topLeft.innerHTML = faceHTML(n === 1); }
 }
 
+function mkOperand() {
+  const w = document.createElement('div'); w.className = 'op-wrap';
+  const g = document.createElement('div'); g.className = 'op-grid';
+  const l = document.createElement('div'); l.className = 'op-label';
+  w.appendChild(g); w.appendChild(l); return { w, g, l };
+}
+
 async function runCombine(a, opSym, b, result) {
   token++; const tk = token;
   showCombineStage(); combineEl.innerHTML = '';
@@ -775,13 +820,7 @@ async function runCombine(a, opSym, b, result) {
   subtitleEl.innerHTML = `Here comes <b>${a}</b>...`;
   serverLog({ type: 'demo', kind: 'combine', value: `${a}${opSym}${b}=${result}` });
 
-  const mk = () => {
-    const w = document.createElement('div'); w.className = 'op-wrap';
-    const g = document.createElement('div'); g.className = 'op-grid';
-    const l = document.createElement('div'); l.className = 'op-label';
-    w.appendChild(g); w.appendChild(l); return { w, g, l };
-  };
-  const left = mk(), right = mk();
+  const left = mkOperand(), right = mkOperand();
   left.l.textContent = a; right.l.textContent = b;
   const sym = document.createElement('div'); sym.className = 'op-sym'; sym.textContent = opSym;
   combineEl.append(left.w, sym, right.w);
@@ -800,6 +839,101 @@ async function runCombine(a, opSym, b, result) {
   left.w.style.opacity = '0'; right.w.style.opacity = '0';
   if (!(await sleep(450, tk))) return;
   await renderWhole(result, true, { a, op: opSym, b });   // shows result + equation
+}
+
+// Subtraction: a and b dance in; b lays over a, the overlap vanishes, leaving
+// the (often crooked) answer behind. e.g. 10 - 3 leaves a crooked 7.
+async function runSubtract(a, b, result) {
+  token++; const tk = token;
+  showWholeStage(); wholeEl.innerHTML = '';
+  wholeEl.style.display = 'flex'; wholeEl.style.alignItems = 'center';
+  wholeEl.style.justifyContent = 'center'; wholeEl.style.gap = '46px';
+  divided = false; mode = 'subtract';
+  decimalEl.textContent = `${a} − ${b}`;
+  fractionEl.innerHTML = ''; breakEl.innerHTML = '';
+  serverLog({ type: 'demo', kind: 'subtract', value: `${a}-${b}=${result}` });
+
+  const shA = allShapes(a), shB = allShapes(b);
+  const shapeA = shA[defaultShapeIndex(a, shA)], shapeB = shB[defaultShapeIndex(b, shB)];
+  const cs = Math.min(fitCellSize(a, shapeA), fitCellSize(b, shapeB), 40);
+
+  const boxA = document.createElement('div');
+  const boxB = document.createElement('div');
+  boxB.style.transition = 'transform 0.7s ease, opacity 0.5s ease';
+  wholeEl.append(boxA, boxB);
+  const { cells: cellsA } = buildShape(boxA, a, shapeA, cs);
+  const { cells: cellsB } = buildShape(boxB, b, shapeB, cs);
+
+  cellsA.forEach((c, i) => setTimeout(() => { if (tk === token) c.classList.add('show'); }, 20 + i * 14));
+  subtitleEl.innerHTML = `Here's <b>${a}</b>...`;
+  if (!(await sleep(20 + cellsA.length * 14 + 350, tk))) return;
+
+  subtitleEl.innerHTML = `...now take away <b>${b}</b>`;
+  boxB.classList.add('walk-in-right');
+  cellsB.forEach(c => c.classList.add('show'));
+  if (!(await sleep(1550, tk))) return;
+
+  // b lays over the top `b` blocks of a
+  const removed = cellsA.slice(a - b);
+  removed.forEach(c => c.classList.add('subtracted'));
+  boxB.style.transform = `translateX(-${Math.round(boxA.offsetWidth / 2 + 24)}px)`;
+  boxB.style.opacity = '0';
+  subtitleEl.innerHTML = `<b>${b}</b> takes ${b} block${b > 1 ? 's' : ''} away...`;
+  if (!(await sleep(560, tk))) return;
+
+  removed.forEach(c => { c.style.transition = 'opacity 0.4s, transform 0.4s';
+    c.style.opacity = '0'; c.style.transform = 'scale(0.15)'; });
+  if (!(await sleep(480, tk))) return;
+  boxB.remove();
+
+  // move the face to the top-left of what's left (the crooked answer)
+  cellsA.forEach(c => { if (c.querySelector('.nb-face')) c.innerHTML = ''; });
+  const remain = cellsA.filter(c => !c.classList.contains('subtracted'));
+  let faceCell = null, bestRow = 1e9, bestCol = 1e9;
+  remain.forEach(c => { const gr = +c.style.gridRow, gc = +c.style.gridColumn;
+    if (gr < bestRow || (gr === bestRow && gc < bestCol)) { bestRow = gr; bestCol = gc; faceCell = c; } });
+  if (faceCell) { faceCell.style.overflow = 'visible'; faceCell.innerHTML = faceHTML(result === 1); }
+  boxA.classList.add('dancing');
+  subtitleEl.innerHTML = `<b>${a} − ${b} = ${result}</b>!`;
+  fractionEl.innerHTML = `<span class="frac">${a} − ${b}</span><span class="eq">=</span><span class="reduced">${result}</span>`;
+}
+
+// Equation split: total dances in, then splits into "a + b". e.g. 3 = 1 + 2.
+async function runSplit(total, a, opSym, b) {
+  token++; const tk = token;
+  showCombineStage(); combineEl.innerHTML = '';
+  divided = false; mode = 'combine';
+  decimalEl.textContent = `${total} = ${a} ${opSym} ${b}`;
+  fractionEl.innerHTML = ''; breakEl.innerHTML = '';
+  serverLog({ type: 'demo', kind: 'split', value: `${total}=${a}${opSym}${b}` });
+
+  const whole = mkOperand(); whole.l.textContent = total;
+  combineEl.append(whole.w);
+  renderMini(whole.g, total); whole.w.classList.add('walk-in-left');
+  subtitleEl.innerHTML = `Here's <b>${total}</b>...`;
+  if (!(await sleep(1500, tk))) return;
+
+  subtitleEl.innerHTML = `Watch <b>${total}</b> split apart...`;
+  combineEl.innerHTML = '';
+  const left = mkOperand(), right = mkOperand();
+  left.l.textContent = a; right.l.textContent = b;
+  const sym = document.createElement('div'); sym.className = 'op-sym'; sym.textContent = opSym;
+  combineEl.append(left.w, sym, right.w);
+  renderMini(left.g, a); renderMini(right.g, b);
+  // start pulled together, then slide apart
+  left.w.style.transform = 'translateX(60px) scale(0.85)'; left.w.style.opacity = '0.25';
+  right.w.style.transform = 'translateX(-60px) scale(0.85)'; right.w.style.opacity = '0.25';
+  requestAnimationFrame(() => {
+    left.w.style.transition = 'transform 0.8s cubic-bezier(0.34,1.4,0.64,1), opacity 0.5s';
+    right.w.style.transition = left.w.style.transition;
+    left.w.style.transform = ''; left.w.style.opacity = '1';
+    right.w.style.transform = ''; right.w.style.opacity = '1';
+    sym.classList.add('show');
+  });
+  if (!(await sleep(900, tk))) return;
+  subtitleEl.innerHTML = `<b>${total} = ${a} ${opSym} ${b}</b>!`;
+  fractionEl.innerHTML = `<span class="frac">${total}</span><span class="eq">=</span>` +
+    `<span class="reduced">${a} ${opSym} ${b}</span>`;
 }
 
 // ===================== MIXED-NUMBER RENDER (whole + fractional block) =====================
@@ -848,6 +982,7 @@ async function renderMixed(whole, n, exact) {
   S = Math.max(42, Math.min(S, 260));
 
   const gridWrap = document.createElement('div');
+  gridWrap.className = 'dancing';
   gridWrap.style.display = 'grid';
   gridWrap.style.gridTemplateColumns = `repeat(${cols}, ${S}px)`;
   gridWrap.style.gap = '10px';
@@ -880,10 +1015,21 @@ async function renderMixed(whole, n, exact) {
 // ===================== ROUTER =====================
 // Combine "a op b" animates; everything else routes to whole / mixed / decimal.
 async function present(raw) {
+  const eq = parseEquation(raw);
+  if (eq) {
+    if (eq.type === 'split') await runSplit(eq.total, eq.a, eq.op, eq.b);
+    else if (eq.op === '-') await runSubtract(eq.a, eq.b, eq.result);
+    else await runCombine(eq.a, eq.sym, eq.b, eq.result);
+    return;
+  }
   const combo = parseBinary(raw);
-  if (combo) { await runCombine(combo.a, combo.op, combo.b, combo.result); return; }
+  if (combo) {
+    if (combo.opRaw === '-') await runSubtract(combo.a, combo.b, combo.result);
+    else await runCombine(combo.a, combo.op, combo.b, combo.result);
+    return;
+  }
   const r = routeValue(evalExpr(raw));
-  if (!r) { subtitleEl.textContent = 'Try 102, 0.42, 1.5, 3/4, or 1+2'; return; }
+  if (!r) { subtitleEl.textContent = 'Try 102, 1.5, 1+2, 10-3, or 3=1+2'; return; }
   if (r.mode === 'whole') await renderWhole(r.k, r.exact);
   else if (r.mode === 'mixed') await renderMixed(r.whole, r.n, r.exact);
   else await demonstrateDecimal(r.n, r.exact);
@@ -899,7 +1045,7 @@ function backToOne() {
 }
 
 // ===================== TOUR =====================
-const TOUR = ['0.5', '0.25', '0.75', '7', '25', '34', '102', '1+2', '1.5', '0.33'];
+const TOUR = ['0.5', '0.25', '7', '25', '34', '102', '1+2', '10-3', '3=1+2', '1.5', '0.33'];
 let tourRunning = false, tourTimer = null;
 async function runTour() {
   const btn = document.getElementById('tour-btn');
@@ -925,8 +1071,8 @@ document.getElementById('reset-btn').addEventListener('click', () => { stopTour(
 function submitInput() {
   const raw = document.getElementById('num-input').value.trim();
   if (raw === '') return;
-  if (parseBinary(raw) == null && evalExpr(raw) == null) {
-    subtitleEl.textContent = 'Hmm — try 102, 0.42, 1.5, 3/4, or 1+2'; return;
+  if (parseEquation(raw) == null && parseBinary(raw) == null && evalExpr(raw) == null) {
+    subtitleEl.textContent = 'Hmm — try 102, 1.5, 1+2, 10-3, or 3=1+2'; return;
   }
   handle(raw);
 }

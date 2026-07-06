@@ -131,6 +131,31 @@
   .wcell::after { content: ''; position: absolute; top: 0; left: 0; right: 55%; bottom: 55%;
     background: rgba(255,255,255,0.22); border-radius: 3px 0 0 0; pointer-events: none; }
 
+  /* combine (a + b) animation */
+  #combine { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; max-height: 100%; }
+  #combine.hidden { display: none; }
+  .op-wrap { display: flex; flex-direction: column; align-items: center;
+    transition: transform 0.8s cubic-bezier(0.34,1.56,0.64,1), opacity 0.4s; }
+  .op-grid { display: inline-grid; gap: 3px; filter: drop-shadow(0 8px 12px rgba(0,0,0,0.3)); }
+  .op-label { font-size: clamp(20px,4.5vw,40px); font-weight: 900; color: #fff;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3); margin-top: 8px; }
+  .op-sym { font-size: clamp(30px,6vw,58px); font-weight: 900; color: #FFD700;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3); align-self: center; opacity: 0; transition: opacity 0.3s; padding-bottom: 34px; }
+  .op-sym.show { opacity: 1; }
+  .mcell { border-radius: 4px; border: 2px solid rgba(0,0,0,0.2); position: relative; overflow: hidden; }
+  .mcell::after { content: ''; position: absolute; top: 0; left: 0; right: 50%; bottom: 50%;
+    background: rgba(255,255,255,0.25); border-radius: 4px 0 0 0; }
+  .walk-in-left  { animation: walkLeft 1.8s ease-out forwards; }
+  .walk-in-right { animation: walkRight 1.8s ease-out forwards; }
+  @keyframes walkLeft {
+    0%{transform:translateX(-110vw) rotate(0);} 16%{transform:translateX(-70vw) translateY(-12px) rotate(8deg);}
+    32%{transform:translateX(-30vw) rotate(8deg);} 48%{transform:translateX(0) rotate(5deg);}
+    60%{transform:translateX(0) rotate(0);} 100%{transform:translateX(0) rotate(0);} }
+  @keyframes walkRight {
+    0%{transform:translateX(110vw) rotate(0);} 16%{transform:translateX(70vw) translateY(-12px) rotate(-8deg);}
+    32%{transform:translateX(30vw) rotate(-8deg);} 48%{transform:translateX(0) rotate(-5deg);}
+    60%{transform:translateX(0) rotate(0);} 100%{transform:translateX(0) rotate(0);} }
+
   /* mixed-number unit squares */
   .unit { position: relative; border-radius: 8px; filter: drop-shadow(0 8px 12px rgba(0,0,0,0.3));
     opacity: 0; transform: scale(0.6); transition: opacity 0.3s ease, transform 0.4s cubic-bezier(0.34,1.56,0.64,1); }
@@ -214,24 +239,25 @@
       </div>
     </div>
     <div id="whole" class="hidden"></div>
+    <div id="combine" class="hidden"></div>
   </div>
 </div>
 
 <div id="controls">
   <div id="entry">
     <input id="num-input" type="text" inputmode="text"
-      placeholder="type e.g. 102, 0.42, 1.5, 3/4, 51*2" spellcheck="false"
+      placeholder="type e.g. 102, 0.42, 1.5, 3/4, 1+2" spellcheck="false"
       autocomplete="off" autocorrect="off" autocapitalize="off" />
     <button id="go">Show!</button>
   </div>
   <div id="presets">
-    <button class="chip" data-v="7">7</button>
+    <button class="chip" data-v="25">25</button>
     <button class="chip" data-v="34">34</button>
     <button class="chip" data-v="102">102</button>
+    <button class="chip" data-v="1+2">1+2</button>
     <button class="chip" data-v="0.5">0.5</button>
     <button class="chip" data-v="0.25">0.25</button>
     <button class="chip" data-v="0.75">0.75</button>
-    <button class="chip" data-v="0.01">0.01</button>
     <button class="chip" data-v="1.5">1.5</button>
     <button class="chip tour" id="tour-btn">▶ Tour</button>
     <button class="chip reset" id="reset-btn">↺ Reset</button>
@@ -310,6 +336,17 @@ function placeColorFn(p) {
   return (i) => getBlockColorAndBorder(p.value, i);
 }
 
+// Prefer a square / largest-factor rectangle (e.g. 25 -> 5x5). Returns a shape,
+// or null when the number reads better as base-ten place value (e.g. 34 -> 30+4,
+// 102 -> 100+2). 1-9 always use their compact character shape.
+function chooseCompactShape(k) {
+  if (k <= 9) return getShape(k);
+  if (k >= 100) return null;                       // hundreds -> place value
+  const s = getShape(k);
+  if (s.cols >= 2 && s.lastRowCols === s.cols && s.rows / s.cols <= 2.0) return s; // clean rectangle
+  return null;
+}
+
 // ===================== INPUT PARSING (math, fractions, percents) =====================
 function evalExpr(raw) {
   let s = String(raw).trim().toLowerCase();
@@ -324,7 +361,24 @@ function evalExpr(raw) {
   } catch { return null; }
 }
 
-const MAX_WHOLE = 1000, MAX_MIXED = 12;
+// A single "a op b" with whole operands (1-100) and a whole result -> animate
+// the two blocks walking in and combining. Returns {a,op,b,result} or null.
+function parseBinary(raw) {
+  let s = String(raw).trim().toLowerCase()
+    .replace(/×/g, '*').replace(/÷/g, '/').replace(/x/g, '*').replace(/\s+/g, '');
+  const m = s.match(/^(\d+)([+\-*/])(\d+)$/);
+  if (!m) return null;
+  const a = parseInt(m[1], 10), b = parseInt(m[3], 10), op = m[2];
+  if (a < 1 || a > 100 || b < 1 || b > 100) return null;
+  let result;
+  switch (op) { case '+': result = a+b; break; case '-': result = a-b; break;
+    case '*': result = a*b; break; case '/': result = a/b; break; }
+  if (!Number.isInteger(result) || result < 1) return null;
+  const sym = op === '*' ? '×' : op === '/' ? '÷' : op;
+  return { a, b, op: sym, result };
+}
+
+const MAX_WHOLE = 1000, MAX_MIXED = 50;
 // Returns { mode:'whole'|'decimal'|'mixed', k?, whole?, n?, exact } or null.
 function routeValue(val) {
   if (val == null || !isFinite(val) || val < 0) return null;
@@ -340,7 +394,7 @@ function routeValue(val) {
     if (whole > MAX_WHOLE) whole = MAX_WHOLE;
     return { mode: 'whole', k: whole, exact: true };
   }
-  // mixed number: whole + n hundredths
+  // mixed number: whole + n hundredths (shown as whole blocks + a fractional block)
   const exact = Math.abs((val - whole) * 100 - n) < 1e-9;
   if (whole > MAX_MIXED) return { mode: 'whole', k: Math.min(whole, MAX_WHOLE), exact: false };
   return { mode: 'mixed', whole, n, exact };
@@ -363,6 +417,7 @@ const guideEl    = document.getElementById('quarter-guide');
 const faceEl     = document.getElementById('face');
 const uniShine   = document.getElementById('unishine');
 const wholeEl    = document.getElementById('whole');
+const combineEl  = document.getElementById('combine');
 const stageWrap  = document.getElementById('stage-wrap');
 const decimalEl  = document.getElementById('decimal-display');
 const subtitleEl = document.getElementById('subtitle');
@@ -415,8 +470,12 @@ function sizeSquare() {
   const w = stageWrap.clientWidth, h = stageWrap.clientHeight;
   document.documentElement.style.setProperty('--sq', Math.max(120, Math.floor(Math.min(w, h) * 0.94)) + 'px');
 }
-function showSquareStage() { wholeEl.classList.add('hidden'); wholeEl.innerHTML = ''; square.classList.remove('hidden'); }
-function showWholeStage()  { square.classList.add('hidden'); wholeEl.classList.remove('hidden'); }
+function showSquareStage() { wholeEl.classList.add('hidden'); wholeEl.innerHTML = '';
+  combineEl.classList.add('hidden'); combineEl.innerHTML = ''; square.classList.remove('hidden'); }
+function showWholeStage()  { square.classList.add('hidden');
+  combineEl.classList.add('hidden'); combineEl.innerHTML = ''; wholeEl.classList.remove('hidden'); }
+function showCombineStage(){ square.classList.add('hidden');
+  wholeEl.classList.add('hidden'); wholeEl.innerHTML = ''; combineEl.classList.remove('hidden'); }
 
 // ===================== DECIMAL RENDER (with enlarge) =====================
 function clearAllCells() { for (const c of allCells) c.className = 'cell empty'; }
@@ -458,8 +517,8 @@ async function demonstrateDecimal(n, exact) {
   const plan = buildFillPlan(n);
   const isQuarter = !!plan.isQuarter;
 
-  // Phase 1: enlarge the single One block, then split it into 100.
-  if (!divided) {
+  // Phase 1: enlarge the single One block, then split it into 100 — every time.
+  {
     resetSquareToOne();
     void square.offsetWidth;                 // paint the small solid block first
     subtitleEl.innerHTML = 'This is <b>One</b> — a single block.';
@@ -541,9 +600,11 @@ function mkCell(cs, color) {
   return cell;
 }
 
-async function renderWhole(k, exact) {
+async function renderWhole(k, exact, combo) {
   token++; const tk = token;
-  showWholeStage(); wholeEl.innerHTML = ''; wholeEl.style.gap = '2px';
+  showWholeStage(); wholeEl.innerHTML = '';
+  wholeEl.style.display = 'flex'; wholeEl.style.alignItems = 'flex-end';
+  wholeEl.style.justifyContent = 'center'; wholeEl.style.gap = '2px';
   divided = false; mode = 'whole';
   decimalEl.textContent = String(k);
   fractionEl.innerHTML = ''; breakEl.innerHTML = '';
@@ -551,11 +612,12 @@ async function renderWhole(k, exact) {
 
   if (k === 0) { subtitleEl.innerHTML = '<b>Zero</b> — no blocks at all!'; return; }
 
-  // Decide representation: 1-9 compact character; >=10 base-ten place groups.
-  const useChar = (k <= 9);
+  // Represent as a square / largest-factor rectangle when it's nice; otherwise
+  // as base-ten place groups that break apart (e.g. 34 -> 30 + 4, 102 -> 100 + 2).
+  const compact = chooseCompactShape(k);
   const parts = getPlaceParts(k);
-  const specs = useChar
-    ? [{ shape: getShape(k), colorFn: (i) => getBlockColorAndBorder(k, i), part: null }]
+  const specs = compact
+    ? [{ shape: compact, colorFn: (i) => getBlockColorAndBorder(k, i), part: null }]
     : parts.map(p => ({ dims: placeDims(p), colorFn: placeColorFn(p), part: p }));
 
   // size cells to fit both the assembled AND the spread-apart form
@@ -591,9 +653,14 @@ async function renderWhole(k, exact) {
   const assembleMs = 30 + allW.length * step + 350;
   if (!(await sleep(assembleMs, tk))) return;
 
+  const rect = compact && compact.cols >= 2;   // a real square/rectangle to name
   const multi = specs.length >= 2;
   if (!multi) {
-    subtitleEl.innerHTML = k === 1 ? 'This is <b>One</b> — a single block.' : `That's <b>${k}</b> as a Numberblock!`;
+    if (k === 1) subtitleEl.innerHTML = 'This is <b>One</b> — a single block.';
+    else if (rect) subtitleEl.innerHTML = compact.cols === compact.rows
+      ? `That's <b>${k}</b> — a perfect <b>${compact.cols}×${compact.rows}</b> square!`
+      : `That's <b>${k}</b> — a <b>${compact.cols}×${compact.rows}</b> rectangle!`;
+    else subtitleEl.innerHTML = `That's <b>${k}</b> as a Numberblock!`;
     labelEls.forEach(l => l.classList.add('show'));
   } else {
     subtitleEl.innerHTML = `That's <b>${k}</b> — now watch it break apart!`;
@@ -605,11 +672,82 @@ async function renderWhole(k, exact) {
     subtitleEl.innerHTML = `<b>${k}</b> = ${parts.map(p => p.value).join(' + ')}`;
   }
   if (!exact) subtitleEl.innerHTML += ` <span style="opacity:.85">(rounded to a whole number)</span>`;
-  breakEl.innerHTML = parts.map(p => {
-    const cls = p.kind === 'hundreds' ? 'p' : p.kind === 'tens' ? 't' : 'h';
-    const unit = p.kind === 'hundreds' ? 'hundred' : p.kind === 'tens' ? 'ten' : 'one';
-    return `<span class="${cls}">${p.digit} ${unit}${p.digit > 1 ? 's' : ''}</span>`;
-  }).join(' + ');
+  if (rect) {
+    breakEl.innerHTML = `<span class="p">${compact.cols} × ${compact.rows} = ${k}</span>`;
+  } else {
+    breakEl.innerHTML = parts.map(p => {
+      const cls = p.kind === 'hundreds' ? 'p' : p.kind === 'tens' ? 't' : 'h';
+      const unit = p.kind === 'hundreds' ? 'hundred' : p.kind === 'tens' ? 'ten' : 'one';
+      return `<span class="${cls}">${p.digit} ${unit}${p.digit > 1 ? 's' : ''}</span>`;
+    }).join(' + ');
+  }
+  if (combo) {
+    subtitleEl.innerHTML = `<b>${combo.a} ${combo.op} ${combo.b}</b> makes <b>${k}</b>!`;
+    fractionEl.innerHTML = `<span class="frac">${combo.a} ${combo.op} ${combo.b}</span>` +
+      `<span class="eq">=</span><span class="reduced">${k}</span>`;
+  }
+}
+
+// ===================== COMBINE (a op b) ANIMATION =====================
+function renderMini(container, n) {
+  container.innerHTML = '';
+  const s = getShape(n);
+  const availH = stageWrap.clientHeight * 0.55, availW = stageWrap.clientWidth * 0.26;
+  let cs = Math.floor(Math.min(availH / s.rows, availW / s.cols));
+  cs = Math.max(12, Math.min(cs, 40));
+  container.style.gridTemplateColumns = `repeat(${s.cols}, ${cs}px)`;
+  container.style.gridTemplateRows = `repeat(${s.rows}, ${cs}px)`;
+  let idx = 0, topLeft = null;
+  for (let r = 0; r < s.rows; r++) {
+    const colsInRow = (r === s.rows - 1) ? s.lastRowCols : s.cols;
+    for (let c = 0; c < colsInRow; c++) {
+      const cell = document.createElement('div');
+      cell.className = 'mcell';
+      cell.style.width = cs + 'px'; cell.style.height = cs + 'px';
+      const { bg, border } = getBlockColorAndBorder(n, idx);
+      cell.style.background = bg; if (border) cell.style.borderColor = border;
+      cell.style.gridRow = s.rows - r; cell.style.gridColumn = c + 1;
+      if (s.rows - r === 1 && c === 0) topLeft = cell;
+      container.appendChild(cell); idx++;
+    }
+  }
+  if (topLeft) { topLeft.style.overflow = 'visible'; topLeft.innerHTML = faceHTML(n === 1); }
+}
+
+async function runCombine(a, opSym, b, result) {
+  token++; const tk = token;
+  showCombineStage(); combineEl.innerHTML = '';
+  divided = false; mode = 'combine';
+  decimalEl.textContent = `${a} ${opSym} ${b}`;
+  fractionEl.innerHTML = ''; breakEl.innerHTML = '';
+  subtitleEl.innerHTML = `Here comes <b>${a}</b>...`;
+  serverLog({ type: 'demo', kind: 'combine', value: `${a}${opSym}${b}=${result}` });
+
+  const mk = () => {
+    const w = document.createElement('div'); w.className = 'op-wrap';
+    const g = document.createElement('div'); g.className = 'op-grid';
+    const l = document.createElement('div'); l.className = 'op-label';
+    w.appendChild(g); w.appendChild(l); return { w, g, l };
+  };
+  const left = mk(), right = mk();
+  left.l.textContent = a; right.l.textContent = b;
+  const sym = document.createElement('div'); sym.className = 'op-sym'; sym.textContent = opSym;
+  combineEl.append(left.w, sym, right.w);
+
+  renderMini(left.g, a); left.w.classList.add('walk-in-left');
+  if (!(await sleep(1400, tk))) return;
+  sym.classList.add('show');
+  subtitleEl.innerHTML = `...and here comes <b>${b}</b>!`;
+  renderMini(right.g, b); right.w.classList.add('walk-in-right');
+  if (!(await sleep(2000, tk))) return;
+  subtitleEl.innerHTML = 'Now put them together...';
+  left.w.style.transform = 'translateX(40px) scale(0.85)';
+  right.w.style.transform = 'translateX(-40px) scale(0.85)';
+  sym.style.opacity = '0'; left.l.style.opacity = '0'; right.l.style.opacity = '0';
+  if (!(await sleep(550, tk))) return;
+  left.w.style.opacity = '0'; right.w.style.opacity = '0';
+  if (!(await sleep(450, tk))) return;
+  await renderWhole(result, true, { a, op: opSym, b });   // shows result + equation
 }
 
 // ===================== MIXED-NUMBER RENDER (whole + fractional block) =====================
@@ -640,32 +778,46 @@ function buildUnitSquare(size, opts) {
 
 async function renderMixed(whole, n, exact) {
   token++; const tk = token;
-  showWholeStage(); wholeEl.innerHTML = ''; wholeEl.style.gap = '14px';
+  showWholeStage();
+  wholeEl.innerHTML = ''; wholeEl.style.display = 'flex'; wholeEl.style.alignItems = 'center';
+  wholeEl.style.justifyContent = 'center'; wholeEl.style.gap = '0';
   divided = false; mode = 'mixed';
   const disp = fmtMixed(whole, n);
   decimalEl.textContent = disp;
   serverLog({ type: 'demo', kind: 'mixed', value: disp });
 
+  // (whole) solid unit blocks + 1 fractional block, laid out as a grid so any
+  // count fits: a single row for a few, a near-square grid for many (e.g. 13.5).
   const count = whole + 1;
-  const availW = stageWrap.clientWidth * 0.95, availH = stageWrap.clientHeight * 0.8;
-  let S = Math.floor(Math.min(availH, (availW - (count - 1) * 14) / count));
-  S = Math.max(60, Math.min(S, 300));
+  const cols = count <= 5 ? count : Math.ceil(Math.sqrt(count));
+  const rows = Math.ceil(count / cols);
+  const availW = stageWrap.clientWidth * 0.95, availH = stageWrap.clientHeight * 0.82;
+  let S = Math.floor(Math.min((availW - (cols - 1) * 10) / cols, (availH - (rows - 1) * 10) / rows));
+  S = Math.max(42, Math.min(S, 260));
+
+  const gridWrap = document.createElement('div');
+  gridWrap.style.display = 'grid';
+  gridWrap.style.gridTemplateColumns = `repeat(${cols}, ${S}px)`;
+  gridWrap.style.gap = '10px';
+  gridWrap.style.justifyItems = 'center'; gridWrap.style.alignItems = 'center';
+  wholeEl.appendChild(gridWrap);
 
   const units = [];
-  for (let i = 0; i < whole; i++) {
-    const u = buildUnitSquare(S, { solid: true, face: i === 0 });
-    const lbl = document.createElement('div'); lbl.className = 'ulabel'; lbl.textContent = '1';
-    u.appendChild(lbl); wholeEl.appendChild(u); units.push(u);
+  for (let i = 0; i < count; i++) {
+    const isFrac = (i === count - 1);
+    const u = isFrac ? buildUnitSquare(S, { n, face: false })
+                     : buildUnitSquare(S, { solid: true, face: i === 0 });
+    if (isFrac) { const lbl = document.createElement('div'); lbl.className = 'ulabel';
+      lbl.textContent = fmtDecimal(n); u.appendChild(lbl); }
+    gridWrap.appendChild(u); units.push(u);
   }
-  const fu = buildUnitSquare(S, { n, face: false });
-  const flbl = document.createElement('div'); flbl.className = 'ulabel'; flbl.textContent = fmtDecimal(n);
-  fu.appendChild(flbl); wholeEl.appendChild(fu); units.push(fu);
 
-  units.forEach((u, i) => setTimeout(() => { if (tk === token) u.classList.add('show'); }, 60 + i * 180));
-  if (!(await sleep(60 + units.length * 180 + 200, tk))) return;
+  const step = count > 8 ? 70 : 150;
+  units.forEach((u, i) => setTimeout(() => { if (tk === token) u.classList.add('show'); }, 50 + i * step));
+  if (!(await sleep(50 + count * step + 200, tk))) return;
 
   const g = gcd(n, 100), rn = n / g, rd = 100 / g;
-  subtitleEl.innerHTML = `<b>${whole}</b> whole block${whole > 1 ? 's' : ''} and <b>${fmtDecimal(n)}</b> of another`;
+  subtitleEl.innerHTML = `<b>${whole}</b> whole block${whole > 1 ? 's' : ''} and <b>${fmtDecimal(n)}</b> of one more`;
   if (!exact) subtitleEl.innerHTML += ` <span style="opacity:.85">(rounded to the nearest hundredth)</span>`;
   fractionEl.innerHTML = `<span class="frac">${disp}</span><span class="eq">=</span>` +
     `<span class="reduced">${whole} ${rn}/${rd}</span>`;
@@ -674,13 +826,17 @@ async function renderMixed(whole, n, exact) {
 }
 
 // ===================== ROUTER =====================
-function run(val) {
-  const r = routeValue(val);
-  if (!r) { subtitleEl.textContent = 'Try 102, 0.42, 1.5, 3/4, or 51*2'; return; }
-  if (r.mode === 'whole') renderWhole(r.k, r.exact);
-  else if (r.mode === 'mixed') renderMixed(r.whole, r.n, r.exact);
-  else demonstrateDecimal(r.n, r.exact);
+// Combine "a op b" animates; everything else routes to whole / mixed / decimal.
+async function present(raw) {
+  const combo = parseBinary(raw);
+  if (combo) { await runCombine(combo.a, combo.op, combo.b, combo.result); return; }
+  const r = routeValue(evalExpr(raw));
+  if (!r) { subtitleEl.textContent = 'Try 102, 0.42, 1.5, 3/4, or 1+2'; return; }
+  if (r.mode === 'whole') await renderWhole(r.k, r.exact);
+  else if (r.mode === 'mixed') await renderMixed(r.whole, r.n, r.exact);
+  else await demonstrateDecimal(r.n, r.exact);
 }
+function handle(raw) { stopTour(); present(raw); }
 
 function backToOne() {
   token++; mode = 'idle';
@@ -691,19 +847,14 @@ function backToOne() {
 }
 
 // ===================== TOUR =====================
-const TOUR = ['0.5', '0.1', '0.01', '0.25', '0.75', '7', '34', '102', '1.5', '0.33'];
+const TOUR = ['0.5', '0.25', '0.75', '7', '25', '34', '102', '1+2', '1.5', '0.33'];
 let tourRunning = false, tourTimer = null;
 async function runTour() {
   const btn = document.getElementById('tour-btn');
   tourRunning = true; btn.classList.add('on'); btn.textContent = '■ Stop';
   let i = 0;
   while (tourRunning) {
-    const r = routeValue(evalExpr(TOUR[i % TOUR.length]));
-    if (r) {
-      if (r.mode === 'whole') await renderWhole(r.k, r.exact);
-      else if (r.mode === 'mixed') await renderMixed(r.whole, r.n, r.exact);
-      else await demonstrateDecimal(r.n, r.exact);
-    }
+    await present(TOUR[i % TOUR.length]);
     if (!tourRunning) break;
     await new Promise(res => { tourTimer = setTimeout(res, 2600); });
     i++;
@@ -716,14 +867,16 @@ function stopTour() {
 
 // ===================== WIRING =====================
 document.querySelectorAll('.chip[data-v]').forEach(btn =>
-  btn.addEventListener('click', () => { stopTour(); run(evalExpr(btn.dataset.v)); }));
+  btn.addEventListener('click', () => handle(btn.dataset.v)));
 document.getElementById('tour-btn').addEventListener('click', () => { tourRunning ? stopTour() : runTour(); });
 document.getElementById('reset-btn').addEventListener('click', () => { stopTour(); backToOne(); });
 function submitInput() {
-  stopTour();
-  const val = evalExpr(document.getElementById('num-input').value);
-  if (val == null) { subtitleEl.textContent = 'Hmm — try 102, 0.42, 1.5, 3/4, or 51*2'; return; }
-  run(val);
+  const raw = document.getElementById('num-input').value.trim();
+  if (raw === '') return;
+  if (parseBinary(raw) == null && evalExpr(raw) == null) {
+    subtitleEl.textContent = 'Hmm — try 102, 0.42, 1.5, 3/4, or 1+2'; return;
+  }
+  handle(raw);
 }
 document.getElementById('go').addEventListener('click', submitInput);
 document.getElementById('num-input').addEventListener('keydown', e => { if (e.key === 'Enter') submitInput(); });

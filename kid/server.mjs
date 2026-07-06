@@ -37,6 +37,7 @@ const GAMES = {
   'family-tree':  join(__dirname, '..', 'family-tree'),
   'powers-of-2-numberblocks': join(__dirname, '..', 'powers-of-2-numberblocks'),
   'side-scroller': join(__dirname, '..', 'side-scroller'),
+  'decimals':     join(__dirname, '..', 'decimals'),
 };
 
 const MIME_TYPES = {

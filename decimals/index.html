@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Decimals — Numberblocks One in 100 pieces</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --sq: min(74vmin, 500px);
+    --red:    #DE151D;
+    --orange: #E89223;
+    --yellow: #E6C40C;
+    --gap: 0px;          /* animates 0 -> grid lines when divided */
+    --face: 100%;        /* face size: full block (whole) -> one cell (divided) */
+  }
+
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow-x: hidden;
+    user-select: none;
+    color: white;
+    padding: 12px;
+  }
+
+  #title {
+    font-size: clamp(20px, 4vw, 34px);
+    font-weight: 900;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    text-align: center;
+    margin-top: 4px;
+  }
+
+  #decimal-display {
+    font-size: clamp(48px, 12vw, 120px);
+    font-weight: 900;
+    color: #FFD700;
+    text-shadow: 3px 3px 6px rgba(0,0,0,0.35);
+    line-height: 1;
+    margin: 4px 0;
+    letter-spacing: 2px;
+    min-height: 1.1em;
+  }
+
+  #subtitle {
+    font-size: clamp(15px, 3vw, 24px);
+    font-weight: 600;
+    text-shadow: 1px 1px 3px rgba(0,0,0,0.3);
+    text-align: center;
+    min-height: 1.6em;
+    padding: 0 10px;
+    transition: opacity 0.3s;
+  }
+
+  /* --- The square stage --- */
+  #stage-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: var(--sq);
+    margin: 10px 0 6px;
+  }
+
+  #square {
+    position: relative;
+    width: var(--sq);
+    height: var(--sq);
+    transform: scale(0.34);
+    transform-origin: center center;
+    transition: transform 0.9s cubic-bezier(0.34, 1.4, 0.64, 1);
+    filter: drop-shadow(0 12px 18px rgba(0,0,0,0.35));
+  }
+  #square.enlarged { transform: scale(1); }
+
+  #grid {
+    width: 100%;
+    height: 100%;
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    grid-template-rows: repeat(10, 1fr);
+    gap: var(--gap);
+    background: rgba(0,0,0,0.28);      /* shows through as grid lines when gap opens */
+    border: 4px solid rgba(0,0,0,0.28);
+    border-radius: 12px;
+    padding: var(--gap);
+    transition: gap 0.7s ease, padding 0.7s ease, background 0.7s ease;
+  }
+
+  .cell {
+    background: var(--red);
+    border-radius: 0;
+    position: relative;
+    transition: background-color 0.35s ease, border-radius 0.6s ease;
+  }
+  #grid.divided .cell { border-radius: 3px; }
+
+  /* highlight shine on each cell */
+  .cell::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 55%; bottom: 55%;
+    background: rgba(255,255,255,0.22);
+    border-radius: 3px 0 0 0;
+    pointer-events: none;
+  }
+
+  /* states once divided */
+  .cell.empty      { background: rgba(255,255,255,0.13); }
+  .cell.empty::after { opacity: 0; }
+  .cell.tenth      { background: var(--red); }
+  .cell.hundredth  { background: var(--yellow); }
+  .cell.quarter    { background: var(--red); }
+
+  /* pop when a cell fills */
+  @keyframes pop {
+    0% { transform: scale(0.4); }
+    60% { transform: scale(1.12); }
+    100% { transform: scale(1); }
+  }
+  .cell.filling { animation: pop 0.3s ease; z-index: 2; }
+
+  /* --- Quarter guide: a faint cross showing the 4 quadrants (quarter demos) --- */
+  #quarter-guide {
+    position: absolute;
+    inset: 4px;
+    z-index: 4;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+  }
+  #quarter-guide.on { opacity: 1; }
+  #quarter-guide::before, #quarter-guide::after {
+    content: '';
+    position: absolute;
+    background: rgba(255,255,255,0.9);
+    box-shadow: 0 0 6px rgba(0,0,0,0.45);
+    border-radius: 2px;
+  }
+  #quarter-guide::before { left: 50%; top: 0; bottom: 0; width: 4px; transform: translateX(-50%); }
+  #quarter-guide::after  { top: 50%; left: 0; right: 0; height: 4px; transform: translateY(-50%); }
+
+  /* --- Numberblock face --- */
+  #face {
+    position: absolute;
+    top: 0; left: 0;
+    width: var(--face);
+    height: var(--face);
+    z-index: 6;
+    pointer-events: none;
+    transition: width 0.7s ease, height 0.7s ease;
+  }
+  .nb-eye {
+    width: 22%; height: 28%;
+    background: white;
+    border-radius: 50%;
+    position: absolute;
+    top: 22%;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 2px rgba(0,0,0,0.3);
+  }
+  .nb-eye::after {
+    content: '';
+    width: 45%; height: 45%;
+    background: #222;
+    border-radius: 50%;
+  }
+  .nb-eye-left  { left: 20%; }
+  .nb-eye-right { right: 20%; }
+  .nb-mouth {
+    position: absolute;
+    bottom: 24%; left: 50%;
+    transform: translateX(-50%);
+    width: 30%; height: 16%;
+    border: 3px solid #333;
+    border-top: none;
+    border-radius: 0 0 60% 60%;
+    background: rgba(255,255,255,0.15);
+  }
+
+  /* --- Fraction equivalence --- */
+  #fraction {
+    font-size: clamp(20px, 5vw, 40px);
+    font-weight: 900;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    text-align: center;
+    min-height: 1.3em;
+    margin: 4px 0 2px;
+  }
+  #fraction .frac { color: #fff; }
+  #fraction .reduced { color: #7CFF9B; }
+  #fraction .eq { color: #FFD700; margin: 0 6px; }
+
+  #breakdown {
+    font-size: clamp(14px, 3vw, 22px);
+    font-weight: 700;
+    min-height: 1.4em;
+    text-align: center;
+  }
+  #breakdown .t { color: #FF8A8A; }
+  #breakdown .h { color: #FFE873; }
+  #breakdown .q { color: #FFFFFF; }
+
+  /* --- Controls --- */
+  #controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    margin-top: 8px;
+    width: 100%;
+    max-width: 640px;
+  }
+
+  #entry {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  #num-input {
+    font-size: clamp(20px, 5vw, 30px);
+    font-weight: 800;
+    text-align: center;
+    width: min(52vw, 230px);
+    padding: 8px 12px;
+    border: 3px solid #FFD700;
+    border-radius: 12px;
+    outline: none;
+    background: rgba(255,255,255,0.95);
+    color: #333;
+  }
+  #num-input::placeholder { color: #999; font-weight: 600; }
+  #go {
+    font-size: clamp(18px, 4vw, 26px);
+    font-weight: 900;
+    color: white;
+    background: var(--red);
+    border: none;
+    border-radius: 12px;
+    padding: 9px 20px;
+    cursor: pointer;
+    box-shadow: 0 3px 0 #9a0f14;
+  }
+  #go:active { transform: translateY(2px); box-shadow: 0 1px 0 #9a0f14; }
+
+  #presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+  }
+  .chip {
+    font-size: clamp(15px, 3.4vw, 22px);
+    font-weight: 800;
+    color: #4a2c73;
+    background: #FFD700;
+    border: none;
+    border-radius: 999px;
+    padding: 8px 16px;
+    cursor: pointer;
+    box-shadow: 0 3px 0 #b89b00;
+    transition: transform 0.1s, box-shadow 0.1s;
+  }
+  .chip:hover { transform: translateY(-2px); }
+  .chip:active { transform: translateY(2px); box-shadow: 0 1px 0 #b89b00; }
+  .chip.tour { background: #7CFF9B; box-shadow: 0 3px 0 #3aa055; color: #164d29; }
+  .chip.tour.on { background: #ff8a8a; box-shadow: 0 3px 0 #b34a4a; color: #5a1616; }
+  .chip.reset { background: #ffffff; box-shadow: 0 3px 0 #b0b0c0; color: #444; }
+  .hint { font-size: 13px; opacity: 0.85; text-align: center; }
+</style>
+</head>
+<body>
+
+<div id="title">Numberblocks One = 100 tiny pieces</div>
+<div id="decimal-display">1</div>
+<div id="subtitle">This is <b>One</b>. Type a number to see it split into pieces!</div>
+
+<div id="stage-wrap">
+  <div id="square">
+    <div id="grid"></div>
+    <div id="quarter-guide"></div>
+    <div id="face">
+      <div class="nb-eye nb-eye-left"></div>
+      <div class="nb-eye nb-eye-right"></div>
+      <div class="nb-mouth"></div>
+    </div>
+  </div>
+</div>
+
+<div id="fraction"></div>
+<div id="breakdown"></div>
+
+<div id="controls">
+  <div id="entry">
+    <input id="num-input" type="text" inputmode="decimal"
+      placeholder="type any number, e.g. 0.42" spellcheck="false" />
+    <button id="go">Show!</button>
+  </div>
+  <div class="hint">Any decimal from 0 to 1 — or a fraction like 3/4, or a percent like 60%</div>
+  <div id="presets">
+    <button class="chip" data-v="0.5">0.5</button>
+    <button class="chip" data-v="0.1">0.1</button>
+    <button class="chip" data-v="0.01">0.01</button>
+    <button class="chip" data-v="0.25">0.25</button>
+    <button class="chip" data-v="0.75">0.75</button>
+    <button class="chip" data-v="0.9">0.9</button>
+    <button class="chip tour" id="tour-btn">▶ Play tour</button>
+    <button class="chip reset" id="reset-btn">↺ Back to One</button>
+  </div>
+</div>
+
+<script>
+// ===================== SERVER LOG (fire-and-forget) =====================
+const SERVER = window.location.origin;
+function serverLog(entry) {
+  try {
+    fetch(`${SERVER}/log`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(entry),
+    }).catch(() => {});
+  } catch {}
+}
+
+// ===================== BUILD THE 100-CELL GRID =====================
+// Grid coordinates: col 0..9 left->right, row 0..9 bottom->top.
+// cellAt(col,row) returns the DOM cell for that coordinate.
+const grid = document.getElementById('grid');
+const square = document.getElementById('square');
+const cellMap = {}; // "col,row" -> element
+
+for (let col = 0; col < 10; col++) {
+  for (let row = 0; row < 10; row++) {
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+    cell.style.gridColumn = (col + 1);
+    cell.style.gridRow = (10 - row);   // row 0 = bottom (gridRow 10)
+    grid.appendChild(cell);
+    cellMap[col + ',' + row] = cell;
+  }
+}
+const cellAt = (col, row) => cellMap[col + ',' + row];
+const allCells = Object.values(cellMap);
+
+// ===================== FILL PLANS =====================
+// Return an ordered list of { col, row, cat } cells to light up for n hundredths.
+// - Quarters (n divisible by 25): fill whole 5x5 quadrants, so 0.25 is a corner
+//   square, 0.5 is the left half, 0.75 is three quadrants (an L).
+// - Everything else: fill full columns (each = one tenth) left->right, then the
+//   leftover hundredths in the next column.
+const QUADRANTS = [
+  { c0: 0, c1: 4, r0: 0, r1: 4 }, // bottom-left
+  { c0: 0, c1: 4, r0: 5, r1: 9 }, // top-left     (BL+TL = left half)
+  { c0: 5, c1: 9, r0: 0, r1: 4 }, // bottom-right
+  { c0: 5, c1: 9, r0: 5, r1: 9 }, // top-right
+];
+
+function buildFillPlan(n) {
+  const plan = [];
+  if (n > 0 && n % 25 === 0) {
+    const count = n / 25; // 1..4 quadrants
+    for (let q = 0; q < count; q++) {
+      const Q = QUADRANTS[q];
+      for (let col = Q.c0; col <= Q.c1; col++)
+        for (let row = Q.r0; row <= Q.r1; row++)
+          plan.push({ col, row, cat: 'quarter' });
+    }
+    plan.isQuarter = true;
+    return plan;
+  }
+  const fullCols = Math.floor(n / 10);
+  const rem = n % 10;
+  for (let col = 0; col < fullCols; col++)
+    for (let row = 0; row < 10; row++)
+      plan.push({ col, row, cat: 'tenth' });
+  for (let row = 0; row < rem; row++)
+    plan.push({ col: fullCols, row, cat: 'hundredth' });
+  return plan;
+}
+
+// ===================== HELPERS =====================
+function gcd(a, b) { return b === 0 ? a : gcd(b, a % b); }
+
+// Returns { n, exact } where n = hundredths (0..100), exact = typed value landed
+// exactly on a hundredth. Accepts decimals, fractions (3/4), and percents (60%).
+function parseValue(raw) {
+  if (raw == null) return null;
+  let s = String(raw).trim().toLowerCase();
+  if (s === '') return null;
+  let val;
+  if (s.includes('/')) {
+    const [a, b] = s.split('/').map(x => parseFloat(x));
+    if (!isFinite(a) || !isFinite(b) || b === 0) return null;
+    val = a / b;
+  } else if (s.includes('%')) {
+    val = parseFloat(s) / 100;
+  } else {
+    val = parseFloat(s);
+  }
+  if (!isFinite(val)) return null;
+  let n = Math.round(val * 100);
+  if (n < 0) n = 0;
+  if (n > 100) n = 100;
+  const exact = Math.abs(val * 100 - n) < 1e-9;
+  return { n, exact };
+}
+
+function fmtDecimal(n) {
+  if (n === 100) return '1';
+  if (n === 0) return '0';
+  return '0.' + String(n).padStart(2, '0');
+}
+
+// ===================== STATE =====================
+let divided = false;   // has the block been split into 100 yet?
+let token = 0;         // cancels an in-flight animation if a new one starts
+
+const decimalEl   = document.getElementById('decimal-display');
+const subtitleEl  = document.getElementById('subtitle');
+const fractionEl  = document.getElementById('fraction');
+const breakdownEl = document.getElementById('breakdown');
+const gridEl      = document.getElementById('grid');
+const guideEl     = document.getElementById('quarter-guide');
+
+const sleep = (ms, tk) => new Promise(res => setTimeout(() => res(tk === token), ms));
+
+function clearAllCells() {
+  for (const c of allCells) c.className = 'cell empty';
+}
+
+function showFraction(n) {
+  if (n === 100) {
+    fractionEl.innerHTML = `<span class="frac">100/100</span><span class="eq">=</span><span class="reduced">1 whole</span>`;
+    return;
+  }
+  if (n === 0) { fractionEl.innerHTML = `<span class="reduced">0</span>`; return; }
+  const g = gcd(n, 100);
+  const rn = n / g, rd = 100 / g;
+  const reduced = (rd === 1) ? `<span class="reduced">${rn}</span>` : `<span class="reduced">${rn}/${rd}</span>`;
+  fractionEl.innerHTML =
+    `<span class="frac">${n}/100</span>` +
+    (g > 1 ? `<span class="eq">=</span>${reduced}` : '');
+}
+
+function showBreakdown(n, isQuarter) {
+  if (n === 0) { breakdownEl.innerHTML = ''; return; }
+  if (isQuarter) {
+    const q = n / 25;
+    breakdownEl.innerHTML = `<span class="q">${q} quarter${q > 1 ? 's' : ''} of the square</span>`;
+    return;
+  }
+  const tenths = Math.floor(n / 10);
+  const hundredths = n % 10;
+  const parts = [];
+  if (tenths > 0) parts.push(`<span class="t">${tenths} tenth${tenths > 1 ? 's' : ''}</span>`);
+  if (hundredths > 0) parts.push(`<span class="h">${hundredths} hundredth${hundredths > 1 ? 's' : ''}</span>`);
+  breakdownEl.innerHTML = parts.join(' + ');
+}
+
+// ===================== MAIN ANIMATION =====================
+async function demonstrate(n, exact = true) {
+  token++;
+  const tk = token;
+
+  decimalEl.textContent = fmtDecimal(n);
+  fractionEl.innerHTML = '';
+  breakdownEl.innerHTML = '';
+  serverLog({ type: 'demo', value: fmtDecimal(n), hundredths: n });
+
+  const plan = buildFillPlan(n);
+  const isQuarter = !!plan.isQuarter;
+
+  // --- Phase 1: enlarge + divide (only the first time) ---
+  if (!divided) {
+    subtitleEl.textContent = 'Watch One grow BIG...';
+    square.classList.add('enlarged');
+    if (!(await sleep(950, tk))) return;
+
+    subtitleEl.innerHTML = 'One splits into <b>100</b> equal pieces — each piece is <b>0.01</b>';
+    document.documentElement.style.setProperty('--gap', '3px');
+    gridEl.classList.add('divided');
+    document.documentElement.style.setProperty('--face', '10%'); // face shrinks to one cell
+    divided = true;
+    if (!(await sleep(1100, tk))) return;
+  }
+
+  guideEl.classList.toggle('on', isQuarter);
+  clearAllCells();
+  if (!(await sleep(90, tk))) return;
+
+  // Subtitle describing the fill
+  if (n === 0) {
+    subtitleEl.innerHTML = '<b>Zero</b> — none of the 100 pieces';
+  } else if (n === 100) {
+    subtitleEl.innerHTML = 'All 100 pieces together make <b>1 whole</b> again!';
+  } else if (isQuarter) {
+    const q = n / 25;
+    subtitleEl.innerHTML = `Shade <b>${q}</b> quarter${q > 1 ? 's' : ''} of the whole square`;
+  } else {
+    const tenths = Math.floor(n / 10), hundredths = n % 10;
+    if (tenths && hundredths)
+      subtitleEl.innerHTML = `Fill <b>${tenths}</b> whole column${tenths > 1 ? 's' : ''} (tenths) + <b>${hundredths}</b> more piece${hundredths > 1 ? 's' : ''}`;
+    else if (tenths)
+      subtitleEl.innerHTML = `Fill <b>${tenths}</b> whole column${tenths > 1 ? 's' : ''} of ten`;
+    else
+      subtitleEl.innerHTML = `Fill just <b>${hundredths}</b> tiny piece${hundredths > 1 ? 's' : ''}`;
+  }
+  if (!exact) subtitleEl.innerHTML += ` &nbsp;<span style="opacity:.85">(rounded to the nearest hundredth)</span>`;
+
+  // --- Phase 2: fill the planned cells one at a time ---
+  const step = plan.length > 60 ? 16 : 30;
+  for (const p of plan) {
+    cellAt(p.col, p.row).className = 'cell filling ' + p.cat;
+    if (!(await sleep(step, tk))) return;
+  }
+
+  showFraction(n);
+  showBreakdown(n, isQuarter);
+}
+
+function backToOne() {
+  token++;
+  divided = false;
+  square.classList.remove('enlarged');
+  gridEl.classList.remove('divided');
+  guideEl.classList.remove('on');
+  document.documentElement.style.setProperty('--gap', '0px');
+  document.documentElement.style.setProperty('--face', '100%');
+  for (const c of allCells) c.className = 'cell';
+  decimalEl.textContent = '1';
+  fractionEl.innerHTML = '';
+  breakdownEl.innerHTML = '';
+  subtitleEl.innerHTML = 'This is <b>One</b>. Type a number to see it split into pieces!';
+}
+
+// ===================== TOUR =====================
+const TOUR = ['0.5', '0.1', '0.01', '0.25', '0.75', '0.9', '0.33', '0.6'];
+let tourRunning = false;
+let tourTimer = null;
+
+async function runTour() {
+  const btn = document.getElementById('tour-btn');
+  tourRunning = true;
+  btn.classList.add('on');
+  btn.textContent = '■ Stop tour';
+  let i = 0;
+  while (tourRunning) {
+    const p = parseValue(TOUR[i % TOUR.length]);
+    await demonstrate(p.n, p.exact);
+    if (!tourRunning) break;
+    await new Promise(res => { tourTimer = setTimeout(res, 2600); });
+    i++;
+  }
+}
+function stopTour() {
+  tourRunning = false;
+  if (tourTimer) clearTimeout(tourTimer);
+  const btn = document.getElementById('tour-btn');
+  btn.classList.remove('on');
+  btn.textContent = '▶ Play tour';
+}
+
+// ===================== WIRING =====================
+document.querySelectorAll('.chip[data-v]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    stopTour();
+    const p = parseValue(btn.dataset.v);
+    if (p) demonstrate(p.n, p.exact);
+  });
+});
+
+document.getElementById('tour-btn').addEventListener('click', () => {
+  if (tourRunning) stopTour(); else runTour();
+});
+
+document.getElementById('reset-btn').addEventListener('click', () => {
+  stopTour();
+  backToOne();
+});
+
+function submitInput() {
+  stopTour();
+  const p = parseValue(document.getElementById('num-input').value);
+  if (p) demonstrate(p.n, p.exact);
+  else subtitleEl.textContent = 'Try a number like 0.42, a fraction like 3/4, or 60%';
+}
+document.getElementById('go').addEventListener('click', submitInput);
+document.getElementById('num-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') submitInput();
+});
+</script>
+</body>
+</html>

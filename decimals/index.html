@@ -336,15 +336,63 @@ function placeColorFn(p) {
   return (i) => getBlockColorAndBorder(p.value, i);
 }
 
-// Prefer a square / largest-factor rectangle (e.g. 25 -> 5x5). Returns a shape,
-// or null when the number reads better as base-ten place value (e.g. 34 -> 30+4,
-// 102 -> 100+2). 1-9 always use their compact character shape.
-function chooseCompactShape(k) {
-  if (k <= 9) return getShape(k);
-  if (k >= 100) return null;                       // hundreds -> place value
-  const s = getShape(k);
-  if (s.cols >= 2 && s.lastRowCols === s.cols && s.rows / s.cols <= 2.0) return s; // clean rectangle
-  return null;
+// ===================== SHAPE PRIMITIVES =====================
+// Every whole number has a list of available shapes: all factor-pair rectangles
+// (upright before wide, most-square first) plus a base-ten place-value layout.
+// Clicking a Numberblock rotates through this list.
+function allShapes(n) {
+  if (n <= 0) return [{ kind: 'rect', rows: 0, cols: 0 }];
+  const rects = [];
+  for (let c = 1; c * c <= n; c++) if (n % c === 0) {
+    const r = n / c;
+    rects.push({ rows: r, cols: c });
+    if (r !== c) rects.push({ rows: c, cols: r });
+  }
+  // most-square first; within a pair, upright (taller) before wide
+  rects.sort((a, b) => (Math.abs(a.rows - a.cols) - Math.abs(b.rows - b.cols)) || (b.rows - a.rows));
+  const shapes = rects.map(x => ({ kind: 'rect', rows: x.rows, cols: x.cols }));
+  if (n >= 10 && getPlaceParts(n).length >= 2) shapes.push({ kind: 'place' });
+  return shapes;
+}
+// Preferred default: the most-square rectangle when it's reasonably compact
+// (25 -> 5x5, 12 -> 4x3, 100 -> 10x10); otherwise the place-value layout
+// (34 -> 30+4, 102 -> 100+2).
+function defaultShapeIndex(n, shapes) {
+  const best = shapes[0];
+  const pi = shapes.findIndex(s => s.kind === 'place');
+  if (n >= 100) {   // hundreds read best as place value, unless a clean square (100, 144)
+    if (best && best.kind === 'rect' && best.cols === best.rows) return 0;
+    return pi >= 0 ? pi : 0;
+  }
+  if (best && best.kind === 'rect' && best.cols >= 2 && best.rows / best.cols <= 2) return 0;
+  if (n <= 9) return 0;
+  return pi >= 0 ? pi : 0;
+}
+function shapeDims(n, shape) {
+  if (shape.kind === 'rect') return { cols: shape.cols, rows: shape.rows, gaps: 0 };
+  const parts = getPlaceParts(n);
+  return { cols: parts.reduce((s, p) => s + placeDims(p).cols, 0),
+           rows: Math.max(...parts.map(p => placeDims(p).rows), 1),
+           gaps: (parts.length - 1) * 10 };
+}
+
+// ===================== PLACE-VALUE COLOR =====================
+// Single digits: assigned color. Tens: pastel of the digit. Hundreds: a
+// checkerboard of the digit's regular + pastel color. (10 white + 4 green = 14.)
+function hundredsCell(d, i, r, c) {
+  let base, pastel, border = null;
+  if (d === 7) { base = RAINBOW[i % 7]; pastel = RAINBOW_LIGHT[i % 7]; }
+  else if (d === 9) { base = GREY_SHADES[i % 3]; pastel = '#D8DADC'; }
+  else if (d === 10) { base = '#EEEEEE'; pastel = '#F7C6C6'; border = '#DE151D'; }
+  else { base = BASE_COLORS[d]; pastel = TENS_COLORS[d]; }
+  return { bg: ((r + c) % 2 === 1) ? pastel : base, border };
+}
+function unitStyle(n, i, r, c) {
+  if (n < 100) return getBlockColorAndBorder(n, i);
+  const Hd = Math.floor(n / 100), hCount = Hd * 100;
+  if (i < hCount) return hundredsCell(Hd, i, r, c);
+  const rem = n % 100;
+  return getBlockColorAndBorder(rem === 0 ? 100 : rem, i - hCount);
 }
 
 // ===================== INPUT PARSING (math, fractions, percents) =====================
@@ -507,9 +555,12 @@ function resetSquareToOne() {
   for (const c of allCells) c.className = 'cell';
 }
 
+let currentDecimalN = 50;   // remembered for click-to-expand-again
+
 async function demonstrateDecimal(n, exact) {
   token++; const tk = token;
   showSquareStage(); sizeSquare();
+  currentDecimalN = n; square.style.cursor = 'pointer'; square.title = 'Tap to expand again';
   decimalEl.textContent = fmtDecimal(n);
   fractionEl.innerHTML = ''; breakEl.innerHTML = '';
   serverLog({ type: 'demo', kind: 'decimal', value: fmtDecimal(n), hundredths: n });
@@ -559,128 +610,129 @@ async function demonstrateDecimal(n, exact) {
   mode = 'decimal';
 }
 
-// ===================== WHOLE-NUMBER RENDER (assemble, then break apart) =====================
-// Fill a grid; returns { topLeft, cells }.
-function fillGrid(gridEl, cs, spec) {
-  const out = { topLeft: null, cells: [] };
-  let idx = 0;
-  if (spec.shape) {  // compact character (1-9)
-    const { rows, cols, lastRowCols } = spec.shape;
-    gridEl.style.gridTemplateColumns = `repeat(${cols}, ${cs}px)`;
-    gridEl.style.gridTemplateRows = `repeat(${rows}, ${cs}px)`;
-    for (let r = 0; r < rows; r++) {
-      const colsInRow = (r === rows - 1) ? lastRowCols : cols;
-      for (let c = 0; c < colsInRow; c++) {
-        const cell = mkCell(cs, spec.colorFn(idx));
-        cell.style.gridRow = rows - r; cell.style.gridColumn = c + 1;
-        if (rows - r === 1 && c === 0) out.topLeft = cell;
-        gridEl.appendChild(cell); out.cells.push(cell); idx++;
-      }
-    }
-  } else {           // base-ten place group
-    const { cols, rows } = spec.dims;
-    gridEl.style.gridTemplateColumns = `repeat(${cols}, ${cs}px)`;
-    gridEl.style.gridTemplateRows = `repeat(${rows}, ${cs}px)`;
-    for (let r = 0; r < rows; r++)
-      for (let c = 0; c < cols; c++) {
-        const cell = mkCell(cs, spec.colorFn(idx));
-        cell.style.gridRow = rows - r; cell.style.gridColumn = c + 1;
-        if (rows - r === 1 && c === 0) out.topLeft = cell;
-        gridEl.appendChild(cell); out.cells.push(cell); idx++;
-      }
-  }
-  return out;
-}
-function mkCell(cs, color) {
+// ===================== WHOLE-NUMBER RENDER (a Numberblock you can re-shape) =====================
+function mkCell(cs, style) {
   const cell = document.createElement('div');
   cell.className = 'wcell';
   cell.style.width = cs + 'px'; cell.style.height = cs + 'px';
-  cell.style.background = color.bg;
-  if (color.border) cell.style.borderColor = color.border;
+  cell.style.background = style.bg;
+  if (style.border) cell.style.borderColor = style.border;
   return cell;
 }
-
-async function renderWhole(k, exact, combo) {
-  token++; const tk = token;
-  showWholeStage(); wholeEl.innerHTML = '';
-  wholeEl.style.display = 'flex'; wholeEl.style.alignItems = 'flex-end';
-  wholeEl.style.justifyContent = 'center'; wholeEl.style.gap = '2px';
-  divided = false; mode = 'whole';
-  decimalEl.textContent = String(k);
-  fractionEl.innerHTML = ''; breakEl.innerHTML = '';
-  serverLog({ type: 'demo', kind: 'whole', value: k });
-
-  if (k === 0) { subtitleEl.innerHTML = '<b>Zero</b> — no blocks at all!'; return; }
-
-  // Represent as a square / largest-factor rectangle when it's nice; otherwise
-  // as base-ten place groups that break apart (e.g. 34 -> 30 + 4, 102 -> 100 + 2).
-  const compact = chooseCompactShape(k);
-  const parts = getPlaceParts(k);
-  const specs = compact
-    ? [{ shape: compact, colorFn: (i) => getBlockColorAndBorder(k, i), part: null }]
-    : parts.map(p => ({ dims: placeDims(p), colorFn: placeColorFn(p), part: p }));
-
-  // size cells to fit both the assembled AND the spread-apart form
-  const totalCols = specs.reduce((s, sp) => s + (sp.shape ? sp.shape.cols : sp.dims.cols), 0);
-  const maxRows = Math.max(...specs.map(sp => sp.shape ? sp.shape.rows : sp.dims.rows), 1);
-  const spreadReserve = (specs.length - 1) * 60; // group gaps + "+" symbols after split
-  const availW = stageWrap.clientWidth * 0.95, availH = stageWrap.clientHeight * 0.86;
-  let cs = Math.floor(Math.min(availH / maxRows, (availW - spreadReserve) / totalCols - 2));
-  cs = Math.max(4, Math.min(cs, 42));
-
-  const groupEls = [], topLefts = [], plusEls = [], labelEls = [];
-  let allW = [];
-  specs.forEach((sp, i) => {
-    if (i > 0) { const plus = document.createElement('div'); plus.className = 'wplus'; plus.textContent = '+';
-      plus.style.display = 'none';   // hidden (no space) until the number breaks apart
-      wholeEl.appendChild(plus); plusEls.push(plus); }
-    const group = document.createElement('div'); group.className = 'wgroup';
-    const g = document.createElement('div'); g.className = 'wgrid'; g.style.gap = '2px';
-    const { topLeft, cells } = fillGrid(g, cs, sp);
-    topLefts.push(topLeft); allW = allW.concat(cells);
-    const lbl = document.createElement('div'); lbl.className = 'wlabel';
-    lbl.textContent = sp.part ? sp.part.value : k;
-    group.appendChild(g); group.appendChild(lbl);
-    wholeEl.appendChild(group); groupEls.push(group); labelEls.push(lbl);
-  });
-
-  // one face on the whole assembled number
-  if (topLefts[0]) { topLefts[0].style.overflow = 'visible'; topLefts[0].innerHTML = faceHTML(k === 1); }
-
-  // assemble: pop blocks in
-  const step = Math.max(5, Math.min(22, Math.floor(560 / allW.length)));
-  allW.forEach((cell, i) => setTimeout(() => { if (tk === token) cell.classList.add('show'); }, 30 + i * step));
-  const assembleMs = 30 + allW.length * step + 350;
-  if (!(await sleep(assembleMs, tk))) return;
-
-  const rect = compact && compact.cols >= 2;   // a real square/rectangle to name
-  const multi = specs.length >= 2;
-  if (!multi) {
-    if (k === 1) subtitleEl.innerHTML = 'This is <b>One</b> — a single block.';
-    else if (rect) subtitleEl.innerHTML = compact.cols === compact.rows
-      ? `That's <b>${k}</b> — a perfect <b>${compact.cols}×${compact.rows}</b> square!`
-      : `That's <b>${k}</b> — a <b>${compact.cols}×${compact.rows}</b> rectangle!`;
-    else subtitleEl.innerHTML = `That's <b>${k}</b> as a Numberblock!`;
-    labelEls.forEach(l => l.classList.add('show'));
+// Build number n in the given shape into `box`. Returns { cells }.
+function buildShape(box, n, shape, cs) {
+  box.innerHTML = '';
+  const cells = []; let topLeft = null;
+  if (shape.kind === 'place') {
+    box.style.display = 'flex'; box.style.alignItems = 'flex-end'; box.style.justifyContent = 'center'; box.style.gap = '10px';
+    let gi = 0;
+    getPlaceParts(n).forEach((p, pi) => {
+      const g = document.createElement('div'); g.className = 'wgrid'; g.style.gap = '2px';
+      const { cols, rows } = placeDims(p);
+      g.style.gridTemplateColumns = `repeat(${cols}, ${cs}px)`;
+      g.style.gridTemplateRows = `repeat(${rows}, ${cs}px)`;
+      for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+        const cell = mkCell(cs, unitStyle(n, gi, r, c));
+        cell.style.gridRow = rows - r; cell.style.gridColumn = c + 1;
+        if (pi === 0 && rows - r === 1 && c === 0) topLeft = cell;
+        g.appendChild(cell); cells.push(cell); gi++;
+      }
+      box.appendChild(g);
+    });
   } else {
-    subtitleEl.innerHTML = `That's <b>${k}</b> — now watch it break apart!`;
-    if (!(await sleep(900, tk))) return;
-    // break apart: open the gap, reveal + and labels
-    wholeEl.style.gap = '34px';
-    plusEls.forEach(p => { p.style.display = ''; requestAnimationFrame(() => p.classList.add('show')); });
-    labelEls.forEach(l => l.classList.add('show'));
-    subtitleEl.innerHTML = `<b>${k}</b> = ${parts.map(p => p.value).join(' + ')}`;
+    box.style.display = 'grid'; box.style.gap = '2px'; box.style.alignItems = ''; box.style.justifyContent = 'center';
+    const { rows, cols } = shape;
+    box.style.gridTemplateColumns = `repeat(${cols}, ${cs}px)`;
+    box.style.gridTemplateRows = `repeat(${rows}, ${cs}px)`;
+    let i = 0;
+    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+      const cell = mkCell(cs, unitStyle(n, i, r, c));
+      cell.style.gridRow = rows - r; cell.style.gridColumn = c + 1;
+      if (rows - r === 1 && c === 0) topLeft = cell;
+      box.appendChild(cell); cells.push(cell); i++;
+    }
   }
-  if (!exact) subtitleEl.innerHTML += ` <span style="opacity:.85">(rounded to a whole number)</span>`;
-  if (rect) {
-    breakEl.innerHTML = `<span class="p">${compact.cols} × ${compact.rows} = ${k}</span>`;
-  } else {
+  if (topLeft) { topLeft.style.overflow = 'visible'; topLeft.innerHTML = faceHTML(n === 1); }
+  return { cells };
+}
+function fitCellSize(n, shape) {
+  const { cols, rows, gaps } = shapeDims(n, shape);
+  const availW = stageWrap.clientWidth * 0.9, availH = stageWrap.clientHeight * 0.82;
+  let cs = Math.floor(Math.min((availW - gaps) / Math.max(cols, 1), availH / Math.max(rows, 1)));
+  return Math.max(4, Math.min(cs, 46));
+}
+function shapeText(n, shape) {
+  const hint = shape.__count > 1 ? ' &nbsp;<span style="opacity:.7">(tap the block to re-shape)</span>' : '';
+  if (shape.kind === 'place') {
+    const parts = getPlaceParts(n);
+    subtitleEl.innerHTML = `<b>${n}</b> in place value: ${parts.map(p => p.value).join(' + ')}${hint}`;
     breakEl.innerHTML = parts.map(p => {
       const cls = p.kind === 'hundreds' ? 'p' : p.kind === 'tens' ? 't' : 'h';
       const unit = p.kind === 'hundreds' ? 'hundred' : p.kind === 'tens' ? 'ten' : 'one';
       return `<span class="${cls}">${p.digit} ${unit}${p.digit > 1 ? 's' : ''}</span>`;
     }).join(' + ');
+  } else if (n === 1) {
+    subtitleEl.innerHTML = 'This is <b>One</b> — a single block.';
+    breakEl.innerHTML = '';
+  } else if (shape.cols >= 2 && shape.rows >= 2) {
+    subtitleEl.innerHTML = shape.cols === shape.rows
+      ? `<b>${n}</b> — a perfect <b>${shape.cols}×${shape.rows}</b> square!${hint}`
+      : `<b>${n}</b> — a <b>${shape.cols}×${shape.rows}</b> rectangle.${hint}`;
+    breakEl.innerHTML = `<span class="p">${shape.cols} × ${shape.rows} = ${n}</span>`;
+  } else {
+    subtitleEl.innerHTML = `<b>${n}</b> — a line of ${n}.${hint}`;
+    breakEl.innerHTML = '';
   }
+}
+
+let current = null;   // { n, shapes, si, box } for click-to-rotate
+
+function drawCurrent(animate, tk) {
+  const { n, shapes, si, box } = current;
+  const shape = shapes[si]; shape.__count = shapes.length;
+  const cs = fitCellSize(n, shape);
+  const { cells } = buildShape(box, n, shape, cs);
+  if (animate) {
+    const step = Math.max(5, Math.min(22, Math.floor(560 / Math.max(cells.length, 1))));
+    cells.forEach((cell, i) => setTimeout(() => { if (!tk || tk === token) cell.classList.add('show'); }, 30 + i * step));
+  } else {
+    cells.forEach(c => c.classList.add('show'));
+  }
+  shapeText(n, shape);
+  return cells.length;
+}
+function rotateShape() {
+  if (!current || current.shapes.length < 2) return;
+  current.si = (current.si + 1) % current.shapes.length;
+  drawCurrent(false);
+  serverLog({ type: 'reshape', value: current.n, shape: current.si });
+}
+
+async function renderWhole(k, exact, combo) {
+  token++; const tk = token;
+  showWholeStage(); wholeEl.innerHTML = '';
+  wholeEl.style.display = 'flex'; wholeEl.style.alignItems = 'center'; wholeEl.style.justifyContent = 'center';
+  wholeEl.style.gap = '0';
+  divided = false; mode = 'whole';
+  decimalEl.textContent = String(k);
+  fractionEl.innerHTML = ''; breakEl.innerHTML = '';
+  serverLog({ type: 'demo', kind: 'whole', value: k });
+
+  if (k === 0) { subtitleEl.innerHTML = '<b>Zero</b> — no blocks at all!'; current = null; return; }
+
+  const shapes = allShapes(k);
+  const box = document.createElement('div');
+  box.style.cursor = shapes.length > 1 ? 'pointer' : 'default';
+  box.title = shapes.length > 1 ? 'Tap to change shape' : '';
+  box.addEventListener('click', rotateShape);
+  wholeEl.appendChild(box);
+  current = { n: k, shapes, si: defaultShapeIndex(k, shapes), box };
+
+  const count = drawCurrent(true, tk);
+  const assembleMs = 30 + count * Math.max(5, Math.min(22, Math.floor(560 / Math.max(count, 1)))) + 350;
+  if (!(await sleep(assembleMs, tk))) return;
+
+  if (!exact) subtitleEl.innerHTML += ` <span style="opacity:.85">(rounded to a whole number)</span>`;
   if (combo) {
     subtitleEl.innerHTML = `<b>${combo.a} ${combo.op} ${combo.b}</b> makes <b>${k}</b>!`;
     fractionEl.innerHTML = `<span class="frac">${combo.a} ${combo.op} ${combo.b}</span>` +
@@ -880,6 +932,8 @@ function submitInput() {
 }
 document.getElementById('go').addEventListener('click', submitInput);
 document.getElementById('num-input').addEventListener('keydown', e => { if (e.key === 'Enter') submitInput(); });
+// Tap a decimal to expand it again (re-grow One into the 100-grid).
+square.addEventListener('click', () => { if (mode === 'decimal') { stopTour(); demonstrateDecimal(currentDecimalN, true); } });
 
 let rT = null;
 window.addEventListener('resize', () => { clearTimeout(rT); rT = setTimeout(sizeSquare, 150); });

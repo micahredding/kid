@@ -411,6 +411,10 @@ function allShapes(n) {
 function defaultShapeIndex(n, shapes) {
   const best = shapes[0];
   const pi = shapes.findIndex(s => s.kind === 'place');
+  if (n >= 1000) {  // place value gets unwieldy; prefer a compact rectangle
+    if (best && best.kind === 'rect' && best.cols >= 2 && best.rows / best.cols <= 2.5) return 0;
+    return pi >= 0 ? pi : 0;
+  }
   if (n >= 100) {   // hundreds read best as place value, unless a clean square (100, 144)
     if (best && best.kind === 'rect' && best.cols === best.rows) return 0;
     return pi >= 0 ? pi : 0;
@@ -440,6 +444,10 @@ function hundredsCell(d, i, r, c) {
   return { bg: ((r + c) % 2 === 1) ? pastel : base, border };
 }
 function unitStyle(n, i, r, c) {
+  if (n >= 1000) {   // thousands+: solid single-digit-equivalent colour (1000 red, 2000 orange...)
+    const d = ((Math.floor(n / 1000) - 1) % 10) + 1;
+    return getBlockColorAndBorder(d, i);
+  }
   if (n < 100) return getBlockColorAndBorder(n, i);
   const Hd = Math.floor(n / 100), hCount = Hd * 100;
   if (i < hCount) return hundredsCell(Hd, i, r, c);
@@ -504,7 +512,7 @@ function parseEquation(raw) {
   return null;
 }
 
-const MAX_WHOLE = 1000, MAX_MIXED = 50;
+const MAX_WHOLE = 10000, MAX_MIXED = 10000;
 // Returns { mode:'whole'|'decimal'|'mixed', k?, whole?, n?, exact } or null.
 function routeValue(val) {
   if (val == null || !isFinite(val) || val < 0) return null;
@@ -598,11 +606,14 @@ function sizeSquare() {
   document.documentElement.style.setProperty('--sq', Math.max(120, Math.floor(Math.min(w, h) * 0.94)) + 'px');
 }
 function showSquareStage() { wholeEl.classList.add('hidden'); wholeEl.innerHTML = '';
-  combineEl.classList.add('hidden'); combineEl.innerHTML = ''; square.classList.remove('hidden'); }
+  combineEl.classList.add('hidden'); combineEl.innerHTML = ''; square.classList.remove('hidden');
+  stageWrap.style.cursor = ''; }
 function showWholeStage()  { square.classList.add('hidden');
-  combineEl.classList.add('hidden'); combineEl.innerHTML = ''; wholeEl.classList.remove('hidden'); }
+  combineEl.classList.add('hidden'); combineEl.innerHTML = ''; wholeEl.classList.remove('hidden');
+  stageWrap.style.cursor = 'default'; }
 function showCombineStage(){ square.classList.add('hidden');
-  wholeEl.classList.add('hidden'); wholeEl.innerHTML = ''; combineEl.classList.remove('hidden'); }
+  wholeEl.classList.add('hidden'); wholeEl.innerHTML = ''; combineEl.classList.remove('hidden');
+  stageWrap.style.cursor = 'default'; }
 
 // ===================== DECIMAL RENDER (with enlarge) =====================
 function clearAllCells() { for (const c of allCells) c.className = 'cell empty'; }
@@ -776,7 +787,7 @@ function drawCurrent(animate, tk) {
   const shape = shapes[si]; shape.__count = shapes.length;
   const cs = fitCellSize(n, shape);
   const { cells } = buildShape(box, n, shape, cs);
-  if (animate) {
+  if (animate && cells.length <= 300) {   // stagger only when it stays snappy
     const step = Math.max(5, Math.min(22, Math.floor(560 / Math.max(cells.length, 1))));
     cells.forEach((cell, i) => setTimeout(() => { if (!tk || tk === token) cell.classList.add('show'); }, 30 + i * step));
   } else {
@@ -807,14 +818,16 @@ async function renderWhole(k, exact, combo) {
   const shapes = allShapes(k);
   const box = document.createElement('div');
   box.className = 'dancing';
-  box.style.cursor = shapes.length > 1 ? 'pointer' : 'default';
   box.title = shapes.length > 1 ? 'Tap to change shape' : '';
-  box.addEventListener('click', rotateShape);
+  box.addEventListener('click', (e) => { e.stopPropagation(); rotateShape(); });
   wholeEl.appendChild(box);
   current = { n: k, shapes, si: defaultShapeIndex(k, shapes), box };
+  // clicking anywhere in the field rotates (helps thin single-line numbers)
+  stageWrap.style.cursor = shapes.length > 1 ? 'pointer' : 'default';
 
   const count = drawCurrent(true, tk);
-  const assembleMs = 30 + count * Math.max(5, Math.min(22, Math.floor(560 / Math.max(count, 1)))) + 350;
+  const assembleMs = count > 300 ? 400
+    : 30 + count * Math.max(5, Math.min(22, Math.floor(560 / Math.max(count, 1)))) + 350;
   if (!(await sleep(assembleMs, tk))) return;
 
   if (!exact) subtitleEl.innerHTML += ` <span style="opacity:.85">(rounded to a whole number)</span>`;
@@ -1103,46 +1116,49 @@ function buildUnitSquare(size, opts) {
 async function renderMixed(whole, n, exact) {
   token++; const tk = token;
   showWholeStage();
-  wholeEl.innerHTML = ''; wholeEl.style.display = 'flex'; wholeEl.style.alignItems = 'center';
-  wholeEl.style.justifyContent = 'center'; wholeEl.style.gap = '0';
+  wholeEl.innerHTML = ''; wholeEl.style.display = 'flex'; wholeEl.style.alignItems = 'flex-end';
+  wholeEl.style.justifyContent = 'center'; wholeEl.style.gap = '16px';
   divided = false; mode = 'mixed';
   const disp = fmtMixed(whole, n);
   decimalEl.textContent = disp;
   serverLog({ type: 'demo', kind: 'mixed', value: disp });
 
-  // (whole) solid unit blocks + 1 fractional block, laid out as a grid so any
-  // count fits: a single row for a few, a near-square grid for many (e.g. 13.5).
-  const count = whole + 1;
-  const cols = count <= 5 ? count : Math.ceil(Math.sqrt(count));
-  const rows = Math.ceil(count / cols);
-  const availW = stageWrap.clientWidth * 0.95, availH = stageWrap.clientHeight * 0.82;
-  let S = Math.floor(Math.min((availW - (cols - 1) * 10) / cols, (availH - (rows - 1) * 10) / rows));
-  S = Math.max(42, Math.min(S, 260));
+  // The whole part is its NORMAL Numberblock (real shape + place-value colors);
+  // the decimal part is shown beside it as a subdivided unit block.
+  const shapes = allShapes(whole);
+  const shape = shapes[defaultShapeIndex(whole, shapes)];
+  const { cols, rows, gaps } = shapeDims(whole, shape);
+  const availW = stageWrap.clientWidth * 0.92, availH = stageWrap.clientHeight * 0.78;
+  let cs = Math.floor(Math.min((availW * 0.6 - gaps) / cols, availH / rows));
+  cs = Math.max(4, Math.min(cs, 46));
+  let fs = Math.max(cs, 66);                       // decimal block stays legible
+  fs = Math.min(fs, Math.floor(availH * 0.7), Math.floor(availW * 0.32));
 
-  const gridWrap = document.createElement('div');
-  gridWrap.className = 'dancing';
-  gridWrap.style.display = 'grid';
-  gridWrap.style.gridTemplateColumns = `repeat(${cols}, ${S}px)`;
-  gridWrap.style.gap = '10px';
-  gridWrap.style.justifyItems = 'center'; gridWrap.style.alignItems = 'center';
-  wholeEl.appendChild(gridWrap);
+  // whole Numberblock
+  const wbox = document.createElement('div'); wbox.className = 'dancing';
+  const { cells } = buildShape(wbox, whole, shape, cs);
+  const wgroup = document.createElement('div'); wgroup.className = 'wgroup';
+  const wlbl = document.createElement('div'); wlbl.className = 'wlabel show'; wlbl.textContent = whole;
+  wgroup.append(wbox, wlbl);
 
-  const units = [];
-  for (let i = 0; i < count; i++) {
-    const isFrac = (i === count - 1);
-    const u = isFrac ? buildUnitSquare(S, { n, face: false })
-                     : buildUnitSquare(S, { solid: true, face: i === 0 });
-    if (isFrac) { const lbl = document.createElement('div'); lbl.className = 'ulabel';
-      lbl.textContent = fmtDecimal(n); u.appendChild(lbl); }
-    gridWrap.appendChild(u); units.push(u);
-  }
+  const plus = document.createElement('div'); plus.className = 'wplus show'; plus.textContent = '+';
 
-  const step = count > 8 ? 70 : 150;
-  units.forEach((u, i) => setTimeout(() => { if (tk === token) u.classList.add('show'); }, 50 + i * step));
-  if (!(await sleep(50 + count * step + 200, tk))) return;
+  // decimal part
+  const fgroup = document.createElement('div'); fgroup.className = 'wgroup dancing';
+  const fblock = buildUnitSquare(fs, { n, face: false });
+  const flbl = document.createElement('div'); flbl.className = 'wlabel show'; flbl.textContent = fmtDecimal(n);
+  fgroup.append(fblock, flbl);
+
+  wholeEl.append(wgroup, plus, fgroup);
+
+  // animate: pop the whole number's blocks, then the decimal block
+  const step = Math.max(5, Math.min(20, Math.floor(500 / Math.max(cells.length, 1))));
+  cells.forEach((c, i) => setTimeout(() => { if (tk === token) c.classList.add('show'); }, 20 + i * step));
+  setTimeout(() => { if (tk === token) fblock.classList.add('show'); }, 40 + cells.length * step + 150);
+  if (!(await sleep(40 + cells.length * step + 500, tk))) return;
 
   const g = gcd(n, 100), rn = n / g, rd = 100 / g;
-  subtitleEl.innerHTML = `<b>${whole}</b> whole block${whole > 1 ? 's' : ''} and <b>${fmtDecimal(n)}</b> of one more`;
+  subtitleEl.innerHTML = `<b>${whole}</b> and <b>${fmtDecimal(n)}</b> more`;
   if (!exact) subtitleEl.innerHTML += ` <span style="opacity:.85">(rounded to the nearest hundredth)</span>`;
   fractionEl.innerHTML = `<span class="frac">${disp}</span><span class="eq">=</span>` +
     `<span class="reduced">${whole} ${rn}/${rd}</span>`;
@@ -1314,6 +1330,10 @@ document.getElementById('go').addEventListener('click', submitInput);
 inputEl.addEventListener('keydown', e => { if (e.key === 'Enter') submitInput(); });
 // Tap a decimal to expand it again (re-grow One into the 100-grid).
 square.addEventListener('click', () => { if (mode === 'decimal') { stopTour(); demonstrateDecimal(currentDecimalN, true); } });
+// Tap anywhere in the field to rotate a whole number's shape (incl. math results).
+stageWrap.addEventListener('click', () => {
+  if (mode === 'whole' && current && current.shapes.length > 1) rotateShape();
+});
 
 let rT = null;
 window.addEventListener('resize', () => { clearTimeout(rT); rT = setTimeout(() => {

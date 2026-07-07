@@ -1328,6 +1328,15 @@ function submitInput() {
 }
 document.getElementById('go').addEventListener('click', submitInput);
 inputEl.addEventListener('keydown', e => { if (e.key === 'Enter') submitInput(); });
+// Type-to-focus: keystrokes anywhere on the page flow into the number field
+// even if it lost focus (e.g. after clicking a block or a button).
+document.addEventListener('keydown', (e) => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;      // leave shortcuts alone
+  if (document.activeElement === inputEl) return;       // already typing in it
+  if (e.key === 'Enter') { e.preventDefault(); inputEl.focus(); submitInput(); }
+  else if (e.key === 'Backspace') { e.preventDefault(); inputEl.focus(); inputEl.value = inputEl.value.slice(0, -1); }
+  else if (e.key.length === 1) { e.preventDefault(); inputEl.focus(); inputEl.value += e.key; }
+});
 // Tap a decimal to expand it again (re-grow One into the 100-grid).
 square.addEventListener('click', () => { if (mode === 'decimal') { stopTour(); demonstrateDecimal(currentDecimalN, true); } });
 // Tap anywhere in the field to rotate a whole number's shape (incl. math results).

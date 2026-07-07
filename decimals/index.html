@@ -829,6 +829,7 @@ async function runCombine(a, opSym, b, result) {
 
   const left = mkOperand(), right = mkOperand();
   left.l.textContent = a; right.l.textContent = b;
+  right.w.style.opacity = '0';   // keep the 2 (block + label) hidden until it walks in
   const sym = document.createElement('div'); sym.className = 'op-sym'; sym.textContent = opSym;
   combineEl.append(left.w, sym, right.w);
 
@@ -836,7 +837,7 @@ async function runCombine(a, opSym, b, result) {
   if (!(await sleep(1400, tk))) return;
   sym.classList.add('show');
   subtitleEl.innerHTML = `...and here comes <b>${b}</b>!`;
-  renderMini(right.g, b); right.w.classList.add('walk-in-right');
+  renderMini(right.g, b); right.w.style.opacity = '1'; right.w.classList.add('walk-in-right');
   if (!(await sleep(2000, tk))) return;
   subtitleEl.innerHTML = 'Now put them together...';
   left.w.style.transform = 'translateX(40px) scale(0.85)';

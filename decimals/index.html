@@ -141,6 +141,28 @@
   }
   .dancing { animation: idleBob 2.6s ease-in-out infinite; transform-origin: 50% 100%; }
 
+  /* negative numbers: dark "anti-block" ghosts */
+  .neg .wcell { background: rgba(26,26,48,0.55) !important; border-color: rgba(255,255,255,0.4) !important; }
+  .neg .wcell::after { opacity: 0; }
+  .neg .nb-eye { background: #cfd2ff; }
+  .neg .nb-mouth { border-color: #cfd2ff; }
+
+  /* thousand-blocks: each cell is one 1000, decorated with a grid pattern */
+  .wcell.thousand::before {
+    content: ''; position: absolute; inset: 3px; z-index: 1; pointer-events: none; border-radius: 2px;
+    background-image:
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.45) 0 1.5px, transparent 1.5px 20%),
+      repeating-linear-gradient(90deg, rgba(255,255,255,0.45) 0 1.5px, transparent 1.5px 20%);
+  }
+
+  /* divide-by-10: a decimal point that hops across a big number */
+  .decshift { font-size: clamp(44px, 11vw, 108px); font-weight: 900; color: #FFD700;
+    text-shadow: 3px 3px 6px rgba(0,0,0,0.35); display: flex; align-items: baseline; letter-spacing: 2px; }
+  .decshift .dig { display: inline-block; }
+  .decshift .dot { display: inline-block; color: #7CFF9B; font-weight: 900; }
+  .decshift .dot.hop { animation: dotHop 0.55s ease; }
+  @keyframes dotHop { 0% { transform: translateY(0); } 45% { transform: translateY(-26px) scale(1.3); } 100% { transform: translateY(0); } }
+
   /* combine (a + b) animation */
   #combine { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; max-height: 100%; }
   #combine.hidden { display: none; }
@@ -402,6 +424,9 @@ function allShapes(n) {
   // most-square first; within a pair, upright (taller) before wide
   rects.sort((a, b) => (Math.abs(a.rows - a.cols) - Math.abs(b.rows - b.cols)) || (b.rows - a.rows));
   const shapes = rects.map(x => ({ kind: 'rect', rows: x.rows, cols: x.cols }));
+  // Step Squad! triangular numbers (3,6,10,15,21,...) can stack as a staircase.
+  const tk = (Math.sqrt(8 * n + 1) - 1) / 2;
+  if (Number.isInteger(tk) && tk >= 2 && tk <= 40) shapes.push({ kind: 'stairs', k: tk });
   if (n >= 10 && getPlaceParts(n).length >= 2) shapes.push({ kind: 'place' });
   return shapes;
 }
@@ -425,6 +450,7 @@ function defaultShapeIndex(n, shapes) {
 }
 function shapeDims(n, shape) {
   if (shape.kind === 'rect') return { cols: shape.cols, rows: shape.rows, gaps: 0 };
+  if (shape.kind === 'stairs') return { cols: shape.k, rows: shape.k, gaps: 0 };
   const parts = getPlaceParts(n);
   return { cols: parts.reduce((s, p) => s + placeDims(p).cols, 0),
            rows: Math.max(...parts.map(p => placeDims(p).rows), 1),
@@ -512,10 +538,33 @@ function parseEquation(raw) {
   return null;
 }
 
-const MAX_WHOLE = 10000, MAX_MIXED = 10000;
-// Returns { mode:'whole'|'decimal'|'mixed', k?, whole?, n?, exact } or null.
+// "a / 10", "a / 100", "a / 1000" -> the decimal-point-hop animation.
+function parseDivByPowerOf10(raw) {
+  let s = String(raw).trim().toLowerCase()
+    .replace(/×/g, '*').replace(/÷/g, '/').replace(/x/g, '*').replace(/\s+/g, '');
+  const m = s.match(/^(\d+)\/(10|100|1000)$/);
+  if (!m) return null;
+  const a = +m[1], b = +m[2];
+  return { a, b, result: a / b, places: Math.round(Math.log10(b)) };
+}
+// Insert a decimal point `places` from the right of integer a (with leading
+// zeros as needed), trimming trailing zeros. 250,1 -> "25"; 250,3 -> "0.25".
+function shiftedString(a, places) {
+  let s = String(a);
+  while (s.length <= places) s = '0' + s;
+  const idx = s.length - places;
+  let res = places > 0 ? s.slice(0, idx) + '.' + s.slice(idx) : s;
+  if (res.includes('.')) res = res.replace(/0+$/, '').replace(/\.$/, '');
+  res = res.replace(/^0+(?=\d)/, '');
+  if (res.startsWith('.')) res = '0' + res;
+  return res;
+}
+
+const MAX_WHOLE = 999000, MAX_MIXED = 999000;
+// Returns { mode:'whole'|'decimal'|'mixed'|'negative', ... } or null.
 function routeValue(val) {
-  if (val == null || !isFinite(val) || val < 0) return null;
+  if (val == null || !isFinite(val)) return null;
+  if (val < 0) return { mode: 'negative', k: Math.min(Math.round(-val), MAX_WHOLE) };
   if (val < 1) {
     let n = Math.round(val * 100);
     if (n >= 100) return { mode: 'whole', k: 1, exact: true };
@@ -613,7 +662,7 @@ function showWholeStage()  { square.classList.add('hidden');
   stageWrap.style.cursor = 'default'; }
 function showCombineStage(){ square.classList.add('hidden');
   wholeEl.classList.add('hidden'); wholeEl.innerHTML = ''; combineEl.classList.remove('hidden');
-  stageWrap.style.cursor = 'default'; }
+  combineEl.style.flexDirection = ''; stageWrap.style.cursor = 'default'; }
 
 // ===================== DECIMAL RENDER (with enlarge) =====================
 function clearAllCells() { for (const c of allCells) c.className = 'cell empty'; }
@@ -710,9 +759,11 @@ function mkCell(cs, style) {
   return cell;
 }
 // Build number n in the given shape into `box`. Returns { cells }.
-function buildShape(box, n, shape, cs) {
+// `thousand`: each cell represents 1000 and gets a decorative grid pattern.
+function buildShape(box, n, shape, cs, thousand) {
   box.innerHTML = '';
   const cells = []; let topLeft = null;
+  const cls = thousand ? 'thousand' : '';
   if (shape.kind === 'place') {
     box.style.display = 'flex'; box.style.alignItems = 'flex-end'; box.style.justifyContent = 'center'; box.style.gap = '10px';
     let gi = 0;
@@ -722,13 +773,29 @@ function buildShape(box, n, shape, cs) {
       g.style.gridTemplateColumns = `repeat(${cols}, ${cs}px)`;
       g.style.gridTemplateRows = `repeat(${rows}, ${cs}px)`;
       for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
-        const cell = mkCell(cs, unitStyle(n, gi, r, c));
+        const cell = mkCell(cs, unitStyle(n, gi, r, c)); if (cls) cell.classList.add(cls);
         cell.style.gridRow = rows - r; cell.style.gridColumn = c + 1;
         if (pi === 0 && rows - r === 1 && c === 0) topLeft = cell;
         g.appendChild(cell); cells.push(cell); gi++;
       }
       box.appendChild(g);
     });
+  } else if (shape.kind === 'stairs') {
+    // staircase: k rows, bottom row widest (k cells) up to 1 on top, left-aligned
+    const k = shape.k;
+    box.style.display = 'grid'; box.style.gap = '2px'; box.style.alignItems = ''; box.style.justifyContent = 'center';
+    box.style.gridTemplateColumns = `repeat(${k}, ${cs}px)`;
+    box.style.gridTemplateRows = `repeat(${k}, ${cs}px)`;
+    let i = 0;
+    for (let r = 0; r < k; r++) {           // r = 0 is the bottom (widest) row
+      const w = k - r;
+      for (let c = 0; c < w; c++) {
+        const cell = mkCell(cs, unitStyle(n, i, r, c)); if (cls) cell.classList.add(cls);
+        cell.style.gridRow = k - r; cell.style.gridColumn = c + 1;
+        if (r === k - 1 && c === 0) topLeft = cell;   // single top cell
+        box.appendChild(cell); cells.push(cell); i++;
+      }
+    }
   } else {
     box.style.display = 'grid'; box.style.gap = '2px'; box.style.alignItems = ''; box.style.justifyContent = 'center';
     const { rows, cols } = shape;
@@ -736,7 +803,7 @@ function buildShape(box, n, shape, cs) {
     box.style.gridTemplateRows = `repeat(${rows}, ${cs}px)`;
     let i = 0;
     for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
-      const cell = mkCell(cs, unitStyle(n, i, r, c));
+      const cell = mkCell(cs, unitStyle(n, i, r, c)); if (cls) cell.classList.add(cls);
       cell.style.gridRow = rows - r; cell.style.gridColumn = c + 1;
       if (rows - r === 1 && c === 0) topLeft = cell;
       box.appendChild(cell); cells.push(cell); i++;
@@ -751,11 +818,22 @@ function fitCellSize(n, shape) {
   let cs = Math.floor(Math.min((availW - gaps) / Math.max(cols, 1), availH / Math.max(rows, 1)));
   return Math.max(4, Math.min(cs, 46));
 }
-function shapeText(n, shape) {
+function shapeText(n, shape, thousand, displayN) {
   const hint = shape.__count > 1 ? ' <span style="opacity:.7">· tap to reshape</span>' : '';
   if (hideAnswer) {   // Game mode: don't reveal the number
     subtitleEl.innerHTML = 'What number is this? Type its name!' + hint;
     breakEl.innerHTML = '';
+    return;
+  }
+  if (thousand) {
+    subtitleEl.innerHTML = `<b>${displayN}</b> = <b>${n}</b> thousand-block${n > 1 ? 's' : ''} (each block is 1000)${hint}`;
+    breakEl.innerHTML = `<span class="p">${n} × 1000 = ${displayN}</span>`;
+    return;
+  }
+  if (shape.kind === 'stairs') {
+    const steps = Array.from({ length: shape.k }, (_, i) => i + 1);
+    subtitleEl.innerHTML = `<b>${n}</b> — the <b>Step Squad</b> staircase!${hint}`;
+    breakEl.innerHTML = `<span class="t">${steps.join(' + ')} = ${n}</span>`;
     return;
   }
   if (shape.kind === 'place') {
@@ -783,17 +861,17 @@ function shapeText(n, shape) {
 let current = null;   // { n, shapes, si, box } for click-to-rotate
 
 function drawCurrent(animate, tk) {
-  const { n, shapes, si, box } = current;
+  const { n, shapes, si, box, thousand } = current;
   const shape = shapes[si]; shape.__count = shapes.length;
   const cs = fitCellSize(n, shape);
-  const { cells } = buildShape(box, n, shape, cs);
+  const { cells } = buildShape(box, n, shape, cs, thousand);
   if (animate && cells.length <= 300) {   // stagger only when it stays snappy
     const step = Math.max(5, Math.min(22, Math.floor(560 / Math.max(cells.length, 1))));
     cells.forEach((cell, i) => setTimeout(() => { if (!tk || tk === token) cell.classList.add('show'); }, 30 + i * step));
   } else {
     cells.forEach(c => c.classList.add('show'));
   }
-  shapeText(n, shape);
+  shapeText(n, shape, thousand, current.displayN);
   return cells.length;
 }
 function rotateShape() {
@@ -803,25 +881,27 @@ function rotateShape() {
   serverLog({ type: 'reshape', value: current.n, shape: current.si });
 }
 
-async function renderWhole(k, exact, combo) {
+async function renderWhole(k, exact, combo, negative) {
   token++; const tk = token;
   showWholeStage(); wholeEl.innerHTML = '';
   wholeEl.style.display = 'flex'; wholeEl.style.alignItems = 'center'; wholeEl.style.justifyContent = 'center';
   wholeEl.style.gap = '0';
   divided = false; mode = 'whole';
-  decimalEl.textContent = hideAnswer ? '?' : String(k);
+  const thousand = k >= 10000;                          // each cell = one 1000
+  const shapeN = thousand ? Math.max(1, Math.round(k / 1000)) : k;
+  decimalEl.textContent = hideAnswer ? '?' : (negative ? '−' : '') + String(k);
   fractionEl.innerHTML = ''; breakEl.innerHTML = '';
-  serverLog({ type: 'demo', kind: 'whole', value: k });
+  serverLog({ type: 'demo', kind: 'whole', value: (negative ? '-' : '') + k });
 
   if (k === 0) { subtitleEl.innerHTML = '<b>Zero</b> — no blocks at all!'; current = null; return; }
 
-  const shapes = allShapes(k);
+  const shapes = allShapes(shapeN);
   const box = document.createElement('div');
-  box.className = 'dancing';
+  box.className = 'dancing' + (negative ? ' neg' : '');
   box.title = shapes.length > 1 ? 'Tap to change shape' : '';
   box.addEventListener('click', (e) => { e.stopPropagation(); rotateShape(); });
   wholeEl.appendChild(box);
-  current = { n: k, shapes, si: defaultShapeIndex(k, shapes), box };
+  current = { n: shapeN, displayN: k, thousand, shapes, si: defaultShapeIndex(shapeN, shapes), box };
   // clicking anywhere in the field rotates (helps thin single-line numbers)
   stageWrap.style.cursor = shapes.length > 1 ? 'pointer' : 'default';
 
@@ -830,7 +910,11 @@ async function renderWhole(k, exact, combo) {
     : 30 + count * Math.max(5, Math.min(22, Math.floor(560 / Math.max(count, 1)))) + 350;
   if (!(await sleep(assembleMs, tk))) return;
 
-  if (!exact) subtitleEl.innerHTML += ` <span style="opacity:.85">(rounded to a whole number)</span>`;
+  if (negative) {
+    subtitleEl.innerHTML = `<b>−${k}</b> — that's <b>${k}</b> below zero (anti-blocks)!`;
+    breakEl.innerHTML = '';
+  }
+  if (!exact && !negative) subtitleEl.innerHTML += ` <span style="opacity:.85">(rounded to a whole number)</span>`;
   if (combo) {
     subtitleEl.innerHTML = `<b>${combo.a} ${combo.op} ${combo.b}</b> makes <b>${k}</b>!`;
     fractionEl.innerHTML = `<span class="frac">${combo.a} ${combo.op} ${combo.b}</span>` +
@@ -955,8 +1039,12 @@ async function runSubtract(a, b, result) {
     if (gr < bestRow || (gr === bestRow && gc < bestCol)) { bestRow = gr; bestCol = gc; faceCell = c; } });
   if (faceCell) { faceCell.style.overflow = 'visible'; faceCell.innerHTML = faceHTML(result === 1); }
   boxA.classList.add('dancing');
-  subtitleEl.innerHTML = `<b>${a} − ${b} = ${result}</b>!`;
+  subtitleEl.innerHTML = `<b>${a} − ${b} = ${result}</b> — now tidy it up...`;
   fractionEl.innerHTML = `<span class="frac">${a} − ${b}</span><span class="eq">=</span><span class="reduced">${result}</span>`;
+  if (result < 1) { return; }   // 0 or negative: nothing to reshape
+  // ...then the leftover reshapes into the proper Numberblock.
+  if (!(await sleep(1300, tk))) return;
+  await renderWhole(result, true, { a, op: '−', b });
 }
 
 // Equation split: total dances in, then splits into "a + b". e.g. 3 = 1 + 2.
@@ -1087,6 +1175,51 @@ async function runDivide(a, b, result) {
   breakEl.innerHTML = `<span class="p">${b} groups of ${result}</span>`;
 }
 
+// Divide by 10/100/1000: hop the decimal point left across the written number.
+async function runDecimalShift(a, b, places) {
+  token++; const tk = token;
+  showCombineStage(); combineEl.innerHTML = '';
+  combineEl.style.gap = '0'; combineEl.style.flexDirection = 'column';
+  divided = false; mode = 'combine';
+  decimalEl.textContent = `${a} ÷ ${b}`;
+  fractionEl.innerHTML = ''; breakEl.innerHTML = '';
+  subtitleEl.innerHTML = `Dividing by <b>${b}</b> slides the decimal point <b>${places}</b> place${places > 1 ? 's' : ''} left!`;
+  serverLog({ type: 'demo', kind: 'decshift', value: `${a}/${b}` });
+
+  const wrap = document.createElement('div'); wrap.className = 'decshift';
+  combineEl.appendChild(wrap);
+  const digits = String(a).split('');
+  // pointPos = number of digits to the LEFT of the point (starts at far right)
+  function render(pointPos, hop) {
+    const ds = digits.slice(); let pos = pointPos;
+    while (pos < 1) { ds.unshift('0'); pos++; }   // pad leading zeros
+    wrap.innerHTML = '';
+    ds.forEach((d, i) => {
+      if (i === pos) { const dot = document.createElement('span');
+        dot.className = 'dot' + (hop ? ' hop' : ''); dot.textContent = '.'; wrap.appendChild(dot); }
+      const sp = document.createElement('span'); sp.className = 'dig'; sp.textContent = d; wrap.appendChild(sp);
+    });
+    if (pos >= ds.length) { const dot = document.createElement('span');
+      dot.className = 'dot' + (hop ? ' hop' : ''); dot.textContent = '.'; wrap.appendChild(dot); }
+  }
+  let pointPos = digits.length;
+  render(pointPos, false);
+  if (!(await sleep(750, tk))) { combineEl.style.flexDirection = ''; return; }
+  for (let step = 0; step < places; step++) {
+    pointPos -= 1;
+    render(pointPos, true);
+    if (!(await sleep(820, tk))) { combineEl.style.flexDirection = ''; return; }
+  }
+  // settle on the clean result
+  const resStr = shiftedString(a, places);
+  wrap.innerHTML = '';
+  resStr.split('').forEach(ch => { const sp = document.createElement('span');
+    sp.className = ch === '.' ? 'dot' : 'dig'; sp.textContent = ch; wrap.appendChild(sp); });
+  combineEl.style.flexDirection = '';
+  subtitleEl.innerHTML = `<b>${a} ÷ ${b} = ${resStr}</b>!`;
+  fractionEl.innerHTML = `<span class="frac">${a} ÷ ${b}</span><span class="eq">=</span><span class="reduced">${resStr}</span>`;
+}
+
 // ===================== MIXED-NUMBER RENDER (whole + fractional block) =====================
 function buildUnitSquare(size, opts) {
   // opts: { solid:true } | { n:hundredths } ; face:boolean
@@ -1169,6 +1302,8 @@ async function renderMixed(whole, n, exact) {
 // ===================== ROUTER =====================
 // Combine "a op b" animates; everything else routes to whole / mixed / decimal.
 async function present(raw) {
+  const dv = parseDivByPowerOf10(raw);      // 250/10 etc. -> hopping decimal point
+  if (dv) { await runDecimalShift(dv.a, dv.b, dv.places); return; }
   const eq = parseEquation(raw);
   if (eq) {
     if (eq.type === 'split') await runSplit(eq.total, eq.a, eq.op, eq.b);
@@ -1187,8 +1322,9 @@ async function present(raw) {
     return;
   }
   const r = routeValue(evalExpr(raw));
-  if (!r) { subtitleEl.textContent = 'Try 102, 1.5, 1+2, 10-3, or 3=1+2'; return; }
+  if (!r) { subtitleEl.textContent = 'Try 102, 1.5, 1+2, 10-3, or -7'; return; }
   if (r.mode === 'whole') await renderWhole(r.k, r.exact);
+  else if (r.mode === 'negative') await renderWhole(r.k, true, null, true);
   else if (r.mode === 'mixed') await renderMixed(r.whole, r.n, r.exact);
   else await demonstrateDecimal(r.n, r.exact);
 }

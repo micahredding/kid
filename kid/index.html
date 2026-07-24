@@ -245,7 +245,11 @@ function tryLaunchGame(trimmed) {
 // Use same-origin so this works from other devices on the LAN (not just the host machine).
 const SERVER = window.location.origin;
 
+// Optional "who" tag from the URL, e.g. ?who=micah — added to every log entry.
+const WHO = (new URLSearchParams(window.location.search).get('who') || '').trim() || null;
+
 function serverLog(entry) {
+  if (WHO) entry.who = WHO;
   fetch(`${SERVER}/log`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -258,7 +262,7 @@ async function serverSaveDrawing(dataUrl) {
     const res = await fetch(`${SERVER}/save-drawing`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dataUrl }),
+      body: JSON.stringify({ dataUrl, who: WHO }),
     });
     if (res.ok) {
       const { filepath } = await res.json();
@@ -879,6 +883,7 @@ function addLine(content, cls = 'result') {
 
 // Log session start
 serverLog({ type: 'start', version: '1.0.0' });
+if (WHO) addLine(`Playing as ${WHO} 👋`, 'welcome');
 
 inputEl.addEventListener('keydown', (e) => {
   const isEnter =

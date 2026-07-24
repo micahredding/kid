@@ -22,6 +22,31 @@ function log(entry) {
   try { appendFileSync(logFile, JSON.stringify(entry) + '\n'); } catch { /* never crash */ }
 }
 
+// Passive "who" signal (Option A): which device/IP made the request.
+function clientIp(req) {
+  const xff = req.headers['x-forwarded-for'];
+  const ip = (xff ? String(xff).split(',')[0].trim() : '') || req.socket?.remoteAddress || '';
+  return ip.replace(/^::ffff:/, '');
+}
+function shortDevice(ua = '') {
+  ua = String(ua);
+  const os = /iPad/.test(ua) ? 'iPad'
+    : /iPhone/.test(ua) ? 'iPhone'
+    : /Android/.test(ua) ? 'Android'
+    : /Macintosh|Mac OS X/.test(ua) ? 'Mac'
+    : /Windows/.test(ua) ? 'Windows'
+    : /Linux/.test(ua) ? 'Linux' : '?';
+  const br = /Edg\//.test(ua) ? 'Edge'
+    : /Chrome\//.test(ua) ? 'Chrome'
+    : /Firefox\//.test(ua) ? 'Firefox'
+    : /Safari\//.test(ua) ? 'Safari' : '';
+  return (os + (br ? ' ' + br : '')).trim() || 'device';
+}
+// Sanitize a client-supplied "who" (Option B) for use in logs and filenames.
+function cleanWho(who) {
+  return who ? String(who).replace(/[^a-z0-9_-]/gi, '').slice(0, 20) : '';
+}
+
 log({ type: 'start', version: '1.0.0' });
 console.log(`\n  Kid (HTML) is running at http://localhost:${PORT}`);
 console.log(`  Logging to: logs/session-${sessionTimestamp}.jsonl\n`);
@@ -99,17 +124,23 @@ const server = createServer(async (req, res) => {
     }
   }
 
-  // Serve the HTML app (read per request so edits show up on refresh)
-  if (req.method === 'GET' && req.url === '/') {
+  // Serve the HTML app (read per request so edits show up on refresh).
+  // Ignore any query string (e.g. /?who=micah) when matching the root path.
+  if (req.method === 'GET' && req.url.split('?')[0] === '/') {
     res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache' });
     res.end(readFileSync(htmlPath));
     return;
   }
 
-  // Append a log entry
+  // Append a log entry, stamped with the device/IP it came from
   if (req.method === 'POST' && req.url === '/log') {
     const body = await readBody(req);
-    try { log(JSON.parse(body)); } catch { /* ignore malformed */ }
+    try {
+      const entry = JSON.parse(body);
+      entry.ip = clientIp(req);
+      entry.device = shortDevice(req.headers['user-agent']);
+      log(entry);
+    } catch { /* ignore malformed */ }
     res.writeHead(204); res.end();
     return;
   }
@@ -118,13 +149,14 @@ const server = createServer(async (req, res) => {
   if (req.method === 'POST' && req.url === '/save-drawing') {
     const body = await readBody(req);
     try {
-      const { dataUrl } = JSON.parse(body);
+      const { dataUrl, who } = JSON.parse(body);
       const base64 = dataUrl.replace(/^data:image\/png;base64,/, '');
       const buf = Buffer.from(base64, 'base64');
       const ts = new Date().toISOString().replace(/[:.]/g, '-');
-      const filepath = join(printsDir, `drawing-${ts}.png`);
+      const tag = cleanWho(who);
+      const filepath = join(printsDir, `drawing-${tag ? tag + '-' : ''}${ts}.png`);
       writeFileSync(filepath, buf);
-      log({ type: 'print', filepath });
+      log({ type: 'print', filepath, who: cleanWho(who) || undefined, ip: clientIp(req), device: shortDevice(req.headers['user-agent']) });
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ filepath }));
     } catch {

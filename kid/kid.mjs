@@ -34,7 +34,7 @@ function startRepl() {
       }
 
       // Draw command
-      if (trimmed.toLowerCase() === 'draw') {
+      if (['draw', 'color', 'colour'].includes(trimmed.toLowerCase())) {
         logger.log({ type: 'input', raw: trimmed, display: '[entering drawing mode]' });
         rl.close();
         const canvasData = await enterDrawingMode(logger);

@@ -139,7 +139,7 @@
     display: none;
     flex-direction: column;
     height: 100%;
-    background: #000;
+    background: #fff;
   }
 
   #canvas-container {
@@ -210,7 +210,7 @@
     <span>|</span>
     <span class="status-swatch" id="status-swatch"></span>
     <span id="status-color-name">red</span>
-    <span class="status-hint">Space: pen &nbsp;&nbsp; Tab: color &nbsp;&nbsp; Arrows: move &nbsp;&nbsp; ESC: exit</span>
+    <span class="status-hint">Space: pen &nbsp;&nbsp; Tab then 1-0: color &nbsp;&nbsp; Arrows: move &nbsp;&nbsp; Del: undo &nbsp;&nbsp; ESC: exit</span>
   </div>
 </div>
 
@@ -277,6 +277,7 @@ const COLORS = {
   green:   { name: 'green',   rgb: [0, 160, 0] },
   orange:  { name: 'orange',  rgb: [255, 165, 0] },
   purple:  { name: 'purple',  rgb: [128, 0, 128] },
+  violet:  { name: 'violet',  rgb: [148, 0, 211] },
   pink:    { name: 'pink',    rgb: [255, 192, 203] },
   brown:   { name: 'brown',   rgb: [139, 69, 19] },
   black:   { name: 'black',   rgb: [0, 0, 0] },
@@ -301,10 +302,11 @@ const MIX_TABLE = {
   'pink+blue': 'purple',   'blue+pink': 'purple',
 };
 
+// Drawing palette, in order. Also the Tab cycle order and the 1-9,0 quick-pick
+// mapping (1=first … 9=ninth, 0=tenth).
 const COLOR_CYCLE = [
-  COLORS.red, COLORS.orange, COLORS.yellow, COLORS.green,
-  COLORS.blue, COLORS.purple, COLORS.pink, COLORS.white,
-  COLORS.cyan, COLORS.brown, COLORS.black, COLORS.gray,
+  COLORS.red, COLORS.orange, COLORS.yellow, COLORS.green, COLORS.blue,
+  COLORS.purple, COLORS.violet, COLORS.pink, COLORS.grey, COLORS.white,
 ];
 
 function isColor(token) { return token.toLowerCase() in COLORS; }
@@ -331,6 +333,23 @@ function mixColors(color1, color2) {
   }
   const cm1 = rgbToCmyk(color1.rgb), cm2 = rgbToCmyk(color2.rgb);
   return { name: null, rgb: cmykToRgb(cm1.map((v, i) => (v + cm2[i]) / 2)) };
+}
+
+function subtractColors(color1, color2) {
+  // Un-mix: if a + b = c in the mix table, then c - b = a (purple - blue = red)
+  if (color1.name && color2.name) {
+    for (const [key, mixed] of Object.entries(MIX_TABLE)) {
+      if (mixed !== color1.name) continue;
+      const parts = key.split('+');
+      if (parts.length === 2 && parts[1] === color2.name && COLORS[parts[0]]) {
+        return { ...COLORS[parts[0]] };
+      }
+    }
+  }
+  // Fallback: take away the second color's light (white - red = cyan, red - blue = red)
+  const rgb = color1.rgb.map((v, i) => Math.max(0, v - color2.rgb[i]));
+  const named = Object.values(COLORS).find(c => arraysEqual(c.rgb, rgb));
+  return named ? { ...named } : { name: null, rgb };
 }
 
 // ===================== KEYWORDS =====================
@@ -512,8 +531,8 @@ function hasVariable(name) { return varStore.has(name.toLowerCase()); }
 
 const OPERATORS = new Set(['+', '-', 'x', '*', '/', '÷', '=']);
 function isOperator(t) { return OPERATORS.has(t); }
-function isNumber(t) { return /^\d+(\.\d+)?$/.test(t); }
-function isFraction(t) { return /^\d+(\.\d+)?\/\d+(\.\d+)?$/.test(t); }
+function isNumber(t) { return /^-?\d+(\.\d+)?$/.test(t); }
+function isFraction(t) { return /^-?\d+(\.\d+)?\/\d+(\.\d+)?$/.test(t); }
 
 function formatNumber(value) {
   return Number.isInteger(value) ? String(value) : String(Number(value.toPrecision(12)));
@@ -625,6 +644,26 @@ function tokenize(line) {
     }
     if (buf) result.push(buf);
   }
+  return mergeUnarySigns(result);
+}
+
+// A "+" or "-" at the start of the expression, or right after another operator,
+// is a sign, not an operator: "-12-12" => ["-12", "-", "12"]
+function mergeUnarySigns(tokens) {
+  const result = [];
+  for (let i = 0; i < tokens.length; i++) {
+    const tok = tokens[i];
+    const next = tokens[i + 1];
+    const prev = result[result.length - 1];
+    const atPrefix = result.length === 0 || isOperator(prev);
+    if ((tok === '-' || tok === '+') && atPrefix && next !== undefined &&
+        (isNumber(next) || isFraction(next))) {
+      result.push(tok === '-' ? `-${next}` : next);
+      i++;
+    } else {
+      result.push(tok);
+    }
+  }
   return result;
 }
 
@@ -681,6 +720,12 @@ function applyJuxtaposition(left, right) {
     }
   }
   if (left.type === 'fraction') return concatenateValues(left, right);
+  if (left.type === 'colored_blocks' && right.type === 'color') {
+    // "5 red - 2 red": the trailing color folds into the blocks
+    const color = arraysEqual(left.data.color.rgb, right.data.rgb)
+      ? left.data.color : mixColors(left.data.color, right.data);
+    return { type: 'colored_blocks', data: { count: left.data.count, color } };
+  }
   if (left.type === 'color' && right.type === 'number') {
     const count = Math.max(0, Math.min(Math.floor(right.data), 1000));
     return { type: 'colored_blocks', data: { count, color: left.data } };
@@ -703,6 +748,17 @@ function applyOp(left, op, right) {
   }
   if (op === '+' && left.type === 'color' && right.type === 'color')
     return { type: 'color', data: mixColors(left.data, right.data) };
+  if (op === '-' && left.type === 'color' && right.type === 'color')
+    return { type: 'color', data: subtractColors(left.data, right.data) };
+  if (op === '-' && left.type === 'colored_blocks' && right.type === 'number')
+    return { type: 'colored_blocks', data: { count: Math.max(0, left.data.count - right.data), color: left.data.color } };
+  if (op === '-' && left.type === 'colored_blocks' && right.type === 'color')
+    return { type: 'colored_blocks', data: { count: left.data.count, color: subtractColors(left.data.color, right.data) } };
+  if (op === '-' && left.type === 'colored_blocks' && right.type === 'colored_blocks') {
+    const color = arraysEqual(left.data.color.rgb, right.data.color.rgb)
+      ? left.data.color : subtractColors(left.data.color, right.data.color);
+    return { type: 'colored_blocks', data: { count: Math.max(0, left.data.count - right.data.count), color } };
+  }
   if (op === '+' && left.type === 'colored_blocks' && right.type === 'color')
     return { type: 'colored_blocks', data: { count: left.data.count, color: mixColors(left.data.color, right.data) } };
   if (op === '+' && left.type === 'colored_blocks' && right.type === 'number')
@@ -857,7 +913,7 @@ inputEl.addEventListener('keydown', (e) => {
 
   if (tryThemeCommand(trimmed)) return;
 
-  if (trimmed.toLowerCase() === 'draw') {
+  if (['draw', 'color', 'colour'].includes(trimmed.toLowerCase())) {
     serverLog({ type: 'input', raw: trimmed, display: '[entering drawing mode]' });
     enterDrawMode();
     return;
@@ -902,7 +958,8 @@ const elColor   = document.getElementById('status-color-name');
 
 const CELL_W = 16;
 const CELL_H = 20;
-let COLS, ROWS, grid, cursorX, cursorY, colorIndex, penDown;
+let COLS, ROWS, grid, cursorX, cursorY, colorIndex, penDown, undoStack, history;
+let awaitingColor = false;   // true after Tab, waiting for a 1-9/0 quick-pick digit
 
 function initGrid() {
   const container = document.getElementById('canvas-container');
@@ -917,6 +974,9 @@ function initGrid() {
   cursorY = Math.floor(ROWS / 2);
   colorIndex = 0;
   penDown = false;
+  awaitingColor = false;
+  undoStack = [];   // rewindable — consumed by undo
+  history  = [];    // append-only — every action, kept for the record
 }
 
 function clamp() {
@@ -924,14 +984,41 @@ function clamp() {
   cursorY = Math.max(0, Math.min(cursorY, ROWS - 1));
 }
 
+function sameCell(a, b) {
+  if (a.char !== b.char) return false;
+  if (!a.color && !b.color) return true;
+  return !!a.color && !!b.color && arraysEqual(a.color, b.color);
+}
+
+function setCell(x, y, cell) {
+  const prev = grid[y][x];
+  if (sameCell(prev, cell)) return;
+  undoStack.push({ x, y, prev });
+  if (undoStack.length > 2000) undoStack.shift();
+  history.push({ action: 'set', x, y, prev: { ...prev }, next: { ...cell } });
+  if (history.length > 20000) history.shift();
+  grid[y][x] = cell;
+}
+
+function undoLast() {
+  const last = undoStack.pop();
+  if (!last) return;
+  const undone = grid[last.y][last.x];
+  grid[last.y][last.x] = last.prev;
+  cursorX = last.x;
+  cursorY = last.y;
+  history.push({ action: 'undo', x: last.x, y: last.y, prev: { ...undone }, next: { ...last.prev } });
+  if (history.length > 20000) history.shift();
+}
+
 function stamp() {
   if (penDown) {
-    grid[cursorY][cursorX] = { char: ' ', color: COLOR_CYCLE[colorIndex % COLOR_CYCLE.length].rgb };
+    setCell(cursorX, cursorY, { char: ' ', color: COLOR_CYCLE[colorIndex % COLOR_CYCLE.length].rgb });
   }
 }
 
 function renderCanvas() {
-  ctx.fillStyle = '#111';
+  ctx.fillStyle = '#fff';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.font = `${CELL_H - 2}px monospace`;
   ctx.textBaseline = 'top';
@@ -944,15 +1031,23 @@ function renderCanvas() {
         ctx.fillStyle = rgbStr(cell.color);
         ctx.fillRect(px, py, CELL_W, CELL_H);
       } else if (cell.char !== ' ') {
-        ctx.fillStyle = '#fff';
+        ctx.fillStyle = '#000';
         ctx.fillText(cell.char, px, py);
       }
     }
   }
 
-  // Cursor
+  // Cursor. Over a colored pixel, contrast against that pixel (black or white by
+  // luminance) so the cursor never disappears; over empty canvas, use the pen
+  // color (gray for white pen, which would vanish on the white background).
   const col = COLOR_CYCLE[colorIndex % COLOR_CYCLE.length];
-  ctx.strokeStyle = rgbStr(col.rgb);
+  const under = grid[cursorY][cursorX];
+  if (under.color) {
+    const [r, g, b] = under.color;
+    ctx.strokeStyle = (0.2126 * r + 0.7152 * g + 0.0722 * b) > 140 ? '#000' : '#fff';
+  } else {
+    ctx.strokeStyle = isWhiteRgb(col.rgb) ? '#999' : rgbStr(col.rgb);
+  }
   ctx.lineWidth = 2;
   ctx.strokeRect(cursorX * CELL_W + 1, cursorY * CELL_H + 1, CELL_W - 2, CELL_H - 2);
 
@@ -961,7 +1056,7 @@ function renderCanvas() {
   elPen.classList.toggle('down', penDown);
   elSwatch.style.backgroundColor = rgbStr(col.rgb);
   elSwatch.style.border = isWhiteRgb(col.rgb) ? '1px solid #888' : '1px solid #555';
-  elColor.textContent = col.name || 'mixed';
+  elColor.textContent = (col.name || 'mixed') + (awaitingColor ? '  — press 1-9 or 0' : '');
 }
 
 function enterDrawMode() {
@@ -983,9 +1078,10 @@ function exitDrawMode() {
     canvas,       // keep live canvas reference for quick re-render
   };
 
-  // Log the drawing (canvas data, same format as TUI)
+  // Log the drawing (canvas data, same format as TUI) plus the full action
+  // history — the append-only record of everything drawn, including undos.
   const canvasData = grid.map(row => row.map(cell => ({ char: cell.char, color: cell.color })));
-  serverLog({ type: 'drawing', canvas: canvasData });
+  serverLog({ type: 'drawing', canvas: canvasData, history });
 
   drawMode.style.display = 'none';
   replMode.style.display = 'flex';
@@ -993,13 +1089,33 @@ function exitDrawMode() {
   saveDrawing();
 }
 
-const DRAW_PREVENT = new Set(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' ','Tab']);
+const DRAW_PREVENT = new Set(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' ','Tab','Delete','Backspace']);
 
 function onDrawKey(e) {
   if (DRAW_PREVENT.has(e.key)) e.preventDefault();
+
+  // Armed by a preceding Tab: the next digit jumps straight to that palette
+  // color (1=first … 9=ninth, 0=tenth). Anything else cancels the arm and is
+  // handled normally, so a digit only picks a color right after Tab.
+  if (awaitingColor) {
+    awaitingColor = false;
+    if (/^[0-9]$/.test(e.key)) {
+      e.preventDefault();
+      const n = e.key === '0' ? 10 : Number(e.key);
+      if (n >= 1 && n <= COLOR_CYCLE.length) colorIndex = n - 1;
+      renderCanvas();
+      return;
+    }
+  }
+
   switch (e.key) {
     case 'Escape':
       exitDrawMode(); break;
+    case 'Delete':
+    case 'Backspace':
+      // Mac's main Delete key reports as Backspace; both rewind (hold to keep rewinding)
+      undoLast();
+      renderCanvas(); break;
     case 'ArrowUp':
       stamp(); cursorY--; clamp(); stamp(); renderCanvas(); break;
     case 'ArrowDown':
@@ -1013,19 +1129,18 @@ function onDrawKey(e) {
       if (penDown) stamp();
       renderCanvas(); break;
     case 'Tab':
+      // A lone Tab still cycles one step; press a digit next to jump directly.
       colorIndex++;
+      awaitingColor = true;
       renderCanvas(); break;
     case 'Enter':
     case 'NumpadEnter':
-      stamp(); cursorY++; cursorX = 0; clamp();
-      if (penDown) stamp();
-      renderCanvas(); break;
-    case 'Backspace':
-      grid[cursorY][cursorX] = { char: ' ', color: null };
+      // Move straight down, staying in the same column (not a carriage return)
+      stamp(); cursorY++; clamp(); stamp();
       renderCanvas(); break;
     default:
       if (e.key.length === 1 && e.key.charCodeAt(0) >= 32) {
-        grid[cursorY][cursorX] = { char: e.key, color: null };
+        setCell(cursorX, cursorY, { char: e.key, color: null });
         cursorX++; clamp();
         renderCanvas();
       }
@@ -1040,7 +1155,7 @@ async function saveDrawing() {
   off.width  = d.cols * CELL_W;
   off.height = d.rows * CELL_H;
   const c = off.getContext('2d');
-  c.fillStyle = '#111';
+  c.fillStyle = '#fff';
   c.fillRect(0, 0, off.width, off.height);
   c.font = `${CELL_H - 2}px monospace`;
   c.textBaseline = 'top';
@@ -1052,7 +1167,7 @@ async function saveDrawing() {
         c.fillStyle = rgbStr(cell.color);
         c.fillRect(px, py, CELL_W, CELL_H);
       } else if (cell.char !== ' ') {
-        c.fillStyle = '#fff';
+        c.fillStyle = '#000';
         c.fillText(cell.char, px, py);
       }
     }

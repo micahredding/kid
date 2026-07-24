@@ -1,4 +1,4 @@
-import { isColor, getColor, mixColors } from './colors.mjs';
+import { isColor, getColor, mixColors, subtractColors } from './colors.mjs';
 import { isEmoji, getEmoji } from './emoji.mjs';
 import { getVariable, setVariable, hasVariable } from './variables.mjs';
 
@@ -9,11 +9,11 @@ function isOperator(token) {
 }
 
 function isNumber(token) {
-  return /^\d+(\.\d+)?$/.test(token);
+  return /^-?\d+(\.\d+)?$/.test(token);
 }
 
 function isFraction(token) {
-  return /^\d+(\.\d+)?\/\d+(\.\d+)?$/.test(token);
+  return /^-?\d+(\.\d+)?\/\d+(\.\d+)?$/.test(token);
 }
 
 function formatNumber(value) {
@@ -106,6 +106,26 @@ function tokenize(line) {
     }
   }
 
+  return mergeUnarySigns(result);
+}
+
+// A "+" or "-" at the start of the expression, or right after another operator,
+// is a sign, not an operator: "-12-12" => ["-12", "-", "12"]
+function mergeUnarySigns(tokens) {
+  const result = [];
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i];
+    const next = tokens[i + 1];
+    const prev = result[result.length - 1];
+    const atPrefix = result.length === 0 || isOperator(prev);
+    if ((token === '-' || token === '+') && atPrefix && next !== undefined &&
+        (isNumber(next) || isFraction(next))) {
+      result.push(token === '-' ? `-${next}` : next);
+      i++;
+    } else {
+      result.push(token);
+    }
+  }
   return result;
 }
 
@@ -154,6 +174,38 @@ function applyOp(left, op, right) {
   // Color + Color = mix
   if (op === '+' && left.type === 'color' && right.type === 'color') {
     return { type: 'color', data: mixColors(left.data, right.data) };
+  }
+
+  // Color - Color = un-mix (purple - blue = red)
+  if (op === '-' && left.type === 'color' && right.type === 'color') {
+    return { type: 'color', data: subtractColors(left.data, right.data) };
+  }
+
+  // ColoredBlocks - Number = take blocks away
+  if (op === '-' && left.type === 'colored_blocks' && right.type === 'number') {
+    return {
+      type: 'colored_blocks',
+      data: { count: Math.max(0, left.data.count - right.data), color: left.data.color }
+    };
+  }
+
+  // ColoredBlocks - Color = un-mix the block color
+  if (op === '-' && left.type === 'colored_blocks' && right.type === 'color') {
+    return {
+      type: 'colored_blocks',
+      data: { count: left.data.count, color: subtractColors(left.data.color, right.data) }
+    };
+  }
+
+  // ColoredBlocks - ColoredBlocks
+  if (op === '-' && left.type === 'colored_blocks' && right.type === 'colored_blocks') {
+    const color = arraysEqual(left.data.color.rgb, right.data.color.rgb)
+      ? left.data.color
+      : subtractColors(left.data.color, right.data.color);
+    return {
+      type: 'colored_blocks',
+      data: { count: Math.max(0, left.data.count - right.data.count), color }
+    };
   }
 
   // ColoredBlocks + Color = mix the block color
@@ -238,6 +290,14 @@ function applyJuxtaposition(left, right) {
 
   if (left.type === 'fraction') {
     return concatenateValues(left, right);
+  }
+
+  // "5 red - 2 red": the trailing color folds into the blocks
+  if (left.type === 'colored_blocks' && right.type === 'color') {
+    const color = arraysEqual(left.data.color.rgb, right.data.rgb)
+      ? left.data.color
+      : mixColors(left.data.color, right.data);
+    return { type: 'colored_blocks', data: { count: left.data.count, color } };
   }
 
   // Color followed by number = colored blocks

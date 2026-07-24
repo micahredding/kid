@@ -5,6 +5,7 @@ export const COLORS = {
   green:   { name: 'green',   rgb: [0, 160, 0] },
   orange:  { name: 'orange',  rgb: [255, 165, 0] },
   purple:  { name: 'purple',  rgb: [128, 0, 128] },
+  violet:  { name: 'violet',  rgb: [148, 0, 211] },
   pink:    { name: 'pink',    rgb: [255, 192, 203] },
   brown:   { name: 'brown',   rgb: [139, 69, 19] },
   black:   { name: 'black',   rgb: [0, 0, 0] },
@@ -92,6 +93,26 @@ export function mixColors(color1, color2) {
   return { name: null, rgb };
 }
 
+export function subtractColors(color1, color2) {
+  // Un-mix: if a + b = c in the mix table, then c - b = a (purple - blue = red)
+  if (color1.name && color2.name) {
+    for (const [key, mixed] of Object.entries(MIX_TABLE)) {
+      if (mixed !== color1.name) continue;
+      const parts = key.split('+');
+      if (parts.length === 2 && parts[1] === color2.name && COLORS[parts[0]]) {
+        return { ...COLORS[parts[0]] };
+      }
+    }
+  }
+
+  // Fallback: take away the second color's light (white - red = cyan, red - blue = red)
+  const rgb = color1.rgb.map((v, i) => Math.max(0, v - color2.rgb[i]));
+  const named = Object.values(COLORS).find(
+    c => c.rgb[0] === rgb[0] && c.rgb[1] === rgb[1] && c.rgb[2] === rgb[2]
+  );
+  return named ? { ...named } : { name: null, rgb };
+}
+
 // Convert RGB to nearest 256-color index (compatible with Terminal.app)
 export function rgbTo256(r, g, b) {
   // Check grayscale ramp first (indices 232-255)
@@ -112,9 +133,9 @@ export function colorBlock(rgb) {
   return `\x1b[48;5;${code}m  \x1b[0m`;
 }
 
-// Color cycle for drawing mode
+// Drawing palette, in order. Also the Tab cycle order and the 1-9,0 quick-pick
+// mapping (1=first … 9=ninth, 0=tenth).
 export const COLOR_CYCLE = [
-  COLORS.red, COLORS.orange, COLORS.yellow, COLORS.green,
-  COLORS.blue, COLORS.purple, COLORS.pink, COLORS.white,
-  COLORS.cyan, COLORS.brown, COLORS.black, COLORS.gray,
+  COLORS.red, COLORS.orange, COLORS.yellow, COLORS.green, COLORS.blue,
+  COLORS.purple, COLORS.violet, COLORS.pink, COLORS.grey, COLORS.white,
 ];

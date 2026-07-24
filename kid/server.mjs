@@ -26,7 +26,7 @@ log({ type: 'start', version: '1.0.0' });
 console.log(`\n  Kid (HTML) is running at http://localhost:${PORT}`);
 console.log(`  Logging to: logs/session-${sessionTimestamp}.jsonl\n`);
 
-const html = readFileSync(join(__dirname, 'index.html'));
+const htmlPath = join(__dirname, 'index.html');
 
 // Static game directories (relative to kid/)
 const GAMES = {
@@ -99,10 +99,10 @@ const server = createServer(async (req, res) => {
     }
   }
 
-  // Serve the HTML app
+  // Serve the HTML app (read per request so edits show up on refresh)
   if (req.method === 'GET' && req.url === '/') {
-    res.writeHead(200, { 'Content-Type': 'text/html' });
-    res.end(html);
+    res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache' });
+    res.end(readFileSync(htmlPath));
     return;
   }
 

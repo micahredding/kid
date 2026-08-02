@@ -189,7 +189,7 @@
   <div id="output">
     <div class="output-line welcome">Welcome! Type anything and press Enter.</div>
     <div class="output-line welcome">Try: 4 + 4 &nbsp; 3 trex &nbsp; 5 red &nbsp; red + blue</div>
-    <div class="output-line welcome">Type "draw" to draw, "print" to save!</div>
+    <div class="output-line welcome">Type "draw", "draw black", or "draw white" to draw; "print" saves!</div>
     <div class="output-line welcome">Try: white &nbsp; dark &nbsp; red screen &nbsp; blue+green screen</div>
     <div class="output-line welcome">&nbsp;</div>
   </div>
@@ -918,9 +918,11 @@ inputEl.addEventListener('keydown', (e) => {
 
   if (tryThemeCommand(trimmed)) return;
 
-  if (['draw', 'color', 'colour'].includes(trimmed.toLowerCase())) {
-    serverLog({ type: 'input', raw: trimmed, display: '[entering drawing mode]' });
-    enterDrawMode();
+  const drawCommand = trimmed.toLowerCase().match(/^(draw|color|colour)(?:\s+(black|white))?$/);
+  if (drawCommand) {
+    const background = drawCommand[2] || 'white';
+    serverLog({ type: 'input', raw: trimmed, display: `[entering drawing mode: ${background}]` });
+    enterDrawMode(background);
     return;
   }
 
@@ -965,6 +967,29 @@ const CELL_W = 16;
 const CELL_H = 20;
 let COLS, ROWS, grid, cursorX, cursorY, colorIndex, penDown, undoStack, history;
 let awaitingColor = false;   // true after Tab, waiting for a 1-9/0 quick-pick digit
+let drawBackground = 'white';
+
+function drawBackgroundColor() {
+  return drawBackground === 'black' ? '#000' : '#fff';
+}
+
+function drawTextColor() {
+  return drawBackground === 'black' ? '#fff' : '#000';
+}
+
+window.render_game_to_text = () => JSON.stringify({
+  mode: drawMode.style.display === 'flex' ? 'draw' : 'repl',
+  background: drawBackground,
+  cursor: { x: cursorX ?? 0, y: cursorY ?? 0 },
+  penDown: penDown ?? false,
+  color: COLOR_CYCLE[(colorIndex ?? 0) % COLOR_CYCLE.length]?.name || 'red',
+  coloredCells: grid?.flat().filter(cell => cell.color).length || 0,
+  coordinates: 'origin top-left; x increases right; y increases down',
+});
+
+// The terminal/drawing hub has no time-based simulation. This deterministic
+// no-op gives browser test clients the same stepping hook as the other games.
+window.advanceTime = () => {};
 
 function initGrid() {
   const container = document.getElementById('canvas-container');
@@ -1023,7 +1048,7 @@ function stamp() {
 }
 
 function renderCanvas() {
-  ctx.fillStyle = '#fff';
+  ctx.fillStyle = drawBackgroundColor();
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.font = `${CELL_H - 2}px monospace`;
   ctx.textBaseline = 'top';
@@ -1036,7 +1061,7 @@ function renderCanvas() {
         ctx.fillStyle = rgbStr(cell.color);
         ctx.fillRect(px, py, CELL_W, CELL_H);
       } else if (cell.char !== ' ') {
-        ctx.fillStyle = '#000';
+        ctx.fillStyle = drawTextColor();
         ctx.fillText(cell.char, px, py);
       }
     }
@@ -1051,7 +1076,7 @@ function renderCanvas() {
     const [r, g, b] = under.color;
     ctx.strokeStyle = (0.2126 * r + 0.7152 * g + 0.0722 * b) > 140 ? '#000' : '#fff';
   } else {
-    ctx.strokeStyle = isWhiteRgb(col.rgb) ? '#999' : rgbStr(col.rgb);
+    ctx.strokeStyle = isWhiteRgb(col.rgb) && drawBackground === 'white' ? '#999' : rgbStr(col.rgb);
   }
   ctx.lineWidth = 2;
   ctx.strokeRect(cursorX * CELL_W + 1, cursorY * CELL_H + 1, CELL_W - 2, CELL_H - 2);
@@ -1064,7 +1089,9 @@ function renderCanvas() {
   elColor.textContent = (col.name || 'mixed') + (awaitingColor ? '  — press 1-9 or 0' : '');
 }
 
-function enterDrawMode() {
+function enterDrawMode(background = 'white') {
+  drawBackground = background;
+  drawMode.style.backgroundColor = drawBackgroundColor();
   replMode.style.display = 'none';
   drawMode.style.display = 'flex';
   initGrid();
@@ -1080,13 +1107,14 @@ function exitDrawMode() {
     grid: grid.map(r => r.map(c => ({ ...c }))),
     cols: COLS,
     rows: ROWS,
+    background: drawBackground,
     canvas,       // keep live canvas reference for quick re-render
   };
 
   // Log the drawing (canvas data, same format as TUI) plus the full action
   // history — the append-only record of everything drawn, including undos.
   const canvasData = grid.map(row => row.map(cell => ({ char: cell.char, color: cell.color })));
-  serverLog({ type: 'drawing', canvas: canvasData, history });
+  serverLog({ type: 'drawing', canvas: canvasData, background: drawBackground, history });
 
   drawMode.style.display = 'none';
   replMode.style.display = 'flex';
@@ -1160,7 +1188,8 @@ async function saveDrawing() {
   off.width  = d.cols * CELL_W;
   off.height = d.rows * CELL_H;
   const c = off.getContext('2d');
-  c.fillStyle = '#fff';
+  const background = d.background === 'black' ? 'black' : 'white';
+  c.fillStyle = background === 'black' ? '#000' : '#fff';
   c.fillRect(0, 0, off.width, off.height);
   c.font = `${CELL_H - 2}px monospace`;
   c.textBaseline = 'top';
@@ -1172,7 +1201,7 @@ async function saveDrawing() {
         c.fillStyle = rgbStr(cell.color);
         c.fillRect(px, py, CELL_W, CELL_H);
       } else if (cell.char !== ' ') {
-        c.fillStyle = '#000';
+        c.fillStyle = background === 'black' ? '#fff' : '#000';
         c.fillText(cell.char, px, py);
       }
     }

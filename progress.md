@@ -8,4 +8,6 @@ Original prompt: is there a way to make the draw tool have a black background
 - Added deterministic browser-test hooks: `render_game_to_text` reports draw mode/background/cursor/pen/color/cell count; `advanceTime` is a no-op because this tool has no timed simulation.
 - Browser tests passed for `draw black`, `draw white`, and plain `draw`: commands enter the expected mode, drawing stamps cells, screenshots match the requested backgrounds, saved PNG corner pixels match the live canvas, and no console errors appeared.
 - Screenshots were visually inspected at `output/draw-modes/black.png` and `output/draw-modes/white.png`.
-- TODO: merge through a PR, deploy on mini4, and verify the live service.
+- PR #1 merged and deployed on mini4 at commit `883a296`.
+- Final read-only browser verification against the live LAN service passed for both background modes with no console errors.
+- TODO: none.

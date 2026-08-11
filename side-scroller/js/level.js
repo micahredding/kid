@@ -182,19 +182,19 @@ export const LEVELS = [
     tiles: [
       '                                           CJ                                                                                                                      S  S                                                                 ',
       '                                                                                                                                                                   SSSS                                                                 ',
-      '                                           9                                                                                                                       SSSS                                                                 ',
-      '                                           9                     CC     CCCC                                                                                       SSSS                                                                 ',
-      '                                           9          C    CC    CC     CCCC         j N                                                                           SSSS                  C         E                                    ',
-      '                                      C    9   F                                                                                                                   SSSS                       0000000000                                ',
-      '                                           9         IIII IIII  IIII    IIII        IIII                                                                           SSSS                 III   0000000000                                ',
-      '                                      8    9                                                                                                                       SSSS                    C  0000000000                                ',
-      '                                  C   8    9                                                                          F       Y                                    SSSS                       0000000000                                ',
-      '                                      8    9                                                                   CCC                             F                   SSSS                   III 0000000000                                ',
-      '                              C   5   8    9                                                                   CCC          55555                                  SSSS               C  C    0000000000                                ',
-      '                          C       5   8    9                                                        CC         CCC   4444   55555       CCC                        SSSS           C   C       0000000000                                ',
-      '      A  H  N     C   C       3   5   8    9                                                        CC         333   4444   55555       CCC                        SSSS       C   C   C III   0000000000                                ',
-      '               C        E 2   3   5   8    9                 E       E                              22         333 X 4444   55555                                           E C   C   C       0000000000                                ',
-      '                  1   1   2   3   5   8    9                                                1       22         333   4444   55555                                   L         C C C C C       0000000000                                ',
+      '                                           3                                                                                                                       SSSS                                                                 ',
+      '                                           3                     CC     CCCC                                                                                       SSSS                                                                 ',
+      '                                           3          C    CC    CC     CCCC         j N                                                                           SSSS                  C         E                                    ',
+      '                                      C    0   F                                                                                                                   SSSS                       0000000000                                ',
+      '                                           0         IIII IIII  IIII    IIII        IIII                                                                           SSSS                 III   0000000000                                ',
+      '                                      8    0                                                                                                                       SSSS                    C  0000000000                                ',
+      '                                  C   8    0                                                                          F       Y                                    SSSS                       0000000000                                ',
+      '                                      8    0                                                                   CCC                             F                   SSSS                   III 0000000000                                ',
+      '                              C   5   8    0                                                                   CCC          55555                                  SSSS               C  C    0000000000                                ',
+      '                          C       5   8    0                                                        CC         CCC   4444   55555       CCC                        SSSS           C   C       0000000000                                ',
+      '      A  H  N     C   C       3   5   8    0                                                        CC         333   4444   55555       CCC                        SSSS       C   C   C III   0000000000                                ',
+      '               C        E 2   3   5   8    0                 E       E                              22         333 X 4444   55555                                           E C   C   C       0000000000                                ',
+      '                  1   1   2   3   5   8    0                                                1       22         333   4444   55555                                   L         C C C C C       0000000000                                ',
       'GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG   GGGGGGG   GGGGGGGGGGGGGGGGGGGGGG   GGGGGGGGGGGGGGGGGGGG      GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG',
       'GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG   GGGGGGG   GGGGGGGGGGGGGGGGGGGGGG   GGGGGGGGGGGGGGGGGGGG      GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG',
       'GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG   GGGGGGG   GGGGGGGGGGGGGGGGGGGGGG   GGGGGGGGGGGGGGGGGGGG    SSGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG',
@@ -207,10 +207,23 @@ export const LEVELS = [
       'GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG   GGGGGGG   GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG',
     ],
     movingPlatforms: [
-      // Fibonacci elevator: the 8->13 rise outgrows your jump — ride instead
-      { col: 40, row: 8, widthTiles: 2, rangeX: 0, rangeY: 160, speed: 1.2 },
+      // Elevators for every climb taller than a comfy hop. Each one's low point is a
+      // walk-on (or one small hop) and its high point overshoots the destination top
+      // by half a tile, so boarding/exiting is a walk, not a timed jump.
+      // 3-top (row 12) <-> 5-top (row 10)
+      { col: 31, row: 11, widthTiles: 3, rangeX: 0, rangeY: 48, speed: 1.0 },
+      // 5-top (row 10) <-> 8-top (row 7)
+      { col: 35, row: 8.5, widthTiles: 2, rangeX: 0, rangeY: 64, speed: 1.0 },
+      // ground hop-on (row 13.5) <-> 13-tower summit (row 2)
+      { col: 40, row: 7.5, widthTiles: 3, rangeX: 0, rangeY: 192, speed: 1.0 },
       // ferry across the 8-wide power-of-two gap
       { col: 79, row: 6, widthTiles: 3, rangeX: 112, rangeY: 0, speed: 1.3 },
+      // number-ridge lift: short hop-on above the ground shelf, up to the 333
+      // rooftop, replacing the rise-3 jump onto the ridge
+      { col: 108, row: 12.75, widthTiles: 3, rangeX: 0, rangeY: 40, speed: 1.0 },
+      // finale lift up the left face of the Hundred: ground <-> summit (flag).
+      // Must sit left of goalCol 197 — crossing that x completes the level.
+      { col: 189, row: 9.25, widthTiles: 2, rangeX: 0, rangeY: 152, speed: 1.0 },
     ],
     goalCol: 197,
     goalRow: 5,         // flag flies from the top of the Hundred

@@ -493,6 +493,60 @@ export class Player {
     }
   }
 
+  // Switch to a different character mid-game, keeping feet planted.
+  // Returns false (no switch) if the new shape wouldn't fit where we stand.
+  switchCharacter(newChar, level) {
+    const p = CONFIG.player;
+    const oldBottom = this.y + this.height;
+    const oldCenterX = this.x + this.width / 2;
+
+    let newW = p.width, newH = p.height;
+    if (newChar === 'numberblock4') {
+      newW = this.subBlockSize * 2;
+      newH = this.subBlockSize * 2;
+    }
+    const newX = oldCenterX - newW / 2;
+    const newY = oldBottom - newH;
+
+    // Fit check against solid tiles (entity markers are already stripped from tiles)
+    const ts = CONFIG.tile.size;
+    const left = Math.floor(newX / ts);
+    const right = Math.floor((newX + newW - 1) / ts);
+    const top = Math.floor(newY / ts);
+    const bottom = Math.floor((newY + newH - 1) / ts);
+    for (let row = top; row <= bottom; row++) {
+      for (let col = left; col <= right; col++) {
+        if (row < 0 || row >= level.tiles.length) continue;
+        if (col < 0 || col >= level.tiles[row].length) continue;
+        const ch = level.tiles[row][col];
+        if (ch && ch !== ' ' && ch !== 'I') return false;
+      }
+    }
+
+    this.character = newChar;
+    this.x = newX;
+    this.y = newY;
+    this.width = newW;
+    this.height = newH;
+
+    // Reset per-character state
+    this.blockForm = 'square';
+    this.rotation = 0;
+    this.spinSpeed = 0;
+    this.segments = [];
+    this.segmentTimer = 0;
+    this.isButterfly = false;
+    this.isFlapping = false;
+    this.butterflyTimer = 0;
+    this.transformTimer = 0;
+    this.resetFollowerPosition();
+    if (this.carriedBlock) {
+      this.carriedBlock.x = this.x + (this.width - this.carriedBlock.width) / 2;
+      this.carriedBlock.y = this.y - this.carriedBlock.height;
+    }
+    return true;
+  }
+
   switchForm(level) {
     const s = this.subBlockSize;
     const oldW = this.width;

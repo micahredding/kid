@@ -23,56 +23,157 @@ export const LEVELS = [
     // L = door(gold), l = door(silver)
     //   (space) = empty
     tiles: [
-      '                                                                                                                        ',
-      '                                                                                                                        ',
-      '                                                                                                                        ',
-      '                                                                                           C                            ',
-      '                                                                                           C                            ',
-      '                                                                                          B B                           ',
-      '                                                                                          B B                           ',
-      '                                                                                          B B                           ',
-      '                                                                       C                  B B                           ',
-      '                                C  C  C                         F      C                  B B                           ',
-      '               ?    B?B?B                        BBBB                  C                  B B                           ',
-      '                                                                                          B B                           ',
-      '    C          A   H                   E       I I I I         C  C  C       D D          B B          J                ',
-      '         E                                                   B?B?B?B     Y     E    X     B B     E                     ',
-      '                         PP                PP                                             B B         L                 ',
-      '  GGGGGGGGGGGGGGGG  GGGGppGGGGGGGGGGGGGGGGppGGGGGGGGGGGGGGGGGGGGGGGGGGG   GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG',
-      '  GGGGGGGGGGGGGGGG  GGGGppGGGGGGGGGGGGGGGGppGGGGGGGGGGGGGGGGGGGGGGGGGGG   GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG',
+      '                                                                                                                                                                                                                                        ',
+      '                                                                                                                                                                                                                                        ',
+      '                                                                                                                                                                           C                                                            ',
+      '                                                                                           C                                                                  C                           J                                             ',
+      '                                                                                           C                                                                       CCCC   III                  F                                        ',
+      '                                                                                          B B                                                     C  C C A   III                         BBBB         C                                 ',
+      '                                                                                          B B                                                                      BBBB                         III                                     ',
+      '                                                                                          B B                                                 C   BBGGGGGG                                           III                                ',
+      '                                                                       C                  B B                                                   BBBBGGGGGG                                                                              ',
+      '                                C  C  C                         F      C                  B B                                             C   BBBBBBGGGGGG                                                                              ',
+      '               ?    B?B?B                        BBBB                  C                  B B                                               BBBBBBBBGGGGGG                                                                              ',
+      '                                                                                          B B                                         C   BBBBBBBBBBGGGGGG                                                            C                 ',
+      '    C          A   H   N               E       I I I I         C  C  C       D D          B B          J                                BBBBBBBBBBBBGGGGGG  C                                                        C C                ',
+      '         E                                                   B?B?B?B     Y     E    X     B B     E                                   BBBBBBBBBBBBBBGGGGGG            C       C       C       C     C   C           C   C  A   E        ',
+      '                         PP                PP                                             B B         L                             BBBBBBBBBBBBBBBBGGGGGG                                                                              ',
+      '  GGGGGGGGGGGGGGGG  GGGGppGGGGGGGGGGGGGGGGppGGGGGGGGGGGGGGGGGGGGGGGGGGG   GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG      GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG        GGGGGGGGGGGGGGGGGGGGGG',
+      '  GGGGGGGGGGGGGGGG  GGGGppGGGGGGGGGGGGGGGGppGGGGGGGGGGGGGGGGGGGGGGGGGGG   GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG  C   GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG      GGGGGGGGGGGGGGGGGGGGGGGG',
+      '  GGGGGGGGGGGGGGGG  GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG   GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG      GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG    GGGGGGGGGGGGGGGGGGGGGGGGGG',
+      '  GGGGGGGGGGGGGGGG  GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG   GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG      GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG    GGGGGGGGGGGGGGGGGGGGGGGGGG',
+      '  GGGGGGGGGGGGGGGG  GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG   GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG                         C C        j             GGGGGGGGGGGGGGGGGGGGGGGGGGGG',
+      '  GGGGGGGGGGGGGGGG  GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG   GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG  C                                               GGGGGGGGGGGGGGGGGGGGGGGGGGGG',
+      '  GGGGGGGGGGGGGGGG  GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG   GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG         C C C  H   E   B?B?B   D       N  E C CGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG',
+      '  GGGGGGGGGGGGGGGG  GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG   GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG                                                GGGGGGGGGGGGGGGGGGGGGGGGGGGGGG',
+      '  GGGGGGGGGGGGGGGG  GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG   GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG',
+      '  GGGGGGGGGGGGGGGG  GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG   GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG',
     ],
     // Moving platforms defined separately
     movingPlatforms: [
       { col: 57, row: 12, widthTiles: 3, rangeX: 0, rangeY: 64, speed: 1 },
+      { col: 178, row: 6, widthTiles: 3, rangeX: 112, rangeY: 0, speed: 1.2 },
     ],
     // Goal/flag position
-    goalCol: 108,
+    goalCol: 226,
+    goalRow: 15,        // ground row the flag stands on
+    undergroundRow: 17, // rows at/below this get the dark cave backdrop
   },
   {
     name: 'World 1-2 Underground',
     theme: 'underground',
     playerStart: { col: 2, row: 14 },
     tiles: [
-      'SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS',
-      'S                                                                                                 S',
-      'S                                                                                                 S',
-      'S                                                                                                 S',
-      'S                                                                                                 S',
-      'S                                                                                                 S',
-      'S                                                                                                 S',
-      'S                       C  C  C             C  C                    F                              S',
-      'S                      BBBBBBBB           ?B?B?              BBB                                  S',
-      'S                                                                                                 S',
-      'S          ?                A   N    E     F        E        I I I       C  C  C  C        j        S',
-      'S     E          BB                                                   BBBBBBBBBB        X         S',
-      'S                            D D            BB         BB                                         S',
-      'S              PP                PP                PP             D D                              S',
-      'SGGGGGGGGGG  GGppGGGGGGGG  GGGGGGppGGGGGGGGGGGGGGGppGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG   GGGGGGGGGGG',
-      'SGGGGGGGGGG  GGppGGGGGGGG  GGGGGGppGGGGGGGGGGGGGGGppGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG   GGGGGGGGGGG',
-      'SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS',
+      'SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS',
+      'S                                                                                                                                                         C                                                                            S',
+      'S                                                                                                                                            C                           J                                                             S',
+      'S                                                                                                                                                 CCCC   III                  F              C C                                       S',
+      'S                                                                                                                                C  C C H   III                         SSSS                                                           S',
+      'S                                                                                                                                                 SSSS                          III         SSSS    C                                  S',
+      'S                                                                                                                            C   SSSSSSSS                                             III                                              S',
+      'S                       C  C  C             C  C                    F                                                          SSSSSSSSSS                                                          III                                 S',
+      'S                      BBBBBBBB           ?B?B?              BBB                                                         C   SSSSSSSSSSSS                                                                                              S',
+      'S                                                                                                                          SSSSSSSSSSSSSS                                                                                              S',
+      'S          ?            H   A   N    E     F        E        I I I       C  C  C  C        j                         C   SSSSSSSSSSSSSSSS  C          C       C       C       C       C       C                       C                S',
+      'S     E          BB                                                   BBBBBBBBBB        X                              SSSSSSSSSSSSSSSSSS                                                                            C C               S',
+      'S                            D D            BB         BB                                                 C C C A    SSSSSSSSSSSSSSSSSSSS    C SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS          C   C  A  E        S',
+      'S              PP                PP                PP             D D                                              SSSSSSSSSSSSSSSSSSSSSS      SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS                             S',
+      'SGGGGGGGGGG  GGppGGGGGGGG  GGGGGGppGGGGGGGGGGGGGGGppGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG   GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGSSSSSSSSSSSSSSSSSSSSSS  C                                                                      GGGGGGGGGGGGGGGGGGGGGS',
+      'SGGGGGGGGGG  GGppGGGGGGGG  GGGGGGppGGGGGGGGGGGGGGGppGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG   GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGSSSSSSSSSSSSSSSSSSSSSS                                                                       GGGGGGGGGGGGGGGGGGGGGGGS',
+      'SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS    C                                                                SSSSSSSSSSSSSSSSSSSSSSSSSS',
+      'SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS                                                                     SSSSSSSSSSSSSSSSSSSSSSSSSS',
+      'SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS  C                     C C                                        SSSSSSSSSSSSSSSSSSSSSSSSSSSS',
+      'SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS                                                 j                 SSSSSSSSSSSSSSSSSSSSSSSSSSSS',
+      'SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS    C               E  B?B?B                           E         SSSSSSSSSSSSSSSSSSSSSSSSSSSSSS',
+      'SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS         C C C   H             D   X   N   C C             C C   SSSSSSSSSSSSSSSSSSSSSSSSSSSSSS',
+      'SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS',
+      'SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS',
+      'SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS',
     ],
-    movingPlatforms: [],
-    goalCol: 95,
+    movingPlatforms: [
+      { col: 161, row: 5, widthTiles: 3, rangeX: 112, rangeY: 0, speed: 1.2 },
+    ],
+    goalCol: 226,
+    goalRow: 14,
+  },
+  {
+    name: 'World 1-3 Castle',
+    theme: 'castle',
+    playerStart: { col: 3, row: 15 },
+    tiles: [
+      '                                                                                                                                                                        S  S                                                           S',
+      '                                               S S                            F                                                                                         SSSS      SS                                                   S',
+      '                                               SSS            C       C               J       C           C                                                             SSSS      SS      C                            F  C C          S',
+      '                                               SSS        S       S       S       S       S       S               S                                                     SSSS      SS                 C    C    C    C                  S',
+      '                                               SSS   SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS   SSSSSSSSSSSSSS                                                SSSS      SS     III       S    S    S    S                    S',
+      '                                               SSS   SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS   SSSSSSSSSSSSSS                                                SSSS      SS  C      SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS',
+      '                                               SSS               C           C           C           IIII                                                               SSSS      SS         SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS',
+      '                                               SSS                                                         C                                                            SSSS      SS III     SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS',
+      '                                               SSS              BBB         BBB         BBB                                                                             SSSS      SS      C  SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS',
+      '                                               SSS                                          F            IIII                                                           SSSS      SS         SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS',
+      '                                               SSS                                                     C                                                                SSSS      SS     III SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS',
+      '                           y                   SSS                                                                                          CC              Y           SSSS      SS  C      SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS',
+      '      C C C   A   H   N                     C  SSS C     C                             C          C   IIII                          C               H   C               SSSS      SS         SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS',
+      '                        E  S                                SS      E   SS    B?B?B E         SS                                        E   PP              S                 C      III     SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS',
+      '                           S    II   II         l           SS          SS                    SS                                            pp              S            L                C  SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS',
+      'GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG          GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG   GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG      GGGGGGGGGGGGGG           SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS',
+      'GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG          GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG   GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG      GGGGGGGGGGGGGGSS     III SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS',
+      'GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG    C     SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS   SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS    SSSSSSSSSSSSSSSSSS  C      SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS',
+      'GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG          SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS C SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS    SSSSSSSSSSSSSSSSSS         SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS',
+      'GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG                                                                      C                                                          SSSSSSSSSSSSSSSSSSSS III     SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS',
+      'GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG  C                                                                                                                j   Y         SSSSSSSSSSSSSSSSSSSS         SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS',
+      'GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG      C     C C   X C      C   C     D     N               E     C   B?B       X         C    C        E       C               SSSSSSSSSSSSSSSSSSSSSS         SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS',
+      'GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG                                                                                                                               SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS',
+      'GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS',
+      'GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS',
+    ],
+    movingPlatforms: [
+      // moat elevator: rides between the bridge (row 14) and the moat floor
+      { col: 34, row: 18, widthTiles: 3, rangeX: 0, rangeY: 128, speed: 1.2 },
+    ],
+    goalCol: 222,
+    goalRow: 5,         // flag stands on the keep rooftop
+    undergroundRow: 17, // dungeon + moat bottom get the dark backdrop
+  },
+  {
+    name: 'World 1-4 Jungle',
+    theme: 'jungle',
+    playerStart: { col: 3, row: 15 },
+    tiles: [
+      '                                                                                                                                                                                                                                        ',
+      '                                                                                                                                                                                                                                        ',
+      '                                                                                            y    F                                                                                           C    F                                     ',
+      '                                         F  C                      C                                       C      J                                               C                  C                                                  ',
+      '                                                           C                         C     IIII    C                                                                  F                     IIII                                        ',
+      '                                     C     IIII    C              IIII     C                              IIII   IIII                     C C             C      IIII               IIII                                                ',
+      '                                                          IIII                      IIII          IIII                                                                          III                                                     ',
+      '                                    IIII          IIII                    IIII                                                         SSSSSS     IIII   IIII            IIII                                                           ',
+      '                                PP                                              PP                                                   SSSSSSSS                                                       SS                                  ',
+      '                             IIIpp                                              pp                                                 SSSSSSSSSS                                                       SS                                  ',
+      '                                pp                                              pp                                               SSSSSSSSSSSSSSS                                                      SS              C                 ',
+      '                                pp             C C                              pp                                             SSSSSSSSSSSSSS                                                         SS             C C                ',
+      '      C C C   A   H   N  IIII   pp  C     C                                     pp  C                  C        C            SSS           SS   SS                                                      SS          C   C  A            ',
+      '                                              B?B?B   E PP                              PP   E  DD                    E    SSSSS C j C N                                                  C     C       SS        E                     ',
+      '                                                        pp                              pp                               SSSSSSS               l                                                                                        ',
+      'GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG                   GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG                         GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG',
+      'GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG                 SSGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG                       SSGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG',
+      'GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG                 SSGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG  C                    SSGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG',
+      'GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG   C           SSSSGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG                     SSSSGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG',
+      'GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG               SSSSGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG                     SSSSGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG',
+      'GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG             SSSSSSGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG                   SSSSSSGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG',
+      'GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG  C  X C X C SSSSSSGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG   H  C  EC  C E   SSSSSSGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG',
+      'GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG',
+      'GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG',
+      'GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG',
+    ],
+    movingPlatforms: [
+      // lily pads across the croc gorge
+      { col: 64, row: 12, widthTiles: 3, rangeX: 64, rangeY: 0, speed: 1.4 },
+      { col: 71, row: 13, widthTiles: 3, rangeX: 64, rangeY: 0, speed: 1.1 },
+    ],
+    goalCol: 222,
+    goalRow: 15,        // flag in the jungle clearing
+    undergroundRow: 17, // gorge + root cave get the dark backdrop
   },
 ];
 
@@ -162,6 +263,8 @@ export function loadLevel(levelIndex) {
     playerX,
     playerY,
     goalCol: def.goalCol * ts,
+    goalGroundY: (def.goalRow ?? tiles.length - 2) * ts,
+    undergroundY: def.undergroundRow != null ? def.undergroundRow * ts : null,
     width: Math.max(...tiles.map(r => r.length)) * ts,
     height: tiles.length * ts,
   };
@@ -223,14 +326,23 @@ export function drawTiles(ctx, tiles, theme, camera) {
 // =============================================================================
 // BACKGROUND RENDERER — Parallax hills, clouds, bushes
 // =============================================================================
-export function drawBackground(ctx, theme, camera, levelWidth) {
+export function drawBackground(ctx, theme, camera, levelWidth, undergroundY = null) {
   const cw = CONFIG.canvas.width;
   const ch = CONFIG.canvas.height;
   const bg = theme.background;
 
-  // Sky
+  // Sky (screen space — this runs before the camera transform is applied)
   ctx.fillStyle = theme.sky;
-  ctx.fillRect(camera.x, camera.y, cw, ch);
+  ctx.fillRect(0, 0, cw, ch);
+
+  // Dark cave backdrop below the ground line
+  if (undergroundY != null) {
+    const screenY = undergroundY - camera.y;
+    if (screenY < ch) {
+      ctx.fillStyle = '#2a1c10';
+      ctx.fillRect(0, Math.max(0, screenY), cw, ch - Math.max(0, screenY));
+    }
+  }
 
   if (!bg.cloudColor && !bg.hillColor) return;
 
@@ -289,9 +401,7 @@ function drawCloud(ctx, x, y) {
 // =============================================================================
 // GOAL FLAG
 // =============================================================================
-export function drawGoalFlag(ctx, goalX, levelHeight) {
-  const ts = CONFIG.tile.size;
-  const groundY = levelHeight - ts * 2;
+export function drawGoalFlag(ctx, goalX, groundY) {
   const flagHeight = 160;
 
   // Pole

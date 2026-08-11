@@ -52,6 +52,9 @@ export const CONFIG = {
     // Lives
     startingLives: 10,
 
+    // Fruits the caterpillar needs to transform into a butterfly
+    fruitsToTransform: 3,
+
     // Invincibility frames after taking damage
     invincibilityFrames: 90,
 

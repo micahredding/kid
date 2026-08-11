@@ -67,6 +67,38 @@ export const THEMES = {
     },
   },
 
+  jungle: {
+    name: 'Jungle',
+    sky: '#79b85e',
+    tiles: {
+      G: { color: '#6b4a2b', topColor: '#46c33c', label: '' },   // earth + bright grass
+      B: { color: '#9c6b34', topColor: '#b47f42', label: '' },   // wood
+      '?': { color: '#FFD700', topColor: '#FFC800', label: '?' },
+      P: { color: '#3aa655', topColor: '#7fe08a', label: '' },   // bamboo top
+      p: { color: '#3aa655', topColor: '#3aa655', label: '' },   // bamboo trunk
+      S: { color: '#7d8f72', topColor: '#a3b892', label: '' },   // mossy stone
+      I: { color: '#7a5230', topColor: '#4ccb52', label: '' },   // leafy branch
+      D: { color: '#b08350', topColor: '#c9a06b', label: '' },   // crate
+    },
+    player: {
+      bodyColor: '#FF0000',
+      headColor: '#FFB366',
+      overallsColor: '#0000CC',
+    },
+    enemies: {
+      goomba: { bodyColor: '#8b5a2b', headColor: '#6f4420' },
+      koopa: { bodyColor: '#228B22', shellColor: '#006400' },
+      flyguy: { bodyColor: '#e07b39', wingColor: '#FFFFFF' },
+      spiker: { bodyColor: '#4f6b4f', spikeColor: '#c9d6c0' },
+    },
+    coin: { color: '#FFD700', sparkle: '#FFF8DC' },
+    background: {
+      hillColor: '#2f6b39',
+      cloudColor: '#eaf7dc',
+      bushColor: '#255c2e',
+    },
+  },
+
   castle: {
     name: 'Castle',
     sky: '#1a1a2e',

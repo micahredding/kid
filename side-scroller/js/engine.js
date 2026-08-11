@@ -91,8 +91,10 @@ export class Engine {
     this.player.gems = prevGems;
     this.player.keys = [...prevKeys];
 
-    // Count total foods in this level for caterpillar transformation
-    this.player.totalFoodsInLevel = this.entities.filter(e => e.type === 'food').length;
+    // Caterpillar transforms after a few fruits, not every fruit in the level
+    // (levels are long now, with fruits spread across branching routes)
+    const foodCount = this.entities.filter(e => e.type === 'food').length;
+    this.player.totalFoodsInLevel = Math.min(foodCount, CONFIG.player.fruitsToTransform);
 
     this.player.onDeath = () => {
       if (this.player.lives <= 0) {
@@ -167,6 +169,13 @@ export class Engine {
           this.player = null;
           this.startLevel(0);
         }
+        // Number keys jump straight to that level
+        for (let i = 0; i < LEVELS.length; i++) {
+          if (this.input.wasPressed(String(i + 1))) {
+            this.player = null;
+            this.startLevel(i);
+          }
+        }
         break;
 
       case GAME_STATES.PLAYING:
@@ -196,6 +205,24 @@ export class Engine {
   }
 
   updatePlaying() {
+    // Character switch — Q cycles to the next character anytime it fits
+    if (this.input.wasPressed('q') || this.input.wasPressed('Q')) {
+      const next = (this.selectedCharacter + 1) % this.characters.length;
+      if (this.player.switchCharacter(this.characters[next], this.level)) {
+        this.selectedCharacter = next;
+        for (let i = 0; i < 10; i++) {
+          this.particles.push(new Particle(
+            this.player.x + this.player.width / 2,
+            this.player.y + this.player.height / 2,
+            (Math.random() - 0.5) * 6,
+            (Math.random() - 0.5) * 6 - 1,
+            '#FFFFFF',
+            25,
+          ));
+        }
+      }
+    }
+
     // Player
     this.player.update(this.input, this.level);
 
@@ -298,7 +325,7 @@ export class Engine {
     const theme = this.level.theme;
 
     // Background (drawn in screen space with parallax)
-    drawBackground(ctx, theme, this.camera, this.level.width);
+    drawBackground(ctx, theme, this.camera, this.level.width, this.level.undergroundY);
 
     // World space
     ctx.save();
@@ -308,7 +335,7 @@ export class Engine {
     drawTiles(ctx, this.level.tiles, theme, this.camera);
 
     // Goal flag
-    drawGoalFlag(ctx, this.level.goalCol, this.level.height);
+    drawGoalFlag(ctx, this.level.goalCol, this.level.goalGroundY);
 
     // Entities
     for (const e of this.entities) {
@@ -420,6 +447,11 @@ export class Engine {
     ctx.font = 'bold 14px monospace';
     ctx.textAlign = 'right';
     ctx.fillText(`LIVES: ${p.lives}`, this.canvas.width - 16, 24);
+
+    // Current character + switch hint
+    ctx.font = '11px monospace';
+    ctx.fillStyle = '#AAA';
+    ctx.fillText(`Q: ${this.characterNames[p.character]}`, this.canvas.width - 110, 24);
 
     ctx.textAlign = 'center';
     ctx.font = '12px monospace';
@@ -556,6 +588,9 @@ export class Engine {
     if (blink) {
       ctx.fillText('PRESS SPACE OR ENTER TO START', cx, 340);
     }
+    ctx.font = '14px monospace';
+    ctx.fillStyle = '#FFD700';
+    ctx.fillText(`OR PRESS 1-${LEVELS.length} TO JUMP TO A LEVEL`, cx, 364);
 
     // Controls
     ctx.font = '14px monospace';
@@ -563,7 +598,7 @@ export class Engine {
     ctx.fillText('Arrow Keys / WASD \u2014 Move & Jump', cx, 390);
     ctx.fillText('Space \u2014 Jump    Shift \u2014 Sprint', cx, 410);
     ctx.fillText('Down/S/X \u2014 Pick up & Place blocks', cx, 430);
-    ctx.fillText('C/E \u2014 Transform (FOUR)', cx, 450);
+    ctx.fillText('C/E \u2014 Transform (FOUR)    Q \u2014 Switch Character', cx, 450);
   }
 
   drawGameOver() {

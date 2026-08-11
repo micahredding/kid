@@ -33,15 +33,15 @@
   #main { flex: 1 1 auto; min-height: 0; display: flex; align-items: center; gap: 16px; }
 
   #info {
-    flex: 0 0 auto; width: clamp(180px, 26vw, 320px);
+    flex: 0 0 auto; width: clamp(190px, 30vw, 380px);
     display: flex; flex-direction: column; justify-content: center;
     text-align: left; padding-left: 6px;
   }
   #title { font-size: clamp(15px, 1.8vw, 22px); font-weight: 800;
     text-shadow: 1px 1px 3px rgba(0,0,0,0.3); opacity: 0.95; line-height: 1.1; }
-  #decimal-display { font-size: clamp(50px, 8.5vw, 116px); font-weight: 900; color: #FFD700;
+  #decimal-display { font-size: clamp(46px, 7.3vw, 96px); font-weight: 900; color: #FFD700;
     text-shadow: 3px 3px 6px rgba(0,0,0,0.35); line-height: 1; margin: 2px 0 4px;
-    letter-spacing: 1px; word-break: break-word; }
+    letter-spacing: 0; white-space: nowrap; overflow-wrap: normal; word-break: normal; font-size-adjust: from-font; }
   #subtitle { font-size: clamp(13px, 1.5vw, 19px); font-weight: 600;
     text-shadow: 1px 1px 3px rgba(0,0,0,0.3); min-height: 2.6em; }
   #fraction { font-size: clamp(16px, 2.1vw, 28px); font-weight: 900;
@@ -57,10 +57,26 @@
   /* ===== the stage ===== */
   #stage-wrap { flex: 1 1 auto; min-width: 0; min-height: 0; height: 100%;
     display: flex; align-items: center; justify-content: center; position: relative; }
+  #focus-rail {
+    position: absolute; left: 0; bottom: 12px; height: 44px; width: 100%;
+    z-index: 1; pointer-events: none; opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  #focus-rail svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; overflow: visible; }
+  #focus-rail.on { opacity: 1; }
+  #focus-rail .base { stroke: rgba(255,255,255,0.26); stroke-width: 5; stroke-linecap: round; }
+  #focus-rail .focus { stroke: #F5E28A; stroke-width: 10; stroke-linecap: round; }
+  #focus-rail .focus-shadow { stroke: rgba(232,132,37,0.52); stroke-width: 16; stroke-linecap: round; }
+  #focus-rail .pointer { fill: #E89223; opacity: 0.88; }
+  #focus-rail .pointer-inner { fill: #F5E28A; }
+  #focus-rail .tick { stroke: rgba(255,255,255,0.2); stroke-width: 2; stroke-linecap: round; }
+  #focus-rail .label-dot { fill: rgba(255,255,255,0.28); }
+  #focus-rail .label-dot.focused { fill: #F5E28A; }
+  #focus-rail .ghost { stroke: rgba(255,255,255,0.07); stroke-width: 2; stroke-linecap: round; }
 
   /* --- decimal square --- */
   #square {
-    position: relative; width: var(--sq); height: var(--sq);
+    position: relative; z-index: 2; width: var(--sq); height: var(--sq);
     transform: scale(0.26); transform-origin: center center;
     transition: transform 0.95s cubic-bezier(0.34, 1.4, 0.64, 1);
     filter: drop-shadow(0 12px 18px rgba(0,0,0,0.35));
@@ -110,11 +126,18 @@
   /* One's face on the square */
   #face { position: absolute; top: 0; left: 0; width: var(--face); height: var(--face);
     z-index: 6; pointer-events: none; transition: width 0.6s ease, height 0.6s ease; }
+  #face .square-one-face { position: absolute; inset: 0; }
+  #square.enlarged #face .mouth {
+    border-width: max(5px, calc(var(--mouth-line, 3px) * 1.35));
+  }
 
   /* --- whole-number / mixed stage --- */
-  #whole { display: flex; align-items: flex-end; justify-content: center; gap: 0px;
-    max-width: 100%; max-height: 100%; transition: gap 0.8s cubic-bezier(0.34,1.2,0.64,1); }
+  #whole { position: relative; z-index: 2; display: flex; align-items: flex-end; justify-content: center; gap: 0px;
+    max-width: 100%; max-height: 100%; transition: gap 0.8s cubic-bezier(0.34,1.2,0.64,1), transform 0.55s cubic-bezier(0.34,1.2,0.64,1); }
+  #whole.large-zoom { max-width: none; transform-origin: 0 100%; }
   .wgroup { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .wgroup.zoomable { cursor: zoom-in; transition: opacity 0.25s ease, transform 0.45s cubic-bezier(0.34,1.2,0.64,1); }
+  .wgroup.focused { cursor: default; }
   .wgrid  { display: grid; filter: drop-shadow(0 8px 12px rgba(0,0,0,0.3)); }
   .wlabel { font-size: clamp(12px, 1.6vw, 20px); font-weight: 900; color: #fff;
     text-shadow: 2px 2px 3px rgba(0,0,0,0.35); opacity: 0; transition: opacity 0.5s ease; }
@@ -140,12 +163,32 @@
     72% { transform: translateY(-5px) rotate(1.6deg); }
   }
   .dancing { animation: idleBob 2.6s ease-in-out infinite; transform-origin: 50% 100%; }
+  @keyframes oneIdleBob {
+    0%,100% { transform: translateY(0); }
+    25% { transform: translateY(-6px); }
+    50% { transform: translateY(0); }
+    75% { transform: translateY(-4px); }
+  }
+  .dancing.one-figure { animation-name: oneIdleBob; }
 
-  /* negative numbers: dark "anti-block" ghosts */
-  .neg .wcell { background: rgba(26,26,48,0.55) !important; border-color: rgba(255,255,255,0.4) !important; }
-  .neg .wcell::after { opacity: 0; }
-  .neg .nb-eye { background: #cfd2ff; }
-  .neg .nb-mouth { border-color: #cfd2ff; }
+  /* negative numbers: native colors, muted into "ghost" blocks */
+  .neg .wcell {
+    filter: grayscale(0.38) saturate(0.62) brightness(0.92);
+    opacity: 0.82;
+    border-color: rgba(255,255,255,0.58) !important;
+    outline: 2px dashed rgba(255,255,255,0.78);
+    outline-offset: 3px;
+  }
+  .neg .wcell::after {
+    inset: 0;
+    border-radius: inherit;
+    background:
+      repeating-linear-gradient(135deg, rgba(255,255,255,0.42) 0 2px, transparent 2px 8px),
+      rgba(230,235,255,0.18);
+    opacity: 1;
+  }
+  .neg .nb-eye { background: rgba(245,247,255,0.82); }
+  .neg .nb-mouth { border-color: rgba(55,55,80,0.72); }
 
   /* thousand-blocks: each cell is one 1000, decorated with a grid pattern */
   .wcell.thousand::before {
@@ -153,6 +196,15 @@
     background-image:
       repeating-linear-gradient(0deg, rgba(255,255,255,0.45) 0 1.5px, transparent 1.5px 20%),
       repeating-linear-gradient(90deg, rgba(255,255,255,0.45) 0 1.5px, transparent 1.5px 20%);
+  }
+  .wcell.hundred-unit {
+    box-shadow: inset 0 0 0 2px rgba(126,98,0,0.18), inset 3px 4px 0 rgba(255,255,255,0.2), inset -4px -5px 0 rgba(0,0,0,0.13);
+  }
+  .wcell.hundred-unit::before {
+    content: ''; position: absolute; inset: 4px; z-index: 1; pointer-events: none; border-radius: 2px;
+    background-image:
+      repeating-linear-gradient(0deg, rgba(126,98,0,0.45) 0 1.25px, transparent 1.25px 20%),
+      repeating-linear-gradient(90deg, rgba(126,98,0,0.45) 0 1.25px, transparent 1.25px 20%);
   }
 
   /* divide-by-10: a decimal point that hops across a big number */
@@ -164,7 +216,7 @@
   @keyframes dotHop { 0% { transform: translateY(0); } 45% { transform: translateY(-26px) scale(1.3); } 100% { transform: translateY(0); } }
 
   /* combine (a + b) animation */
-  #combine { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; max-height: 100%; }
+  #combine { position: relative; z-index: 2; display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; max-height: 100%; }
   #combine.hidden { display: none; }
   .op-wrap { display: flex; flex-direction: column; align-items: center;
     transition: transform 0.8s cubic-bezier(0.34,1.56,0.64,1), opacity 0.4s; }
@@ -203,19 +255,185 @@
   .ucell.quarter { background: var(--red); }
   .ulabel { position: absolute; bottom: -26px; left: 0; right: 0; text-align: center;
     font-size: clamp(12px,1.6vw,20px); font-weight: 900; color: #fff; text-shadow: 2px 2px 3px rgba(0,0,0,0.35); }
+  /* combined mixed figure: fade the head's grid + outline and soften its shadow
+     so the decimal square reads as part of one body */
+  .unit.merged-head { filter: drop-shadow(0 3px 6px rgba(0,0,0,0.16)); }
+  .unit.merged-head .unit-grid { background: rgba(0,0,0,0.1); border-color: rgba(0,0,0,0.08); }
+  .unit.merged-head .ucell:not(.tenth):not(.hundredth):not(.quarter) { background: rgba(255,255,255,0.07); }
 
   /* shared face */
   .nb-face { position: absolute; inset: 0; z-index: 3; pointer-events: none; overflow: visible; }
   .nb-eye { width: 22%; height: 28%; background: white; border-radius: 50%; position: absolute; top: 22%;
-    display: flex; align-items: center; justify-content: center; box-shadow: 0 0 2px rgba(0,0,0,0.3); }
-  .nb-eye::after { content: ''; width: 45%; height: 45%; background: #222; border-radius: 50%; }
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: inset -2px -3px 0 rgba(0,0,0,0.12), 0 0 2px rgba(0,0,0,0.3); }
+  .nb-eye::after { content: ''; width: 45%; height: 45%; background: var(--pupil, #222); border-radius: 50%; }
   .nb-eye-left  { left: 20%; }
   .nb-eye-right { right: 20%; }
   .nb-eye-single { width: 34%; height: 42%; left: 50%; top: 25%; transform: translateX(-50%); }
   .nb-eye-single::after { width: 42%; height: 42%; }
   .nb-mouth { position: absolute; bottom: 22%; left: 50%; transform: translateX(-50%);
-    width: 30%; height: 16%; border: 3px solid #333; border-top: none; border-radius: 0 0 60% 60%;
+    width: 30%; height: 16%; border: 3px solid var(--mouth, #333); border-top: none; border-radius: 0 0 60% 60%;
     background: rgba(255,255,255,0.15); }
+
+  /* ===== full Numberblocks character (eyes + mouth + arms + legs + hat) =====
+     A pixel-positioned overlay layered over the whole figure box, so limbs can
+     extend past the blocks. Built by buildCharacter() for the friendly 1–10. */
+  .nb-char { position: absolute; inset: 0; z-index: 6; pointer-events: none; overflow: visible; }
+  .nb-char .eye { position: absolute; background: var(--eye, #fff); border-radius: 50%;
+    box-shadow: inset -2px -3px 0 rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.35);
+    display: flex; align-items: center; justify-content: center; box-sizing: border-box; }
+  .nb-char .eye::after { content: ''; width: 44%; height: 44%; background: var(--pupil, #262026);
+    border-radius: 50%; box-shadow: 1px 1px 0 rgba(255,255,255,0.35) inset; }
+  .nb-char.one-char .eye {
+    border: max(7px, var(--one-ring, 8px)) solid #8e1d2b;
+    box-shadow: inset -3px -4px 0 rgba(0,0,0,0.06), 0 4px 5px rgba(92,0,12,0.28);
+  }
+  .nb-char.one-char .eye::after {
+    width: 38%; height: 38%; transform: translate(13%, 4%);
+    box-shadow: 0 0 0 999px transparent, 3px 3px 0 rgba(255,255,255,0.42) inset;
+  }
+  .nb-char .mouth { position: absolute; border: max(2px, var(--mouth-line, 3px)) solid var(--mouth, #2a2a2a);
+    border-top: none; border-radius: 0 0 70% 70%; background: rgba(255,255,255,0.18); box-sizing: border-box; }
+  .nb-char .mouth.smile-open { background: radial-gradient(circle at 50% 0, #fff 0 22%, #5b1228 24% 100%);
+    border-radius: 0 0 999px 999px; }
+  .nb-char.one-char .mouth {
+    border: 0;
+    background: linear-gradient(180deg, #9d2534 0%, #691526 100%);
+    border-radius: 44% 44% 55% 55% / 42% 42% 72% 72%;
+    box-shadow: inset 0 4px 0 rgba(255,255,255,0.12), inset 0 -4px 0 rgba(71,0,16,0.28), 0 3px 4px rgba(80,0,15,0.24);
+  }
+  .nb-char.one-char .mouth.one-smile {
+    overflow: hidden;
+  }
+  .nb-char.one-char .mouth.one-smile::before {
+    content: ''; position: absolute; left: 13%; right: 13%; top: 28%; bottom: 15%;
+    border-radius: 0 0 999px 999px;
+    background: #171014;
+  }
+  .nb-char.one-char .mouth.one-smile::after {
+    content: ''; position: absolute; left: 26%; right: 22%; top: 34%; height: 18%;
+    border-radius: 0 0 999px 999px;
+    background: #fff;
+    box-shadow: 0 1px 0 rgba(0,0,0,0.18);
+  }
+  .nb-char .cheek {
+    position: absolute; z-index: 4; width: 16%; height: 9%;
+    border-radius: 50%; background: rgba(255,88,118,0.52);
+    filter: blur(1px); pointer-events: none;
+  }
+  .nb-char .mouth.grin { background: #fff; border-top: max(2px, var(--mouth-line, 3px)) solid var(--mouth, #2a2a2a);
+    border-radius: 0 0 50% 50%; }
+  .nb-char .limb {
+    position: absolute;
+    background:
+      radial-gradient(circle at var(--bulb-x, 82%) 50%, rgba(255,255,255,0.28) 0 18%, transparent 19%),
+      linear-gradient(135deg, var(--limb1, currentColor), var(--limb2, currentColor));
+    border: 2px solid rgba(0,0,0,0.22);
+    box-shadow: inset 2px 2px 0 rgba(255,255,255,0.2), inset -2px -2px 0 rgba(0,0,0,0.1);
+    transform-origin: center;
+  }
+  .nb-char .arm-limb {
+    border-radius: 72% 95% 95% 72% / 58% 78% 78% 58%;
+    clip-path: polygon(0 25%, 56% 15%, 100% 0, 100% 100%, 56% 85%, 0 75%);
+  }
+  .nb-char .leg-limb {
+    border-radius: 58% 58% 82% 82% / 42% 42% 96% 96%;
+    clip-path: polygon(25% 0, 75% 0, 88% 55%, 100% 100%, 0 100%, 12% 55%);
+  }
+  .nb-char.one-char .arm-limb {
+    border-radius: 72% 96% 96% 72% / 54% 86% 86% 54%;
+  }
+  .nb-char.one-char .leg-limb {
+    border-radius: 58% 58% 90% 90% / 34% 34% 98% 98%;
+  }
+  .nb-char .badge, .nb-char .hat { position: absolute; pointer-events: none; }
+  .nb-char .badge { z-index: 8; font-weight: 900; color: #fff; text-shadow: 0 2px 2px rgba(0,0,0,0.32);
+    display: flex; align-items: center; justify-content: center; }
+  .nb-char .hat { filter: drop-shadow(0 2px 1px rgba(0,0,0,0.25)); }
+  .nb-char .accessory { position: absolute; z-index: 8; pointer-events: none; }
+  .nb-char .glasses-ring { position: absolute; border: var(--glasses-line, 6px) solid #7d458f;
+    border-radius: 50%; box-sizing: border-box; filter: drop-shadow(0 2px 1px rgba(0,0,0,0.24)); }
+  .nb-char .glasses-bridge { position: absolute; height: var(--glasses-line, 6px); background: #7d458f;
+    border-radius: 999px; box-shadow: 0 2px 1px rgba(0,0,0,0.2); }
+  .nb-char .brow { position: absolute; background: var(--brow, #245b25); border-radius: 18% 18% 28% 28%;
+    box-shadow: inset 2px 2px 0 rgba(255,255,255,0.08), 0 2px 2px rgba(0,0,0,0.24); }
+  .nb-char .crown { display: flex; align-items: flex-end; justify-content: center; gap: 2px;
+    filter: drop-shadow(0 2px 1px rgba(0,0,0,0.22)); }
+  .nb-char .crown-point { width: 32%; height: 100%; background: #db2533;
+    clip-path: polygon(50% 0, 100% 100%, 0 100%); position: relative; }
+  .nb-char .crown-point::after { content: ''; position: absolute; left: 50%; top: -16%;
+    width: 34%; aspect-ratio: 1; border-radius: 50%; background: #f2d52a; transform: translateX(-50%); }
+  .nb-char .star-accessory { color: #f6dc25; text-shadow: 0 2px 0 #14718e, 0 3px 3px rgba(0,0,0,0.25); }
+  .nb-char .pip { position: absolute; border-radius: 50%; background: rgba(255,255,255,0.92);
+    box-shadow: inset -1px -1px 0 rgba(0,0,0,0.18), 0 1px 1px rgba(0,0,0,0.2); }
+  .nb-char .extra-tentacle { position: absolute; width: 16%; height: 34%; border-radius: 999px;
+    background: linear-gradient(180deg, #ff63b8, #9e1e65); box-shadow: inset 3px 3px 5px rgba(255,255,255,0.18); }
+  .nb-char .ten-frame { position: absolute; inset: -4%; border: max(3px, var(--ten-line, 6px)) solid #de151d;
+    border-radius: 12px; box-shadow: inset 0 0 0 3px rgba(255,255,255,0.4), 0 4px 5px rgba(0,0,0,0.18); }
+  .numberling {
+    position: absolute; left: 50%; top: 0; z-index: 9; transform: translate(-50%, -125%);
+    min-width: 1.35em; padding: 0.04em 0.18em; border-radius: 999px;
+    background: rgba(255,255,255,0.94); color: #33254b; border: 2px solid rgba(0,0,0,0.22);
+    font-weight: 900; line-height: 1; text-align: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.85);
+    pointer-events: none;
+  }
+  .numberblock-figure .wcell {
+    border-radius: 8px;
+    box-shadow: inset 4px 5px 7px rgba(255,255,255,0.17), inset -5px -6px 8px rgba(0,0,0,0.15),
+      0 6px 9px rgba(0,0,0,0.16);
+  }
+  .numberblock-figure .wcell::after {
+    inset: 0; border-radius: inherit;
+    background:
+      radial-gradient(ellipse at 26% 20%, rgba(255,255,255,0.24) 0 12%, transparent 42%),
+      linear-gradient(135deg, rgba(255,255,255,0.1), transparent 42%);
+  }
+  .numberblock-figure .numberling {
+    top: -0.1em;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+    color: #070707;
+    padding: 0;
+    transform: translate(-50%, -155%);
+    text-shadow: 0 2px 0 rgba(255,255,255,0.24);
+  }
+  .one-figure .wcell {
+    overflow: hidden;
+    border-radius: 18px;
+    border-color: rgba(117,0,16,0.26);
+    background:
+      radial-gradient(ellipse at 24% 18%, rgba(255,255,255,0.36) 0 8%, rgba(255,255,255,0.12) 22%, transparent 48%),
+      linear-gradient(150deg, #ff3a3f 0%, #ec171f 48%, #b50d19 100%) !important;
+    box-shadow: inset 10px 11px 18px rgba(255,255,255,0.16), inset -13px -15px 22px rgba(86,0,12,0.22),
+      0 12px 18px rgba(40,0,20,0.18);
+  }
+  .one-figure .wcell::before {
+    content: ''; position: absolute; inset: 4% 5% 53% 5%; z-index: 1; pointer-events: none;
+    border-radius: 16px 16px 40% 40%;
+    background: linear-gradient(180deg, rgba(255,255,255,0.16), rgba(255,255,255,0));
+  }
+  .one-figure .wcell::after {
+    inset: 0; z-index: 1; border-radius: inherit;
+    background:
+      radial-gradient(ellipse at 30% 20%, rgba(255,255,255,0.22) 0 12%, transparent 38%),
+      linear-gradient(135deg, rgba(255,255,255,0.08) 0 22%, transparent 48%),
+      linear-gradient(315deg, rgba(82,0,11,0.16) 0 18%, transparent 42%);
+  }
+  .one-figure .numberling {
+    top: -0.1em;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+    color: #070707;
+    padding: 0;
+    transform: translate(-50%, -155%);
+    text-shadow: 0 2px 0 rgba(255,255,255,0.22);
+  }
+  .wcell, .mcell, .cell, .unit.solid {
+    box-shadow: inset 3px 4px 0 rgba(255,255,255,0.2), inset -4px -5px 0 rgba(0,0,0,0.13);
+  }
 
   /* ===== controls ===== */
   #controls { flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 7px; }
@@ -270,7 +488,7 @@
     #main { flex-direction: column; align-items: stretch; gap: 2px; }
     #info { display: block; width: 100%; flex: 0 0 auto; text-align: center; padding: 0 6px; }
     #title { display: none; }
-    #decimal-display { font-size: clamp(30px, 9vw, 58px); margin: 0; line-height: 1; }
+    #decimal-display { font-size: clamp(24px, 8vw, 58px); margin: 0; line-height: 1; }
     #subtitle { min-height: 0; font-size: clamp(12px, 3.2vw, 16px); overflow-wrap: anywhere; }
     #fraction { margin-top: 0; min-height: 0; font-size: clamp(15px, 4.2vw, 22px); }
     #breakdown { min-height: 0; font-size: clamp(11px, 3vw, 15px); }
@@ -293,6 +511,7 @@
   </div>
 
   <div id="stage-wrap">
+    <div id="focus-rail" aria-hidden="true"></div>
     <div id="square">
       <div id="grid"></div>
       <div id="unishine"></div>
@@ -415,7 +634,14 @@ function placeColorFn(p) {
 // Clicking a Numberblock rotates through this list.
 function allShapes(n) {
   if (n <= 0) return [{ kind: 'rect', rows: 0, cols: 0 }];
+  const root = Math.sqrt(n);
+  const ones = n % 10;
+  const digitRoot = Math.sqrt(ones);
   const rects = [];
+  if (Number.isInteger(root) && root >= 3 && Number.isInteger(digitRoot) && digitRoot >= 1) {
+    const inner = digitRoot;
+    if (inner < root) rects.push({ kind: 'center-square', side: root, inner });
+  }
   for (let c = 1; c * c <= n; c++) if (n % c === 0) {
     const r = n / c;
     rects.push({ rows: r, cols: c });
@@ -434,6 +660,8 @@ function allShapes(n) {
 // (25 -> 5x5, 12 -> 4x3, 100 -> 10x10); otherwise the place-value layout
 // (34 -> 30+4, 102 -> 100+2).
 function defaultShapeIndex(n, shapes) {
+  const center = shapes.findIndex(s => s.kind === 'center-square');
+  if (n < 100 && center >= 0) return center;
   const best = shapes[0];
   const pi = shapes.findIndex(s => s.kind === 'place');
   if (n >= 1000) {  // place value gets unwieldy; prefer a compact rectangle
@@ -451,6 +679,7 @@ function defaultShapeIndex(n, shapes) {
 function shapeDims(n, shape) {
   if (shape.kind === 'rect') return { cols: shape.cols, rows: shape.rows, gaps: 0 };
   if (shape.kind === 'stairs') return { cols: shape.k, rows: shape.k, gaps: 0 };
+  if (shape.kind === 'center-square') return { cols: shape.side, rows: shape.side, gaps: 0 };
   const parts = getPlaceParts(n);
   return { cols: parts.reduce((s, p) => s + placeDims(p).cols, 0),
            rows: Math.max(...parts.map(p => placeDims(p).rows), 1),
@@ -568,7 +797,7 @@ function routeValue(val) {
   if (val < 1) {
     let n = Math.round(val * 100);
     if (n >= 100) return { mode: 'whole', k: 1, exact: true };
-    return { mode: 'decimal', n, exact: Math.abs(val * 100 - n) < 1e-9 };
+    return { mode: 'decimal', n, exact: Math.abs(val * 100 - n) < 1e-9, disp: fmtExact(val) };
   }
   let whole = Math.floor(val + 1e-9);
   let n = Math.round((val - whole) * 100);
@@ -580,17 +809,303 @@ function routeValue(val) {
   // mixed number: whole + n hundredths (shown as whole blocks + a fractional block)
   const exact = Math.abs((val - whole) * 100 - n) < 1e-9;
   if (whole > MAX_MIXED) return { mode: 'whole', k: Math.min(whole, MAX_WHOLE), exact: false };
-  return { mode: 'mixed', whole, n, exact };
+  return { mode: 'mixed', whole, n, exact, disp: fmtExact(val) };
 }
 
 // ===================== SHARED HELPERS =====================
 function gcd(a, b) { return b === 0 ? a : gcd(b, a % b); }
 function fmtDecimal(n) { return n === 0 ? '0' : '0.' + String(n).padStart(2, '0'); }
-function fmtMixed(whole, n) { return String(whole) + (n / 100).toString().slice(1); } // 1 + .5 -> "1.5"
+function fmtMixed(whole, n) { return fmtInt(whole) + (n / 100).toString().slice(1); } // 1 + .5 -> "1.5"
+function fmtInt(n) { return Math.trunc(n).toLocaleString('en-US'); }
+// Truthful decimal string: trims float noise + trailing zeros, keeps every real
+// digit. 0.125 -> "0.125" (NOT rounded to 0.13, even though blocks show 13/100).
+function fmtExact(val) { return (+(+val).toFixed(6)).toString(); }
 function faceHTML(single) {
   return single
-    ? `<div class="nb-face"><div class="nb-eye nb-eye-single"></div><div class="nb-mouth"></div></div>`
+    ? `<div class="nb-face" style="--pupil:#5d1728;--mouth:#6b1428"><div class="nb-eye nb-eye-single"></div><div class="nb-mouth"></div></div>`
     : `<div class="nb-face"><div class="nb-eye nb-eye-left"></div><div class="nb-eye nb-eye-right"></div><div class="nb-mouth"></div></div>`;
+}
+
+const CHARACTER_SPECS = {
+  1: { limb1:'#d91b23', limb2:'#8b1420', mouth:'#611220', pupil:'#111111', eyes:1, eyeScale:0.56, mouthType:'one-smile', armY:0.47 },
+  2: { limb1:'#8a4a98', limb2:'#5e2c78', mouth:'#7b3510', eyes:2, eyeScale:0.42, eyeY:0.44, eyeSpread:0.25, mouthW:0.36, mouthH:0.16, mouthY:0.68, armY:0.5, armLen:0.64, armAngle:20, legLen:0.42, accessory:'glasses' },
+  3: { limb1:'#d9232d', limb2:'#9c1723', mouth:'#6b5300', eyes:2, eyeScale:0.4, eyeY:0.43, eyeSpread:0.24, mouthW:0.42, mouthH:0.18, mouthY:0.68, armY:0.48, armLen:0.66, armAngle:18, legLen:0.42, accessory:'crown' },
+  4: { limb1:'#206f24', limb2:'#174d1b', mouth:'#175a09', eyes:2, eyeScale:0.38, eyeY:0.42, eyeSpread:0.24, mouthW:0.38, mouthH:0.16, mouthY:0.67, armY:0.5, armLen:0.66, armAngle:16, legLen:0.4, accessory:'brows', brow:'#1f6425' },
+  5: { limb1:'#29c1e8', limb2:'#14718e', mouth:'#07516d', eyes:2, eyeScale:0.38, eyeY:0.42, eyeSpread:0.25, mouthW:0.42, mouthH:0.2, mouthY:0.67, mouthType:'smile-open', armY:0.47, armLen:0.7, armAngle:18, legLen:0.42, accessory:'star' },
+  6: { limb1:'#704ee0', limb2:'#392073', mouth:'#27144f', eyes:2, eyeScale:0.36, eyeY:0.42, eyeSpread:0.25, mouthW:0.4, mouthH:0.18, mouthY:0.67, armY:0.5, armLen:0.68, armAngle:16, legLen:0.4, accessory:'pips' },
+  7: { limb1:'#e252c7', limb2:'#433fd8', mouth:'#2e246b', eyes:2, eyeScale:0.36, eyeY:0.41, eyeSpread:0.25, mouthW:0.44, mouthH:0.2, mouthY:0.66, mouthType:'smile-open', armY:0.49, armLen:0.72, armAngle:20, legLen:0.4, hat:'rainbow', accessory:'rainbowGems' },
+  8: { limb1:'#ff63b8', limb2:'#9e1e65', mouth:'#701245', eyes:2, eyeScale:0.34, eyeY:0.41, eyeSpread:0.25, mouthW:0.4, mouthH:0.17, mouthY:0.66, armY:0.5, armLen:0.7, armAngle:16, legLen:0.38, accessory:'tentacles' },
+  9: { limb1:'#41546a', limb2:'#263547', mouth:'#3e4248', eyes:2, eyeScale:0.34, eyeY:0.41, eyeSpread:0.25, mouthW:0.38, mouthH:0.16, mouthY:0.66, armY:0.5, armLen:0.68, armAngle:16, legLen:0.38, accessory:'brows', brow:'#41546a' },
+  10:{ limb1:'#ef2632', limb2:'#861524', mouth:'#7b1426', eyes:2, eyeScale:0.32, eyeY:0.4, eyeSpread:0.23, mouthW:0.42, mouthH:0.18, mouthY:0.65, armY:0.5, armLen:0.72, armAngle:15, legLen:0.38, accessory:'tenFrame' }
+};
+
+function makeBadge(spec, cs, W) {
+  if (!spec.badge) return null;
+  const b = document.createElement('div');
+  b.className = 'badge';
+  b.textContent = spec.badge;
+  b.style.width = Math.min(W * 0.44, cs * 1.0) + 'px';
+  b.style.height = cs * 0.42 + 'px';
+  b.style.left = (W / 2 - Math.min(W * 0.44, cs * 1.0) / 2) + 'px';
+  b.style.top = (-cs * 0.26) + 'px';
+  b.style.fontSize = Math.max(10, cs * 0.32) + 'px';
+  return b;
+}
+function makeOneFaceHTML(cs, W, H, square = false) {
+  const isSquare = !!square;
+  const face = document.createElement('div');
+  face.className = 'nb-char one-char' + (isSquare ? ' square-one-face' : '');
+  face.style.color = '#DE151D';
+  face.style.setProperty('--pupil', '#111111');
+  face.style.setProperty('--mouth', '#611220');
+  face.style.setProperty('--mouth-line', Math.max(2, cs * (isSquare ? 0.07 : 0.075)) + 'px');
+  face.style.setProperty('--one-ring', Math.max(5, cs * (isSquare ? 0.072 : 0.082)) + 'px');
+
+  const eyeD = Math.max(11, cs * (isSquare ? 0.52 : 0.54));
+  const eyeCY = cs * (isSquare ? 0.37 : 0.38);
+  const eye = document.createElement('div');
+  eye.className = 'eye';
+  eye.style.width = eye.style.height = eyeD + 'px';
+  eye.style.left = (W / 2 - eyeD / 2) + 'px';
+  eye.style.top = (eyeCY - eyeD / 2) + 'px';
+  face.appendChild(eye);
+
+  const mouthW = cs * (isSquare ? 0.42 : 0.4);
+  const mouthH = cs * (isSquare ? 0.26 : 0.24);
+  const mouth = document.createElement('div');
+  mouth.className = 'mouth one-smile';
+  mouth.style.width = mouthW + 'px';
+  mouth.style.height = mouthH + 'px';
+  mouth.style.left = (W / 2 - mouthW / 2) + 'px';
+  mouth.style.top = (cs * (isSquare ? 0.64 : 0.65)) + 'px';
+  face.appendChild(mouth);
+
+  const cheekL = document.createElement('div');
+  const cheekR = document.createElement('div');
+  cheekL.className = 'cheek'; cheekR.className = 'cheek';
+  cheekL.style.left = (W * 0.13) + 'px'; cheekR.style.right = (W * 0.13) + 'px';
+  cheekL.style.top = cheekR.style.top = (cs * (isSquare ? 0.58 : 0.59)) + 'px';
+  face.append(cheekL, cheekR);
+  return face;
+}
+
+function makeHat(spec, cs, W) {
+  if (!spec.hat) return null;
+  const h = document.createElement('div');
+  h.className = 'hat';
+  if (spec.hat === 'star') {
+    h.textContent = '★';
+    h.style.color = '#ffe45c';
+    h.style.webkitTextStroke = `${Math.max(1, cs * 0.035)}px #167da0`;
+    h.style.fontSize = cs * 0.7 + 'px';
+    h.style.left = (W / 2 - cs * 0.34) + 'px';
+    h.style.top = (-cs * 0.62) + 'px';
+  } else if (spec.hat === 'rainbow') {
+    h.style.width = cs * 1.18 + 'px';
+    h.style.height = cs * 0.58 + 'px';
+    h.style.left = (W / 2 - cs * 0.59) + 'px';
+    h.style.top = (-cs * 0.52) + 'px';
+    h.style.borderRadius = `${cs}px ${cs}px 0 0`;
+    h.style.background = `linear-gradient(90deg, ${RAINBOW.join(',')})`;
+    h.style.border = `${Math.max(2, cs * 0.05)}px solid rgba(255,255,255,0.85)`;
+    h.style.borderBottom = 'none';
+  }
+  return h;
+}
+function addAccessories(ov, n, spec, cs, W, H, eyeCenters, eyeD, eyeCY) {
+  if (!spec.accessory) return;
+  const add = (el) => ov.appendChild(el);
+  const mk = (cls) => { const el = document.createElement('div'); el.className = 'accessory ' + cls; return el; };
+  if (spec.accessory === 'glasses' && eyeCenters.length === 2) {
+    const line = Math.max(4, cs * 0.07);
+    ov.style.setProperty('--glasses-line', line + 'px');
+    eyeCenters.forEach((cx) => {
+      const ring = mk('glasses-ring');
+      const d = eyeD * 1.26;
+      ring.style.width = ring.style.height = d + 'px';
+      ring.style.left = (cx - d / 2) + 'px';
+      ring.style.top = (eyeCY - d / 2) + 'px';
+      add(ring);
+    });
+    const bridge = mk('glasses-bridge');
+    bridge.style.width = Math.max(6, eyeCenters[1] - eyeCenters[0] - eyeD * 0.72) + 'px';
+    bridge.style.left = (eyeCenters[0] + eyeD * 0.36) + 'px';
+    bridge.style.top = (eyeCY - line / 2) + 'px';
+    add(bridge);
+  } else if (spec.accessory === 'crown') {
+    const crown = mk('crown');
+    crown.style.width = Math.min(W * 0.78, cs * 1.05) + 'px';
+    crown.style.height = cs * 0.42 + 'px';
+    crown.style.left = (W / 2 - parseFloat(crown.style.width) / 2) + 'px';
+    crown.style.top = (-cs * 0.34) + 'px';
+    for (let i = 0; i < 3; i++) {
+      const p = document.createElement('div');
+      p.className = 'crown-point';
+      p.style.height = (i === 1 ? 1 : 0.84) * 100 + '%';
+      crown.appendChild(p);
+    }
+    add(crown);
+  } else if (spec.accessory === 'brows' && eyeCenters.length === 2) {
+    ov.style.setProperty('--brow', spec.brow || '#245b25');
+    eyeCenters.forEach((cx, i) => {
+      const brow = mk('brow');
+      brow.style.width = eyeD * 0.98 + 'px';
+      brow.style.height = eyeD * 0.34 + 'px';
+      brow.style.left = (cx - eyeD * 0.49) + 'px';
+      brow.style.top = (eyeCY - eyeD * 1.18) + 'px';
+      brow.style.transform = `rotate(${i === 0 ? -8 : 8}deg)`;
+      add(brow);
+    });
+  } else if (spec.accessory === 'star') {
+    const star = mk('star-accessory');
+    star.textContent = '★';
+    star.style.left = (W / 2 - cs * 0.36) + 'px';
+    star.style.top = (-cs * 0.36) + 'px';
+    star.style.fontSize = cs * 0.72 + 'px';
+    add(star);
+  } else if (spec.accessory === 'pips') {
+    const pipSize = Math.max(5, cs * 0.11);
+    const positions = [[0.3,0.27],[0.5,0.27],[0.7,0.27],[0.3,0.82],[0.5,0.82],[0.7,0.82]];
+    positions.forEach(([x,y]) => {
+      const pip = mk('pip');
+      pip.style.width = pip.style.height = pipSize + 'px';
+      pip.style.left = (W * x - pipSize / 2) + 'px';
+      pip.style.top = (H * y - pipSize / 2) + 'px';
+      add(pip);
+    });
+  } else if (spec.accessory === 'rainbowGems') {
+    RAINBOW.forEach((color, i) => {
+      const gem = mk('pip');
+      const d = Math.max(5, cs * 0.11);
+      gem.style.background = color;
+      gem.style.width = gem.style.height = d + 'px';
+      gem.style.left = (W * (0.2 + i * 0.1) - d / 2) + 'px';
+      gem.style.top = (-cs * 0.12 - Math.sin((i / 6) * Math.PI) * cs * 0.16) + 'px';
+      add(gem);
+    });
+  } else if (spec.accessory === 'tentacles') {
+    const coords = [[0.12,0.62,-38],[0.24,0.96,-12],[0.76,0.96,12],[0.88,0.62,38]];
+    coords.forEach(([x,y,rot]) => {
+      const t = mk('extra-tentacle');
+      t.style.left = (W * x - cs * 0.08) + 'px';
+      t.style.top = (H * y - cs * 0.08) + 'px';
+      t.style.transform = `rotate(${rot}deg)`;
+      add(t);
+    });
+  } else if (spec.accessory === 'tenFrame') {
+    const frame = mk('ten-frame');
+    frame.style.setProperty('--ten-line', Math.max(4, cs * 0.06) + 'px');
+    add(frame);
+  }
+}
+// Build a full Numberblocks-style character (googly eyes, mouth, arms + white
+// hands, legs + feet, optional hat) as a pixel-positioned overlay sized to a
+// `cols`x`rows` figure of `cs`px cells. One (n===1) gets the single cyclops eye.
+function buildCharacter(n, cs, cols, rows) {
+  const W = cols * cs, H = rows * cs;
+  const spec = CHARACTER_SPECS[n] || CHARACTER_SPECS[2];
+  const isOne = n === 1;
+  const stairs = n > 0 && Number.isInteger((Math.sqrt(8 * n + 1) - 1) / 2) && cols === rows && n !== 1 && n !== 4 && n !== 9;
+  // face sits on the TOP block; for a staircase the top block is the single
+  // top-left cell, otherwise it spans the whole top row.
+  const faceCX = stairs ? cs / 2 : W / 2;
+  const faceSpan = stairs ? cs : W;
+  const ov = document.createElement('div');
+  ov.className = 'nb-char' + (n === 1 ? ' one-char' : '');
+  ov.style.color = getBlockColorAndBorder(n, 0).bg;
+  ov.style.setProperty('--limb1', spec.limb1);
+  ov.style.setProperty('--limb2', spec.limb2);
+  ov.style.setProperty('--mouth', spec.mouth);
+  ov.style.setProperty('--pupil', spec.pupil || '#262026');
+  ov.style.setProperty('--mouth-line', Math.max(2, cs * 0.075) + 'px');
+  ov.style.setProperty('--one-ring', Math.max(4, cs * 0.075) + 'px');
+
+  // eyes
+  if (isOne) {
+    ov.appendChild(makeOneFaceHTML(cs, W, H, false));
+  } else {
+    const eyeD = Math.max(9, cs * spec.eyeScale);
+    const eyeCY = cs * (spec.eyeY || 0.45);
+    const eyeCenters = [];
+  const mkEye = (cx) => { const e = document.createElement('div'); e.className = 'eye';
+    e.style.width = e.style.height = eyeD + 'px';
+    e.style.left = (cx - eyeD / 2) + 'px'; e.style.top = (eyeCY - eyeD / 2) + 'px';
+    ov.appendChild(e); eyeCenters.push(cx); };
+    if (spec.eyes === 1) mkEye(faceCX);
+    else { const sp = Math.min(faceSpan * (spec.eyeSpread || 0.24), cs * 0.62); mkEye(faceCX - sp); mkEye(faceCX + sp); }
+    addAccessories(ov, n, spec, cs, W, H, eyeCenters, eyeD, eyeCY);
+
+    // mouth
+    const mw = cs * (spec.mouthW || 0.42), mh = cs * (spec.mouthH || (spec.mouthType === 'smile-open' ? 0.24 : 0.2));
+    const mo = document.createElement('div');
+    mo.className = 'mouth ' + (spec.mouthType || 'smile');
+    mo.style.width = mw + 'px'; mo.style.height = mh + 'px';
+    mo.style.left = (faceCX - mw / 2) + 'px'; mo.style.top = (cs * (spec.mouthY || 0.7)) + 'px';
+    ov.appendChild(mo);
+  }
+
+  // Arms and legs are single soft shapes, not rods with separate circles.
+  const armY = Math.min(H * (spec.armY || 0.48), cs * (isOne ? 0.74 : 1.35)),
+        armLen = cs * (isOne ? 0.58 : (spec.armLen || 0.72)),
+        armT = Math.max(10, cs * (isOne ? 0.27 : (spec.armT || 0.28))),
+        armAngle = isOne ? 32 : (spec.armAngle || 16);
+  const mkArm = (right) => {
+    const arm = document.createElement('div'); arm.className = 'limb arm-limb';
+    arm.style.height = armT + 'px'; arm.style.width = armLen + 'px'; arm.style.top = (armY - armT / 2) + 'px';
+    arm.style.transform = `rotate(${right ? -armAngle : armAngle}deg)`;
+    if (right) {
+      arm.style.left = (W - armLen * 0.08) + 'px';
+      arm.style.setProperty('--bulb-x', '82%');
+    } else {
+      arm.style.left = (-armLen * 0.92) + 'px';
+      arm.style.transform += ' scaleX(-1)';
+      arm.style.setProperty('--bulb-x', '82%');
+    }
+    ov.appendChild(arm);
+  };
+  mkArm(false); mkArm(true);
+
+  // legs + feet (below, slightly splayed)
+  const legLen = Math.max(14, cs * (isOne ? 0.42 : (spec.legLen || 0.5))),
+        legW = Math.max(10, cs * (isOne ? 0.27 : (spec.legW || 0.28)));
+  const mkLeg = (cx, out) => {
+    const leg = document.createElement('div'); leg.className = 'limb leg-limb';
+    leg.style.width = legW + 'px'; leg.style.height = legLen + 'px';
+    leg.style.left = (cx - legW / 2 + out) + 'px'; leg.style.top = (H - legLen * 0.08) + 'px';
+    leg.style.transform = `rotate(${out < 0 ? 7 : -7}deg)`;
+    ov.appendChild(leg);
+  };
+  const legX = Math.min(W * (spec.legSpread || 0.24), cs * 0.75);
+  mkLeg(W / 2 - legX, -legW * 0.25); mkLeg(W / 2 + legX, legW * 0.25);
+
+  const badge = makeBadge(spec, cs, W);
+  const hat = makeHat(spec, cs, W);
+  if (badge) ov.appendChild(badge);
+  if (hat) ov.appendChild(hat);
+  return ov;
+}
+// Attach the character overlay to a figure box for the friendly 1–10 blocks;
+// returns true if it decorated (so callers can skip the plain per-cell face).
+function decorateFigure(box, n, cs, cols, rows) {
+  if (!(n >= 1 && n <= 10)) return false;
+  box.style.position = 'relative'; box.style.overflow = 'visible';
+  box.classList.add('numberblock-figure', `nb-${n}`);
+  box.classList.toggle('one-figure', n === 1);
+  box.appendChild(buildCharacter(n, cs, cols, rows));
+  return true;
+}
+
+function addNumberling(box, value, cs, cols) {
+  if (hideAnswer || value == null) return;
+  box.style.position = 'relative';
+  box.style.overflow = 'visible';
+  const nling = document.createElement('div');
+  nling.className = 'numberling';
+  const displayValue = Number.isInteger(+value) ? fmtInt(+value) : value;
+  nling.textContent = displayValue;
+  nling.style.fontSize = Math.max(13, Math.min(34, cs * (String(displayValue).length > 2 ? 0.44 : 0.5))) + 'px';
+  nling.style.maxWidth = Math.max(cs * Math.max(cols, 1), cs * 1.5) + 'px';
+  box.appendChild(nling);
 }
 
 // ===================== DOM =====================
@@ -599,6 +1114,7 @@ const gridEl     = document.getElementById('grid');
 const guideEl    = document.getElementById('quarter-guide');
 const faceEl     = document.getElementById('face');
 const uniShine   = document.getElementById('unishine');
+const focusRailEl = document.getElementById('focus-rail');
 const wholeEl    = document.getElementById('whole');
 const combineEl  = document.getElementById('combine');
 const stageWrap  = document.getElementById('stage-wrap');
@@ -626,9 +1142,11 @@ const QUADRANTS = [
   { c0:5,c1:9,r0:0,r1:4 }, { c0:5,c1:9,r0:5,r1:9 },
 ];
 // Returns ordered [{col,row,cat}], with .isQuarter flag for 25/50/75/100.
-function buildFillPlan(n) {
+// layout: undefined (quarters when they apply, else vertical), 'quarter',
+// 'vertical' (tenths as columns), or 'horizontal' (tenths as rows).
+function buildFillPlan(n, layout) {
   const plan = [];
-  if (n > 0 && n % 25 === 0) {
+  if (n > 0 && n % 25 === 0 && (!layout || layout === 'quarter')) {
     for (let q = 0; q < n / 25; q++) {
       const Q = QUADRANTS[q];
       for (let col = Q.c0; col <= Q.c1; col++)
@@ -636,10 +1154,13 @@ function buildFillPlan(n) {
     }
     plan.isQuarter = true; return plan;
   }
-  const fullCols = Math.floor(n / 10), rem = n % 10;
-  for (let col = 0; col < fullCols; col++)
-    for (let row = 0; row < 10; row++) plan.push({ col, row, cat: 'tenth' });
-  for (let row = 0; row < rem; row++) plan.push({ col: fullCols, row, cat: 'hundredth' });
+  const flip = layout === 'horizontal';
+  const fullLines = Math.floor(n / 10), rem = n % 10;
+  for (let line = 0; line < fullLines; line++)
+    for (let i = 0; i < 10; i++)
+      plan.push(flip ? { col: i, row: line, cat: 'tenth' } : { col: line, row: i, cat: 'tenth' });
+  for (let i = 0; i < rem; i++)
+    plan.push(flip ? { col: i, row: fullLines, cat: 'hundredth' } : { col: fullLines, row: i, cat: 'hundredth' });
   return plan;
 }
 
@@ -655,17 +1176,24 @@ function sizeSquare() {
   document.documentElement.style.setProperty('--sq', Math.max(120, Math.floor(Math.min(w, h) * 0.94)) + 'px');
 }
 function showSquareStage() { wholeEl.classList.add('hidden'); wholeEl.innerHTML = '';
+  wholeEl.classList.remove('large-zoom'); wholeEl.style.transform = ''; currentLarge = null;
   combineEl.classList.add('hidden'); combineEl.innerHTML = ''; square.classList.remove('hidden');
+  focusRailEl.classList.remove('on'); focusRailEl.innerHTML = '';
   stageWrap.style.cursor = ''; }
 function showWholeStage()  { square.classList.add('hidden');
   combineEl.classList.add('hidden'); combineEl.innerHTML = ''; wholeEl.classList.remove('hidden');
+  focusRailEl.classList.remove('on');
   stageWrap.style.cursor = 'default'; }
 function showCombineStage(){ square.classList.add('hidden');
-  wholeEl.classList.add('hidden'); wholeEl.innerHTML = ''; combineEl.classList.remove('hidden');
+  wholeEl.classList.add('hidden'); wholeEl.innerHTML = ''; wholeEl.classList.remove('large-zoom'); wholeEl.style.transform = ''; currentLarge = null; combineEl.classList.remove('hidden');
+  focusRailEl.classList.remove('on'); focusRailEl.innerHTML = '';
   combineEl.style.flexDirection = ''; stageWrap.style.cursor = 'default'; }
 
 // ===================== DECIMAL RENDER (with enlarge) =====================
 function clearAllCells() { for (const c of allCells) c.className = 'cell empty'; }
+function squareOneFaceHTML() {
+  return makeOneFaceHTML(120, 120, 120, true).outerHTML;
+}
 function showFraction(n) {
   if (n === 0) { fractionEl.innerHTML = `<span class="reduced">0</span>`; return; }
   const g = gcd(n, 100), rn = n / g, rd = 100 / g;
@@ -690,37 +1218,54 @@ function resetSquareToOne() {
   uniShine.classList.remove('off');
   document.documentElement.style.setProperty('--gap', '0px');
   document.documentElement.style.setProperty('--face', '100%');
-  faceEl.innerHTML = '<div class="nb-eye nb-eye-single"></div><div class="nb-mouth"></div>';
+  const sq = Math.max(120, Math.round(parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sq')) || 120));
+  faceEl.replaceChildren(makeOneFaceHTML(sq, sq, sq, true));
   for (const c of allCells) c.className = 'cell';
 }
 
 let currentDecimalN = 50;   // remembered for click-to-expand-again
 
-async function demonstrateDecimal(n, exact) {
+function showNormalOneIntro() {
+  showWholeStage(); wholeEl.innerHTML = '';
+  wholeEl.classList.remove('large-zoom'); wholeEl.style.transform = ''; currentLarge = null;
+  wholeEl.style.display = 'flex'; wholeEl.style.alignItems = 'center'; wholeEl.style.justifyContent = 'center';
+  wholeEl.style.gap = '0';
+  const shape = allShapes(1)[0];
+  const cs = fitCellSize(1, shape);
+  const box = document.createElement('div');
+  box.className = 'dancing';
+  wholeEl.appendChild(box);
+  const { cells } = buildShape(box, 1, shape, cs, false, 1);
+  cells.forEach(c => c.classList.add('show'));
+  current = { n: 1, displayN: 1, thousand: false, shapes: [shape], si: 0, box };
+}
+
+async function demonstrateDecimal(n, exact, disp) {
   token++; const tk = token;
-  showSquareStage(); sizeSquare();
   currentDecimalN = n; square.style.cursor = 'pointer'; square.title = 'Tap to expand again';
-  decimalEl.textContent = fmtDecimal(n);
+  const label = (!exact && disp) ? disp : fmtDecimal(n);   // show the true value, not the rounded one
+  decimalEl.textContent = label;
   fractionEl.innerHTML = ''; breakEl.innerHTML = '';
-  serverLog({ type: 'demo', kind: 'decimal', value: fmtDecimal(n), hundredths: n });
+  serverLog({ type: 'demo', kind: 'decimal', value: label, hundredths: n });
 
   const plan = buildFillPlan(n);
   const isQuarter = !!plan.isQuarter;
 
   // Phase 1: enlarge the single One block, then split it into 100 — every time.
   {
+    showNormalOneIntro();
+    subtitleEl.innerHTML = 'This is <b>One</b> — the normal Numberblock.';
+    if (!(await sleep(800, tk))) return;
+    showSquareStage(); sizeSquare();
     resetSquareToOne();
-    void square.offsetWidth;                 // paint the small solid block first
-    subtitleEl.innerHTML = 'This is <b>One</b> — a single block.';
-    if (!(await sleep(650, tk))) return;
-    subtitleEl.innerHTML = 'Watch <b>One</b> grow big...';
+    void square.offsetWidth;                 // paint the solid block before it grows
+    subtitleEl.innerHTML = 'Watch <b>One</b> stretch into a hundred-square...';
     square.classList.add('enlarged');        // scale 0.26 -> 1 (the enlargement)
     if (!(await sleep(1050, tk))) return;
     subtitleEl.innerHTML = 'Now split it into <b>100</b> equal pieces — each is <b>0.01</b>';
     document.documentElement.style.setProperty('--gap', '3px');
     gridEl.classList.add('divided');
     uniShine.classList.add('off');
-    document.documentElement.style.setProperty('--face', '10%');
     divided = true;
     if (!(await sleep(950, tk))) return;
   }
@@ -737,7 +1282,7 @@ async function demonstrateDecimal(n, exact) {
     else if (t) subtitleEl.innerHTML = `Fill <b>${t}</b> whole column${t>1?'s':''} of ten`;
     else subtitleEl.innerHTML = `Fill just <b>${h}</b> tiny piece${h>1?'s':''}`;
   }
-  if (!exact) subtitleEl.innerHTML += ` <span style="opacity:.85">(rounded to the nearest hundredth)</span>`;
+  if (!exact) subtitleEl.innerHTML += ` <span style="opacity:.85">(blocks shown to the nearest hundredth)</span>`;
 
   const step = plan.length > 60 ? 15 : 28;
   for (const p of plan) {
@@ -760,7 +1305,7 @@ function mkCell(cs, style) {
 }
 // Build number n in the given shape into `box`. Returns { cells }.
 // `thousand`: each cell represents 1000 and gets a decorative grid pattern.
-function buildShape(box, n, shape, cs, thousand) {
+function buildShape(box, n, shape, cs, thousand, labelValue = n) {
   box.innerHTML = '';
   const cells = []; let topLeft = null;
   const cls = thousand ? 'thousand' : '';
@@ -773,12 +1318,29 @@ function buildShape(box, n, shape, cs, thousand) {
       g.style.gridTemplateColumns = `repeat(${cols}, ${cs}px)`;
       g.style.gridTemplateRows = `repeat(${rows}, ${cs}px)`;
       for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
-        const cell = mkCell(cs, unitStyle(n, gi, r, c)); if (cls) cell.classList.add(cls);
+        const cell = mkCell(cs, unitStyle(n, gi, r, c)); if (cls) cell.classList.add(cls); if (shape.hundred) cell.classList.add('hundred-unit');
         cell.style.gridRow = rows - r; cell.style.gridColumn = c + 1;
         if (pi === 0 && rows - r === 1 && c === 0) topLeft = cell;
         g.appendChild(cell); cells.push(cell); gi++;
       }
       box.appendChild(g);
+    });
+  } else if (shape.kind === 'center-square') {
+    const side = shape.side, inner = shape.inner, offset = Math.floor((side - inner) / 2);
+    box.style.display = 'grid'; box.style.gap = '2px'; box.style.alignItems = ''; box.style.justifyContent = 'center';
+    box.style.gridTemplateColumns = `repeat(${side}, ${cs}px)`;
+    box.style.gridTemplateRows = `repeat(${side}, ${cs}px)`;
+    const coords = [];
+    for (let r = 0; r < side; r++) for (let c = 0; c < side; c++) {
+      const inCenter = r >= offset && r < offset + inner && c >= offset && c < offset + inner;
+      if (!inCenter) coords.push({ r, c });
+    }
+    for (let r = offset; r < offset + inner; r++) for (let c = offset; c < offset + inner; c++) coords.push({ r, c });
+    coords.forEach(({ r, c }, i) => {
+      const cell = mkCell(cs, unitStyle(n, i, r, c)); if (cls) cell.classList.add(cls);
+      cell.style.gridRow = side - r; cell.style.gridColumn = c + 1;
+      if (side - r === 1 && c === 0) topLeft = cell;
+      box.appendChild(cell); cells.push(cell);
     });
   } else if (shape.kind === 'stairs') {
     // staircase: k rows, bottom row widest (k cells) up to 1 on top, left-aligned
@@ -790,7 +1352,7 @@ function buildShape(box, n, shape, cs, thousand) {
     for (let r = 0; r < k; r++) {           // r = 0 is the bottom (widest) row
       const w = k - r;
       for (let c = 0; c < w; c++) {
-        const cell = mkCell(cs, unitStyle(n, i, r, c)); if (cls) cell.classList.add(cls);
+        const cell = mkCell(cs, unitStyle(n, i, r, c)); if (cls) cell.classList.add(cls); if (shape.hundred) cell.classList.add('hundred-unit');
         cell.style.gridRow = k - r; cell.style.gridColumn = c + 1;
         if (r === k - 1 && c === 0) topLeft = cell;   // single top cell
         box.appendChild(cell); cells.push(cell); i++;
@@ -803,20 +1365,26 @@ function buildShape(box, n, shape, cs, thousand) {
     box.style.gridTemplateRows = `repeat(${rows}, ${cs}px)`;
     let i = 0;
     for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
-      const cell = mkCell(cs, unitStyle(n, i, r, c)); if (cls) cell.classList.add(cls);
+      const cell = mkCell(cs, unitStyle(n, i, r, c)); if (cls) cell.classList.add(cls); if (shape.hundred) cell.classList.add('hundred-unit');
       cell.style.gridRow = rows - r; cell.style.gridColumn = c + 1;
       if (rows - r === 1 && c === 0) topLeft = cell;
       box.appendChild(cell); cells.push(cell); i++;
     }
   }
-  if (topLeft) { topLeft.style.overflow = 'visible'; topLeft.innerHTML = faceHTML(n === 1); }
+  // 1–10 get the full character (eyes + mouth + arms + legs + hat); larger
+  // numbers keep the simple face on their top-left block.
+  const dims = shapeDims(n, shape);
+  if (!thousand && decorateFigure(box, n, cs, dims.cols, dims.rows)) { /* decorated */ }
+  else if (topLeft) { topLeft.style.overflow = 'visible'; topLeft.innerHTML = faceHTML(n === 1); }
+  if (n >= 1 || thousand) addNumberling(box, labelValue, cs, dims.cols);
   return { cells };
 }
 function fitCellSize(n, shape) {
   const { cols, rows, gaps } = shapeDims(n, shape);
   const availW = stageWrap.clientWidth * 0.9, availH = stageWrap.clientHeight * 0.82;
   let cs = Math.floor(Math.min((availW - gaps) / Math.max(cols, 1), availH / Math.max(rows, 1)));
-  return Math.max(4, Math.min(cs, 46));
+  const cap = n === 1 ? 156 : 46;
+  return Math.max(4, Math.min(cs, cap));
 }
 function shapeText(n, shape, thousand, displayN) {
   const hint = shape.__count > 1 ? ' <span style="opacity:.7">· tap to reshape</span>' : '';
@@ -826,19 +1394,30 @@ function shapeText(n, shape, thousand, displayN) {
     return;
   }
   if (thousand) {
-    subtitleEl.innerHTML = `<b>${displayN}</b> = <b>${n}</b> thousand-block${n > 1 ? 's' : ''} (each block is 1000)${hint}`;
-    breakEl.innerHTML = `<span class="p">${n} × 1000 = ${displayN}</span>`;
+    subtitleEl.innerHTML = `<b>${fmtInt(displayN)}</b> = <b>${fmtInt(n)}</b> thousand-block${n > 1 ? 's' : ''} (each block is 1,000)${hint}`;
+    breakEl.innerHTML = `<span class="p">${fmtInt(n)} × 1,000 = ${fmtInt(displayN)}</span>`;
+    return;
+  }
+  if (shape.hundred && displayN !== n) {
+    subtitleEl.innerHTML = `<b>${fmtInt(displayN)}</b> = <b>${fmtInt(n)}</b> hundred-block${n > 1 ? 's' : ''} (each block is 100)${hint}`;
+    breakEl.innerHTML = `<span class="p">${fmtInt(n)} × 100 = ${fmtInt(displayN)}</span>`;
     return;
   }
   if (shape.kind === 'stairs') {
     const steps = Array.from({ length: shape.k }, (_, i) => i + 1);
-    subtitleEl.innerHTML = `<b>${n}</b> — the <b>Step Squad</b> staircase!${hint}`;
-    breakEl.innerHTML = `<span class="t">${steps.join(' + ')} = ${n}</span>`;
+    subtitleEl.innerHTML = `<b>${fmtInt(n)}</b> — the <b>Step Squad</b> staircase!${hint}`;
+    breakEl.innerHTML = `<span class="t">${steps.join(' + ')} = ${fmtInt(n)}</span>`;
+    return;
+  }
+  if (shape.kind === 'center-square') {
+    const inner = shape.inner;
+    subtitleEl.innerHTML = `<b>${fmtInt(n)}</b> — a square with a centered <b>${inner}×${inner}</b> square inside.${hint}`;
+    breakEl.innerHTML = `<span class="p">${fmtInt(n - inner * inner)} around a ${inner} × ${inner} center</span>`;
     return;
   }
   if (shape.kind === 'place') {
     const parts = getPlaceParts(n);
-    subtitleEl.innerHTML = `<b>${n}</b> in place value: ${parts.map(p => p.value).join(' + ')}${hint}`;
+    subtitleEl.innerHTML = `<b>${fmtInt(n)}</b> in place value: ${parts.map(p => fmtInt(p.value)).join(' + ')}${hint}`;
     breakEl.innerHTML = parts.map(p => {
       const cls = p.kind === 'hundreds' ? 'p' : p.kind === 'tens' ? 't' : 'h';
       const unit = p.kind === 'hundreds' ? 'hundred' : p.kind === 'tens' ? 'ten' : 'one';
@@ -849,11 +1428,11 @@ function shapeText(n, shape, thousand, displayN) {
     breakEl.innerHTML = '';
   } else if (shape.cols >= 2 && shape.rows >= 2) {
     subtitleEl.innerHTML = shape.cols === shape.rows
-      ? `<b>${n}</b> — a perfect <b>${shape.cols}×${shape.rows}</b> square!${hint}`
-      : `<b>${n}</b> — a <b>${shape.cols}×${shape.rows}</b> rectangle.${hint}`;
-    breakEl.innerHTML = `<span class="p">${shape.cols} × ${shape.rows} = ${n}</span>`;
+      ? `<b>${fmtInt(n)}</b> — a perfect <b>${shape.cols}×${shape.rows}</b> square!${hint}`
+      : `<b>${fmtInt(n)}</b> — a <b>${shape.cols}×${shape.rows}</b> rectangle.${hint}`;
+    breakEl.innerHTML = `<span class="p">${shape.cols} × ${shape.rows} = ${fmtInt(n)}</span>`;
   } else {
-    subtitleEl.innerHTML = `<b>${n}</b> — a line of ${n}.${hint}`;
+    subtitleEl.innerHTML = `<b>${fmtInt(n)}</b> — a line of ${fmtInt(n)}.${hint}`;
     breakEl.innerHTML = '';
   }
 }
@@ -864,7 +1443,7 @@ function drawCurrent(animate, tk) {
   const { n, shapes, si, box, thousand } = current;
   const shape = shapes[si]; shape.__count = shapes.length;
   const cs = fitCellSize(n, shape);
-  const { cells } = buildShape(box, n, shape, cs, thousand);
+  const { cells } = buildShape(box, n, shape, cs, thousand, current.displayN);
   if (animate && cells.length <= 300) {   // stagger only when it stays snappy
     const step = Math.max(5, Math.min(22, Math.floor(560 / Math.max(cells.length, 1))));
     cells.forEach((cell, i) => setTimeout(() => { if (!tk || tk === token) cell.classList.add('show'); }, 30 + i * step));
@@ -881,6 +1460,177 @@ function rotateShape() {
   serverLog({ type: 'reshape', value: current.n, shape: current.si });
 }
 
+// A per-block fit function: largest cell size that fits value `n`'s shape inside
+// the given fraction of the stage (so several blocks can share the stage).
+function blockFit(n, budgetW, budgetH, cap) {
+  return (shape) => { const d = shapeDims(n, shape);
+    return Math.max(8, Math.min(Math.floor(Math.min(
+      (stageWrap.clientWidth * budgetW - d.gaps) / d.cols,
+      stageWrap.clientHeight * budgetH / d.rows)), cap)); };
+}
+// Make an on-stage block grid clickable to cycle through its shapes, in place.
+// Each block keeps its OWN shape state, so any number of results on stage at
+// once (mixed-number wholes, division groups, equation splits) can be reshaped.
+function enableReshape(grid, n, fit) {
+  if (!Number.isInteger(n) || n < 1) return;
+  const shapes = allShapes(n);
+  if (shapes.length < 2) return;
+  let si = defaultShapeIndex(n, shapes);
+  grid.style.cursor = 'pointer'; grid.title = 'Tap to change shape';
+  grid.addEventListener('click', (e) => {
+    e.stopPropagation();
+    si = (si + 1) % shapes.length;
+    const shape = shapes[si]; shape.__count = shapes.length;
+    const { cells } = buildShape(grid, n, shape, fit(shape));
+    cells.forEach(c => c.classList.add('show'));
+    serverLog({ type: 'reshape', value: n, shape: si });
+  });
+}
+
+function largePlaceParts(k) {
+  const thousands = Math.floor(k / 1000), rem = k % 1000;
+  const H = Math.floor(rem / 100), ones = rem % 100;
+  const parts = [];
+  if (thousands) parts.push({ kind: 'thousands', unitName: 'thousand', unitValue: 1000, count: thousands, value: thousands * 1000, n: thousands, label: thousands * 1000, thousand: true });
+  if (H) parts.push({ kind: 'hundreds', unitName: 'hundred', unitValue: 100, count: H, value: H * 100, n: H, label: H * 100, hundred: true });
+  if (ones) parts.push({ kind: 'ones', unitName: 'one', unitValue: 1, count: ones, value: ones, n: ones, label: ones, thousand: false });
+  return parts;
+}
+
+let currentLarge = null; // { k, exact, combo, negative, focusIndex }
+
+function largePartFit(parts, focusIndex = null) {
+  const dims = parts.map(p => {
+    const shapes = allShapes(p.n);
+    const shape = { ...shapes[defaultShapeIndex(p.n, shapes)], hundred: !!p.hundred };
+    return { ...p, shapes, shape, dims: shapeDims(p.n, shape) };
+  });
+  const gapPx = 22;
+  const availW = stageWrap.clientWidth * 0.98 - gapPx * Math.max(0, dims.length - 1);
+  const availH = stageWrap.clientHeight * 0.88;
+  const scaleFor = (p, i) => {
+    if (focusIndex == null || focusIndex === 0) return p.kind === 'thousands' ? 1 : p.kind === 'hundreds' ? 0.2 : 0.14;
+    if (i < focusIndex) return 0.52;
+    if (i === focusIndex) return 1;
+    return Math.max(0.34, 0.5 - (i - focusIndex - 1) * 0.1);
+  };
+  const unitCols = dims.reduce((s, p, i) => s + (p.dims.cols + (p.dims.gaps || 0) / 10) * scaleFor(p, i), 0);
+  const maxRows = Math.max(...dims.map((p, i) => p.dims.rows * scaleFor(p, i)), 1);
+  const cs = Math.max(4, Math.min(44, Math.floor(Math.min(availW / Math.max(unitCols, 1), availH / maxRows))));
+  return { dims: dims.map((p, i) => ({ ...p, cs: Math.max(4, Math.round(cs * scaleFor(p, i))), focused: i === focusIndex })), gapPx };
+}
+
+function largeNumberText(k, parts, combo, exact, negative) {
+  if (hideAnswer) {
+    subtitleEl.innerHTML = 'What number is this? Type its name!';
+    breakEl.innerHTML = '';
+    return;
+  }
+  if (negative) {
+    subtitleEl.innerHTML = `<b>−${fmtInt(k)}</b> — that's <b>${fmtInt(k)}</b> below zero (anti-blocks)!`;
+    breakEl.innerHTML = '';
+    return;
+  }
+  const sum = parts.map(p => fmtInt(p.value)).join(' + ');
+  subtitleEl.innerHTML = `<b>${fmtInt(k)}</b> in place value: ${sum}`;
+  breakEl.innerHTML = parts.map(p => {
+    const plural = p.count === 1 ? p.unitName : p.unitName + 's';
+    return `<span class="p">${fmtInt(p.count)} ${plural}</span>`;
+  }).join(' + ');
+  if (!exact) subtitleEl.innerHTML += ` <span style="opacity:.85">(rounded to a whole number)</span>`;
+  if (combo) {
+    if (!hideAnswer) decimalEl.textContent = `${fmtInt(combo.a)} ${combo.op} ${fmtInt(combo.b)} = ${fmtInt(k)}`;
+    subtitleEl.innerHTML = `<b>${fmtInt(combo.a)} ${combo.op} ${fmtInt(combo.b)}</b> makes <b>${fmtInt(k)}</b>!`;
+    fractionEl.innerHTML = `<span class="frac">${combo.a} ${combo.op} ${combo.b}</span>` +
+      `<span class="eq">=</span><span class="reduced">${fmtInt(k)}</span>`;
+  }
+}
+
+function positionLargeFocus(focusIndex) {
+  requestAnimationFrame(() => {
+    if (!currentLarge || focusIndex == null || focusIndex <= 0) { wholeEl.style.transform = ''; updateFocusRail(focusIndex); return; }
+    const groups = [...wholeEl.querySelectorAll('.wgroup.zoomable')];
+    const group = groups[focusIndex];
+    if (!group) { wholeEl.style.transform = ''; updateFocusRail(focusIndex); return; }
+    const targetX = Math.max(10, stageWrap.clientWidth * 0.08);
+    wholeEl.style.transform = `translateX(${Math.round(targetX - group.offsetLeft)}px)`;
+    updateFocusRail(focusIndex);
+  });
+}
+
+function updateFocusRail(focusIndex) {
+  if (!currentLarge || focusIndex == null) { focusRailEl.classList.remove('on'); return; }
+  const groups = [...wholeEl.querySelectorAll('.wgroup.zoomable')];
+  const group = groups[Math.max(0, Math.min(focusIndex, groups.length - 1))];
+  if (!group) { focusRailEl.classList.remove('on'); return; }
+  const stageRect = stageWrap.getBoundingClientRect();
+  const groupRect = group.getBoundingClientRect();
+  const center = groupRect.left + groupRect.width / 2 - stageRect.left;
+  const railY = Math.max(18, Math.min(stageRect.height - 14, stageRect.height * 0.88));
+  const focusW = Math.max(88, Math.min(stageRect.width * 0.24, groupRect.width * (1.2 + Math.max(0, focusIndex) * 0.06)));
+  const x1 = Math.max(0, Math.round(center - focusW / 2));
+  const x2 = Math.min(Math.round(stageRect.width), Math.round(center + focusW / 2));
+  const pointerTop = Math.max(4, Math.round(railY - 22));
+  focusRailEl.innerHTML = `
+    <svg viewBox="0 0 ${Math.round(stageRect.width)} ${Math.round(stageRect.height)}" preserveAspectRatio="none" aria-hidden="true">
+      <line class="ghost" x1="0" y1="${railY}" x2="${Math.round(stageRect.width)}" y2="${railY}"></line>
+      <line class="base" x1="0" y1="${railY}" x2="${Math.round(stageRect.width)}" y2="${railY}"></line>
+      <line class="focus-shadow" x1="${x1}" y1="${railY}" x2="${x2}" y2="${railY}"></line>
+      <line class="focus" x1="${x1}" y1="${railY}" x2="${x2}" y2="${railY}"></line>
+      <circle class="pointer" cx="${Math.round(center)}" cy="${pointerTop}" r="9"></circle>
+      <circle class="pointer-inner" cx="${Math.round(center)}" cy="${pointerTop}" r="4"></circle>
+      <line class="tick" x1="${Math.round(center)}" y1="${pointerTop + 8}" x2="${Math.round(center)}" y2="${railY + 2}"></line>
+      <circle class="label-dot" cx="${Math.max(20, x1)}" cy="${railY}" r="3"></circle>
+      <circle class="label-dot focused" cx="${Math.round(center)}" cy="${railY}" r="4"></circle>
+      <circle class="label-dot" cx="${Math.min(Math.round(stageRect.width) - 20, x2)}" cy="${railY}" r="3"></circle>
+    </svg>`;
+  focusRailEl.classList.add('on');
+}
+
+async function renderLargeWhole(k, exact, combo, negative, focusIndex = 0) {
+  token++; const tk = token;
+  showWholeStage(); wholeEl.innerHTML = '';
+  wholeEl.classList.add('large-zoom');
+  wholeEl.style.display = 'flex'; wholeEl.style.alignItems = 'flex-end';
+  wholeEl.style.justifyContent = focusIndex > 0 ? 'flex-start' : 'center';
+  wholeEl.style.transform = '';
+  divided = false; mode = 'whole'; current = null;
+  currentLarge = { k, exact, combo, negative, focusIndex };
+  decimalEl.textContent = hideAnswer ? '?' : (negative ? '−' : '') + fmtInt(k);
+  fractionEl.innerHTML = ''; breakEl.innerHTML = '';
+  serverLog({ type: 'demo', kind: 'whole', value: (negative ? '-' : '') + k });
+
+  const parts = largePlaceParts(k);
+  focusIndex = Math.max(0, Math.min(focusIndex, parts.length - 1));
+  currentLarge.focusIndex = focusIndex;
+  const { dims, gapPx } = largePartFit(parts, focusIndex);
+  wholeEl.style.gap = gapPx + 'px';
+  let count = 0;
+  dims.forEach((p, i) => {
+    const group = document.createElement('div');
+    group.className = 'wgroup zoomable' + (p.focused ? ' focused' : '') + (negative ? ' neg' : '');
+    group.title = p.focused ? '' : `Zoom to ${p.count} ${p.unitName}${p.count === 1 ? '' : 's'}`;
+    group.addEventListener('click', (e) => { e.stopPropagation(); focusLargeGroup(i); });
+    const box = document.createElement('div'); box.className = 'dancing';
+    const { cells } = buildShape(box, p.n, p.shape, p.cs, p.thousand, p.label);
+    const label = document.createElement('div'); label.className = 'wlabel show'; label.textContent = hideAnswer ? '?' : fmtInt(p.label);
+    group.append(box, label); wholeEl.appendChild(group);
+    cells.forEach((cell, i) => setTimeout(() => { if (tk === token) cell.classList.add('show'); }, 30 + (count + i) * 6));
+    count += cells.length;
+  });
+  stageWrap.style.cursor = 'default';
+  positionLargeFocus(focusIndex);
+  if (!(await sleep(Math.min(900, 80 + count * 6), tk))) return;
+  largeNumberText(k, parts, combo, exact, negative);
+}
+
+function focusLargeGroup(index) {
+  if (!currentLarge) return;
+  const parts = largePlaceParts(currentLarge.k);
+  const next = Math.max(0, Math.min(index, parts.length - 1));
+  renderLargeWhole(currentLarge.k, currentLarge.exact, currentLarge.combo, currentLarge.negative, next);
+}
+
 async function renderWhole(k, exact, combo, negative) {
   token++; const tk = token;
   showWholeStage(); wholeEl.innerHTML = '';
@@ -888,14 +1638,21 @@ async function renderWhole(k, exact, combo, negative) {
   wholeEl.style.gap = '0';
   divided = false; mode = 'whole';
   const thousand = k >= 10000;                          // each cell = one 1000
-  const shapeN = thousand ? Math.max(1, Math.round(k / 1000)) : k;
-  decimalEl.textContent = hideAnswer ? '?' : (negative ? '−' : '') + String(k);
+  const hundredBlocks = !thousand && k >= 1000 && k < 10000 && k % 100 === 0;
+  const shapeN = thousand ? Math.max(1, Math.round(k / 1000)) : (hundredBlocks ? Math.round(k / 100) : k);
+  decimalEl.textContent = hideAnswer ? '?' : (negative ? '−' : '') + fmtInt(k);
   fractionEl.innerHTML = ''; breakEl.innerHTML = '';
   serverLog({ type: 'demo', kind: 'whole', value: (negative ? '-' : '') + k });
 
   if (k === 0) { subtitleEl.innerHTML = '<b>Zero</b> — no blocks at all!'; current = null; return; }
+  if (k >= 10000 && k % 1000 !== 0) {
+    token--;
+    await renderLargeWhole(k, exact, combo, negative);
+    return;
+  }
+  wholeEl.classList.remove('large-zoom'); wholeEl.style.transform = ''; currentLarge = null;
 
-  const shapes = allShapes(shapeN);
+  const shapes = allShapes(shapeN).map(s => hundredBlocks ? { ...s, hundred: true } : s);
   const box = document.createElement('div');
   box.className = 'dancing' + (negative ? ' neg' : '');
   box.title = shapes.length > 1 ? 'Tap to change shape' : '';
@@ -911,20 +1668,32 @@ async function renderWhole(k, exact, combo, negative) {
   if (!(await sleep(assembleMs, tk))) return;
 
   if (negative) {
-    subtitleEl.innerHTML = `<b>−${k}</b> — that's <b>${k}</b> below zero (anti-blocks)!`;
+    subtitleEl.innerHTML = `<b>−${fmtInt(k)}</b> — that's <b>${fmtInt(k)}</b> below zero (anti-blocks)!`;
     breakEl.innerHTML = '';
   }
   if (!exact && !negative) subtitleEl.innerHTML += ` <span style="opacity:.85">(rounded to a whole number)</span>`;
   if (combo) {
-    subtitleEl.innerHTML = `<b>${combo.a} ${combo.op} ${combo.b}</b> makes <b>${k}</b>!`;
+    if (!hideAnswer) decimalEl.textContent = `${fmtInt(combo.a)} ${combo.op} ${fmtInt(combo.b)} = ${fmtInt(k)}`;
+    subtitleEl.innerHTML = `<b>${fmtInt(combo.a)} ${combo.op} ${fmtInt(combo.b)}</b> makes <b>${fmtInt(k)}</b>!`;
     fractionEl.innerHTML = `<span class="frac">${combo.a} ${combo.op} ${combo.b}</span>` +
-      `<span class="eq">=</span><span class="reduced">${k}</span>`;
+      `<span class="eq">=</span><span class="reduced">${fmtInt(k)}</span>`;
   }
 }
 
 // ===================== COMBINE (a op b) ANIMATION =====================
 function renderMini(container, n) {
   container.innerHTML = '';
+  if (n >= 1 && n <= 10) {
+    const shapes = allShapes(n);
+    const shape = shapes[defaultShapeIndex(n, shapes)];
+    const dims = shapeDims(n, shape);
+    const availH = stageWrap.clientHeight * 0.55, availW = stageWrap.clientWidth * 0.26;
+    let cs = Math.floor(Math.min(availH / Math.max(dims.rows, 1), (availW - (dims.gaps || 0)) / Math.max(dims.cols, 1)));
+    cs = Math.max(14, Math.min(cs, 42));
+    const { cells } = buildShape(container, n, shape, cs);
+    cells.forEach(c => c.classList.add('show'));
+    return;
+  }
   const s = getShape(n);
   const availH = stageWrap.clientHeight * 0.55, availW = stageWrap.clientWidth * 0.26;
   let cs = Math.floor(Math.min(availH / s.rows, availW / s.cols));
@@ -946,6 +1715,7 @@ function renderMini(container, n) {
     }
   }
   if (topLeft) { topLeft.style.overflow = 'visible'; topLeft.innerHTML = faceHTML(n === 1); }
+  addNumberling(container, n, cs, s.cols);
 }
 
 function mkOperand() {
@@ -959,9 +1729,9 @@ async function runCombine(a, opSym, b, result) {
   token++; const tk = token;
   showCombineStage(); combineEl.innerHTML = '';
   divided = false; mode = 'combine';
-  decimalEl.textContent = `${a} ${opSym} ${b}`;
+  decimalEl.textContent = `${fmtInt(a)} ${opSym} ${fmtInt(b)}`;
   fractionEl.innerHTML = ''; breakEl.innerHTML = '';
-  subtitleEl.innerHTML = `Here comes <b>${a}</b>...`;
+  subtitleEl.innerHTML = `Here comes <b>${fmtInt(a)}</b>...`;
   serverLog({ type: 'demo', kind: 'combine', value: `${a}${opSym}${b}=${result}` });
 
   const left = mkOperand(), right = mkOperand();
@@ -973,7 +1743,7 @@ async function runCombine(a, opSym, b, result) {
   renderMini(left.g, a); left.w.classList.add('walk-in-left');
   if (!(await sleep(1400, tk))) return;
   sym.classList.add('show');
-  subtitleEl.innerHTML = `...and here comes <b>${b}</b>!`;
+  subtitleEl.innerHTML = `...and here comes <b>${fmtInt(b)}</b>!`;
   renderMini(right.g, b); right.w.style.opacity = '1'; right.w.classList.add('walk-in-right');
   if (!(await sleep(2000, tk))) return;
   subtitleEl.innerHTML = 'Now put them together...';
@@ -994,7 +1764,7 @@ async function runSubtract(a, b, result) {
   wholeEl.style.display = 'flex'; wholeEl.style.alignItems = 'center';
   wholeEl.style.justifyContent = 'center'; wholeEl.style.gap = '46px';
   divided = false; mode = 'subtract';
-  decimalEl.textContent = `${a} − ${b}`;
+  decimalEl.textContent = `${fmtInt(a)} − ${fmtInt(b)}`;
   fractionEl.innerHTML = ''; breakEl.innerHTML = '';
   serverLog({ type: 'demo', kind: 'subtract', value: `${a}-${b}=${result}` });
 
@@ -1010,10 +1780,10 @@ async function runSubtract(a, b, result) {
   const { cells: cellsB } = buildShape(boxB, b, shapeB, cs);
 
   cellsA.forEach((c, i) => setTimeout(() => { if (tk === token) c.classList.add('show'); }, 20 + i * 14));
-  subtitleEl.innerHTML = `Here's <b>${a}</b>...`;
+  subtitleEl.innerHTML = `Here's <b>${fmtInt(a)}</b>...`;
   if (!(await sleep(20 + cellsA.length * 14 + 350, tk))) return;
 
-  subtitleEl.innerHTML = `...now take away <b>${b}</b>`;
+  subtitleEl.innerHTML = `...now take away <b>${fmtInt(b)}</b>`;
   boxB.classList.add('walk-in-right');
   cellsB.forEach(c => c.classList.add('show'));
   if (!(await sleep(1550, tk))) return;
@@ -1023,7 +1793,7 @@ async function runSubtract(a, b, result) {
   removed.forEach(c => c.classList.add('subtracted'));
   boxB.style.transform = `translateX(-${Math.round(boxA.offsetWidth / 2 + 24)}px)`;
   boxB.style.opacity = '0';
-  subtitleEl.innerHTML = `<b>${b}</b> takes ${b} block${b > 1 ? 's' : ''} away...`;
+  subtitleEl.innerHTML = `<b>${fmtInt(b)}</b> takes ${fmtInt(b)} block${b > 1 ? 's' : ''} away...`;
   if (!(await sleep(560, tk))) return;
 
   removed.forEach(c => { c.style.transition = 'opacity 0.4s, transform 0.4s';
@@ -1039,8 +1809,9 @@ async function runSubtract(a, b, result) {
     if (gr < bestRow || (gr === bestRow && gc < bestCol)) { bestRow = gr; bestCol = gc; faceCell = c; } });
   if (faceCell) { faceCell.style.overflow = 'visible'; faceCell.innerHTML = faceHTML(result === 1); }
   boxA.classList.add('dancing');
-  subtitleEl.innerHTML = `<b>${a} − ${b} = ${result}</b> — now tidy it up...`;
-  fractionEl.innerHTML = `<span class="frac">${a} − ${b}</span><span class="eq">=</span><span class="reduced">${result}</span>`;
+  if (!hideAnswer) decimalEl.textContent = `${fmtInt(a)} − ${fmtInt(b)} = ${fmtInt(result)}`;
+  subtitleEl.innerHTML = `<b>${fmtInt(a)} − ${fmtInt(b)} = ${fmtInt(result)}</b> — now tidy it up...`;
+  fractionEl.innerHTML = `<span class="frac">${fmtInt(a)} − ${fmtInt(b)}</span><span class="eq">=</span><span class="reduced">${fmtInt(result)}</span>`;
   if (result < 1) { return; }   // 0 or negative: nothing to reshape
   // ...then the leftover reshapes into the proper Numberblock.
   if (!(await sleep(1300, tk))) return;
@@ -1052,17 +1823,17 @@ async function runSplit(total, a, opSym, b) {
   token++; const tk = token;
   showCombineStage(); combineEl.innerHTML = '';
   divided = false; mode = 'combine';
-  decimalEl.textContent = `${total} = ${a} ${opSym} ${b}`;
+  decimalEl.textContent = `${fmtInt(total)} = ${fmtInt(a)} ${opSym} ${fmtInt(b)}`;
   fractionEl.innerHTML = ''; breakEl.innerHTML = '';
   serverLog({ type: 'demo', kind: 'split', value: `${total}=${a}${opSym}${b}` });
 
   const whole = mkOperand(); whole.l.textContent = total;
   combineEl.append(whole.w);
   renderMini(whole.g, total); whole.w.classList.add('walk-in-left');
-  subtitleEl.innerHTML = `Here's <b>${total}</b>...`;
+  subtitleEl.innerHTML = `Here's <b>${fmtInt(total)}</b>...`;
   if (!(await sleep(1500, tk))) return;
 
-  subtitleEl.innerHTML = `Watch <b>${total}</b> split apart...`;
+  subtitleEl.innerHTML = `Watch <b>${fmtInt(total)}</b> split apart...`;
   combineEl.innerHTML = '';
   const left = mkOperand(), right = mkOperand();
   left.l.textContent = a; right.l.textContent = b;
@@ -1080,9 +1851,12 @@ async function runSplit(total, a, opSym, b) {
     sym.classList.add('show');
   });
   if (!(await sleep(900, tk))) return;
-  subtitleEl.innerHTML = `<b>${total} = ${a} ${opSym} ${b}</b>!`;
+  subtitleEl.innerHTML = `<b>${fmtInt(total)} = ${fmtInt(a)} ${opSym} ${fmtInt(b)}</b>!`;
   fractionEl.innerHTML = `<span class="frac">${total}</span><span class="eq">=</span>` +
     `<span class="reduced">${a} ${opSym} ${b}</span>`;
+  // both halves stay on stage — each is independently reshapeable
+  enableReshape(left.g, a, blockFit(a, 0.28, 0.55, 40));
+  enableReshape(right.g, b, blockFit(b, 0.28, 0.55, 40));
 }
 
 // ===================== MULTIPLY (array of groups) & DIVIDE (sharing) =====================
@@ -1112,6 +1886,7 @@ function buildMiniGroup(value, cs) {
     }
   }
   if (topLeft) { topLeft.style.overflow = 'visible'; topLeft.innerHTML = faceHTML(value === 1); }
+  addNumberling(w.g, value, cs, s.cols);
   return w;
 }
 
@@ -1120,7 +1895,7 @@ async function runMultiply(a, b, result) {
   token++; const tk = token;
   showCombineStage(); combineEl.innerHTML = ''; combineEl.style.gap = '14px';
   divided = false; mode = 'combine';
-  decimalEl.textContent = `${a} × ${b}`;
+  decimalEl.textContent = `${fmtInt(a)} × ${fmtInt(b)}`;
   fractionEl.innerHTML = ''; breakEl.innerHTML = '';
   serverLog({ type: 'demo', kind: 'multiply', value: `${a}x${b}=${result}` });
 
@@ -1128,7 +1903,7 @@ async function runMultiply(a, b, result) {
     await renderWhole(result, true, { a, op: '×', b });
     return;
   }
-  subtitleEl.innerHTML = `<b>${a}</b> group${a > 1 ? 's' : ''} of <b>${b}</b>...`;
+  subtitleEl.innerHTML = `<b>${fmtInt(a)}</b> group${a > 1 ? 's' : ''} of <b>${fmtInt(b)}</b>...`;
   const cs = groupCellSize(b, a);
   const groups = [];
   for (let i = 0; i < a; i++) { const w = buildMiniGroup(b, cs); w.w.style.opacity = '0';
@@ -1137,7 +1912,7 @@ async function runMultiply(a, b, result) {
   groups.forEach((g, i) => setTimeout(() => { if (tk === token) { g.style.opacity = '1'; g.style.transform = ''; } }, 250 + i * 380));
   if (!(await sleep(250 + a * 380 + 500, tk))) return;
 
-  subtitleEl.innerHTML = `<b>${a}</b> × <b>${b}</b> = <b>${a}</b> groups of <b>${b}</b> = <b>${result}</b>!`;
+  subtitleEl.innerHTML = `<b>${fmtInt(a)}</b> × <b>${fmtInt(b)}</b> = <b>${fmtInt(a)}</b> groups of <b>${fmtInt(b)}</b> = <b>${fmtInt(result)}</b>!`;
   if (!(await sleep(1100, tk))) return;
   groups.forEach(g => { g.style.transition = 'opacity .4s'; g.style.opacity = '0'; });
   if (!(await sleep(420, tk))) return;
@@ -1149,14 +1924,14 @@ async function runDivide(a, b, result) {
   token++; const tk = token;
   showCombineStage(); combineEl.innerHTML = ''; combineEl.style.gap = '14px';
   divided = false; mode = 'combine';
-  decimalEl.textContent = `${a} ÷ ${b}`;
+  decimalEl.textContent = `${fmtInt(a)} ÷ ${fmtInt(b)}`;
   fractionEl.innerHTML = ''; breakEl.innerHTML = '';
   serverLog({ type: 'demo', kind: 'divide', value: `${a}/${b}=${result}` });
 
   // Phase 1: the whole number arrives
   const whole = buildMiniGroup(a, Math.max(8, Math.min(groupCellSize(a, 1), 30)));
   combineEl.appendChild(whole.w); whole.w.classList.add('walk-in-left');
-  subtitleEl.innerHTML = `Share <b>${a}</b> into <b>${b}</b> equal groups...`;
+  subtitleEl.innerHTML = `Share <b>${fmtInt(a)}</b> into <b>${fmtInt(b)}</b> equal groups...`;
   if (!(await sleep(1500, tk))) return;
 
   if (b > 8) { await renderWhole(result, true, { a, op: '÷', b }); return; }
@@ -1166,13 +1941,24 @@ async function runDivide(a, b, result) {
   const groups = [];
   for (let i = 0; i < b; i++) { const w = buildMiniGroup(result, cs);
     w.w.style.opacity = '0'; w.w.style.transform = 'scale(0.5)'; w.w.style.transition = 'opacity .3s, transform .4s cubic-bezier(0.34,1.56,0.64,1)';
-    combineEl.appendChild(w.w); groups.push(w.w); }
-  groups.forEach((g, i) => setTimeout(() => { if (tk === token) { g.style.opacity = '1'; g.style.transform = ''; } }, 150 + i * 300));
+    combineEl.appendChild(w.w); groups.push(w); }
+  groups.forEach((g, i) => setTimeout(() => { if (tk === token) { g.w.style.opacity = '1'; g.w.style.transform = ''; } }, 150 + i * 300));
   if (!(await sleep(150 + b * 300 + 400, tk))) return;
 
-  subtitleEl.innerHTML = `<b>${a}</b> ÷ <b>${b}</b> = <b>${result}</b> in each group!`;
+  subtitleEl.innerHTML = `<b>${fmtInt(a)}</b> ÷ <b>${fmtInt(b)}</b> = <b>${fmtInt(result)}</b> in each group!`;
   fractionEl.innerHTML = `<span class="frac">${a} ÷ ${b}</span><span class="eq">=</span><span class="reduced">${result}</span>`;
   breakEl.innerHTML = `<span class="p">${b} groups of ${result}</span>`;
+  if (!(await sleep(1400, tk))) return;
+
+  // Phase 3: the extra groups run off the stage, leaving a single group — the answer.
+  const extra = groups.slice(1);
+  extra.forEach(g => { g.w.style.transition = 'transform 0.75s ease-in, opacity 0.75s ease-in';
+    g.w.style.transform = 'translateX(140vw)'; g.w.style.opacity = '0'; });
+  if (!(await sleep(820, tk))) return;
+  extra.forEach(g => g.w.remove());
+  if (!hideAnswer) decimalEl.textContent = `${fmtInt(a)} ÷ ${fmtInt(b)} = ${fmtInt(result)}`;
+  subtitleEl.innerHTML = `<b>${fmtInt(a)} ÷ ${fmtInt(b)} = ${fmtInt(result)}</b> — one group is the answer!`;
+  enableReshape(groups[0].g, result, blockFit(result, 0.6, 0.62, 46));   // the answer is reshapeable
 }
 
 // Divide by 10/100/1000: hop the decimal point left across the written number.
@@ -1181,9 +1967,9 @@ async function runDecimalShift(a, b, places) {
   showCombineStage(); combineEl.innerHTML = '';
   combineEl.style.gap = '0'; combineEl.style.flexDirection = 'column';
   divided = false; mode = 'combine';
-  decimalEl.textContent = `${a} ÷ ${b}`;
+  decimalEl.textContent = `${fmtInt(a)} ÷ ${fmtInt(b)}`;
   fractionEl.innerHTML = ''; breakEl.innerHTML = '';
-  subtitleEl.innerHTML = `Dividing by <b>${b}</b> slides the decimal point <b>${places}</b> place${places > 1 ? 's' : ''} left!`;
+  subtitleEl.innerHTML = `Dividing by <b>${fmtInt(b)}</b> slides the decimal point <b>${places}</b> place${places > 1 ? 's' : ''} left!`;
   serverLog({ type: 'demo', kind: 'decshift', value: `${a}/${b}` });
 
   const wrap = document.createElement('div'); wrap.className = 'decshift';
@@ -1216,8 +2002,17 @@ async function runDecimalShift(a, b, places) {
   resStr.split('').forEach(ch => { const sp = document.createElement('span');
     sp.className = ch === '.' ? 'dot' : 'dig'; sp.textContent = ch; wrap.appendChild(sp); });
   combineEl.style.flexDirection = '';
-  subtitleEl.innerHTML = `<b>${a} ÷ ${b} = ${resStr}</b>!`;
+  subtitleEl.innerHTML = `<b>${fmtInt(a)} ÷ ${fmtInt(b)} = ${resStr}</b>!`;
   fractionEl.innerHTML = `<span class="frac">${a} ÷ ${b}</span><span class="eq">=</span><span class="reduced">${resStr}</span>`;
+
+  // ...then show that same result as blocks (numbers first, blocks second).
+  if (!(await sleep(1200, tk))) return;
+  const r = routeValue(a / b);
+  if (!r) return;
+  if (r.mode === 'whole') await renderWhole(r.k, r.exact, { a, op: '÷', b });
+  else if (r.mode === 'negative') await renderWhole(r.k, true, null, true);
+  else if (r.mode === 'mixed') await renderMixed(r.whole, r.n, r.exact, r.disp);
+  else await demonstrateDecimal(r.n, r.exact, r.disp);
 }
 
 // ===================== MIXED-NUMBER RENDER (whole + fractional block) =====================
@@ -1238,7 +2033,7 @@ function buildUnitSquare(size, opts) {
         c.style.gridColumn = col + 1; c.style.gridRow = 10 - row;
         g.appendChild(c); map[col + ',' + row] = c;
       }
-    for (const p of buildFillPlan(opts.n)) map[p.col + ',' + p.row].className = 'ucell ' + p.cat;
+    for (const p of buildFillPlan(opts.n, opts.layout)) map[p.col + ',' + p.row].className = 'ucell ' + p.cat;
     unit.appendChild(g);
     if (opts.face) { const f = document.createElement('div'); f.innerHTML = faceHTML(true);
       f.firstChild.style.zIndex = 5; unit.appendChild(f.firstChild); unit.style.overflow = 'visible'; }
@@ -1246,43 +2041,149 @@ function buildUnitSquare(size, opts) {
   return unit;
 }
 
-async function renderMixed(whole, n, exact) {
+// Click the decimal block to cycle its fill layout: quarters (when they apply),
+// vertical tenths (columns), horizontal tenths (rows). Same spirit as
+// enableReshape, but re-paints the unit grid's cells in place.
+function enableUnitReshape(unit, n) {
+  if (!Number.isInteger(n) || n < 1 || n > 99) return;
+  const layouts = ['vertical', 'horizontal'];
+  // 50's quarter layout (left half) is identical to its vertical one — skip it
+  if (n % 25 === 0 && n !== 50) layouts.unshift('quarter');
+  let li = 0;
+  unit.style.cursor = 'pointer'; unit.title = 'Tap to change shape';
+  unit.addEventListener('click', (e) => {
+    e.stopPropagation();
+    li = (li + 1) % layouts.length;
+    const g = unit.querySelector('.unit-grid');
+    if (!g) return;
+    for (const c of g.children) c.className = 'ucell';
+    // cells were appended col-major: child index = col * 10 + row
+    for (const p of buildFillPlan(n, layouts[li]))
+      g.children[p.col * 10 + p.row].className = 'ucell ' + p.cat;
+    serverLog({ type: 'reshape', kind: 'decimal', value: n, layout: layouts[li] });
+  });
+}
+
+async function renderMixed(whole, n, exact, trueDisp) {
   token++; const tk = token;
   showWholeStage();
-  wholeEl.innerHTML = ''; wholeEl.style.display = 'flex'; wholeEl.style.alignItems = 'flex-end';
-  wholeEl.style.justifyContent = 'center'; wholeEl.style.gap = '16px';
   divided = false; mode = 'mixed';
   const disp = fmtMixed(whole, n);
-  decimalEl.textContent = disp;
-  serverLog({ type: 'demo', kind: 'mixed', value: disp });
+  const label = (!exact && trueDisp) ? trueDisp : disp;   // show the true value, not the rounded one
+  decimalEl.textContent = label;
+  serverLog({ type: 'demo', kind: 'mixed', value: label });
+
+  // Two arrangements: 'apart' (whole Numberblock + decimal square) and
+  // 'together' (one cohesive figure — a tower of big "one" blocks wearing the
+  // decimal square on top as a slightly-smaller head). Tap + to snap together;
+  // tap the figure's body to split apart. Towers taller than 6 get unwieldy.
+  const canCombine = whole <= 6;
+  let arrangement = 'apart';
+
+  const notExactNote = exact ? '' : ` <span style="opacity:.85">(blocks shown to the nearest hundredth)</span>`;
+  function setApartText() {
+    subtitleEl.innerHTML = `<b>${fmtInt(whole)}</b> and <b>${fmtDecimal(n)}</b> more` +
+      (canCombine ? ` <span style="opacity:.7">· tap the + to snap together</span>` : '') + notExactNote;
+  }
+  function setTogetherText() {
+    subtitleEl.innerHTML = `<b>${label}</b> — all together, one Numberblock!` +
+      ` <span style="opacity:.7">· tap its body to split apart</span>` + notExactNote;
+  }
 
   // The whole part is its NORMAL Numberblock (real shape + place-value colors);
   // the decimal part is shown beside it as a subdivided unit block.
-  const shapes = allShapes(whole);
-  const shape = shapes[defaultShapeIndex(whole, shapes)];
-  const { cols, rows, gaps } = shapeDims(whole, shape);
-  const availW = stageWrap.clientWidth * 0.92, availH = stageWrap.clientHeight * 0.78;
-  let cs = Math.floor(Math.min((availW * 0.6 - gaps) / cols, availH / rows));
-  cs = Math.max(4, Math.min(cs, 46));
-  let fs = Math.max(cs, 66);                       // decimal block stays legible
-  fs = Math.min(fs, Math.floor(availH * 0.7), Math.floor(availW * 0.32));
+  function buildApart(animate) {
+    wholeEl.innerHTML = ''; wholeEl.style.display = 'flex'; wholeEl.style.alignItems = 'flex-end';
+    wholeEl.style.justifyContent = 'center'; wholeEl.style.gap = '16px';
+    const shapes = allShapes(whole);
+    const shape = shapes[defaultShapeIndex(whole, shapes)];
+    const { cols, rows, gaps } = shapeDims(whole, shape);
+    const availW = stageWrap.clientWidth * 0.92, availH = stageWrap.clientHeight * 0.78;
+    let cs = Math.floor(Math.min((availW * 0.6 - gaps) / cols, availH / rows));
+    cs = Math.max(4, Math.min(cs, 46));
+    let fs = Math.max(cs, 66);                       // decimal block stays legible
+    fs = Math.min(fs, Math.floor(availH * 0.7), Math.floor(availW * 0.32));
 
-  // whole Numberblock
-  const wbox = document.createElement('div'); wbox.className = 'dancing';
-  const { cells } = buildShape(wbox, whole, shape, cs);
-  const wgroup = document.createElement('div'); wgroup.className = 'wgroup';
-  const wlbl = document.createElement('div'); wlbl.className = 'wlabel show'; wlbl.textContent = whole;
-  wgroup.append(wbox, wlbl);
+    // whole Numberblock
+    const wbox = document.createElement('div'); wbox.className = 'dancing';
+    const { cells } = buildShape(wbox, whole, shape, cs);
+    enableReshape(wbox, whole, blockFit(whole, 0.552, 0.78, 46));   // click the whole part to reshape it
+    const wgroup = document.createElement('div'); wgroup.className = 'wgroup';
+    const wlbl = document.createElement('div'); wlbl.className = 'wlabel show'; wlbl.textContent = fmtInt(whole);
+    wgroup.append(wbox, wlbl);
 
-  const plus = document.createElement('div'); plus.className = 'wplus show'; plus.textContent = '+';
+    const plus = document.createElement('div'); plus.className = 'wplus show'; plus.textContent = '+';
+    if (canCombine) {
+      plus.style.cursor = 'pointer'; plus.style.pointerEvents = 'auto'; plus.title = 'Tap to snap together!';
+      plus.addEventListener('click', (e) => { e.stopPropagation(); buildTogether(); });
+    }
 
-  // decimal part
-  const fgroup = document.createElement('div'); fgroup.className = 'wgroup dancing';
-  const fblock = buildUnitSquare(fs, { n, face: false });
-  const flbl = document.createElement('div'); flbl.className = 'wlabel show'; flbl.textContent = fmtDecimal(n);
-  fgroup.append(fblock, flbl);
+    // decimal part
+    const fgroup = document.createElement('div'); fgroup.className = 'wgroup dancing';
+    const fblock = buildUnitSquare(fs, { n, face: false });
+    enableUnitReshape(fblock, n);
+    const flbl = document.createElement('div'); flbl.className = 'wlabel show'; flbl.textContent = fmtDecimal(n);
+    fgroup.append(fblock, flbl);
 
-  wholeEl.append(wgroup, plus, fgroup);
+    wholeEl.append(wgroup, plus, fgroup);
+    if (!animate) { cells.forEach(c => c.classList.add('show')); fblock.classList.add('show'); }
+    return { cells, fblock };
+  }
+
+  function buildTogether() {
+    arrangement = 'together';
+    wholeEl.innerHTML = ''; wholeEl.style.display = 'flex'; wholeEl.style.alignItems = 'flex-end';
+    wholeEl.style.justifyContent = 'center'; wholeEl.style.gap = '16px';
+    const availW = stageWrap.clientWidth * 0.92, availH = stageWrap.clientHeight * 0.88;
+    // each "one" is slightly larger than the decimal head, so the stack reads
+    // as one figure: broad body, smaller head on top (plus room for legs)
+    let u = Math.floor(Math.min(availH / (whole + 1.2), availW * 0.5, 170));
+    u = Math.max(40, u);
+    const d = Math.round(u * 0.82);
+
+    const fig = document.createElement('div');
+    fig.className = 'wgroup dancing';
+    fig.style.gap = '2px'; fig.style.cursor = 'pointer';
+    fig.title = 'Tap to split apart';
+
+    const head = buildUnitSquare(d, { n, face: false });
+    head.classList.add('merged-head');
+    enableUnitReshape(head, n);                      // head still cycles its fill
+    fig.appendChild(head);
+
+    // the body is a real One-style figure: One's block styling on each cell,
+    // with One's face, arms and legs sized to the whole tower
+    const body = document.createElement('div');
+    body.className = 'one-figure';
+    body.style.position = 'relative'; body.style.overflow = 'visible';
+    body.style.display = 'flex'; body.style.flexDirection = 'column'; body.style.gap = '2px';
+    body.style.marginBottom = Math.round(Math.max(14, u * 0.42) * 0.8) + 'px';  // legs
+    const bodyBlocks = [head];
+    for (let i = 0; i < whole; i++) {
+      const one = document.createElement('div');
+      one.className = 'wcell';
+      one.style.width = u + 'px'; one.style.height = u + 'px';
+      body.appendChild(one); bodyBlocks.push(one);
+    }
+    body.appendChild(buildCharacter(1, u, 1, whole));
+    fig.appendChild(body);
+    const lbl = document.createElement('div'); lbl.className = 'wlabel show'; lbl.textContent = label;
+    fig.appendChild(lbl);
+    fig.addEventListener('click', () => {
+      arrangement = 'apart';
+      buildApart(false); setApartText();
+      serverLog({ type: 'reshape', kind: 'mixed-split', value: label });
+    });
+    wholeEl.appendChild(fig);
+    // pop in from the bottom up, head last
+    bodyBlocks.slice().reverse().forEach((b, i) => setTimeout(() => {
+      if (tk === token) b.classList.add('show');
+    }, 30 + i * 90));
+    setTogetherText();
+    serverLog({ type: 'reshape', kind: 'mixed-combine', value: label });
+  }
+
+  const { cells, fblock } = buildApart(true);
 
   // animate: pop the whole number's blocks, then the decimal block
   const step = Math.max(5, Math.min(20, Math.floor(500 / Math.max(cells.length, 1))));
@@ -1291,8 +2192,7 @@ async function renderMixed(whole, n, exact) {
   if (!(await sleep(40 + cells.length * step + 500, tk))) return;
 
   const g = gcd(n, 100), rn = n / g, rd = 100 / g;
-  subtitleEl.innerHTML = `<b>${whole}</b> and <b>${fmtDecimal(n)}</b> more`;
-  if (!exact) subtitleEl.innerHTML += ` <span style="opacity:.85">(rounded to the nearest hundredth)</span>`;
+  if (arrangement === 'apart') setApartText(); else setTogetherText();
   fractionEl.innerHTML = `<span class="frac">${disp}</span><span class="eq">=</span>` +
     `<span class="reduced">${whole} ${rn}/${rd}</span>`;
   breakEl.innerHTML = `<span class="p">${whole} whole${whole > 1 ? 's' : ''}</span> + ` +
@@ -1325,14 +2225,15 @@ async function present(raw) {
   if (!r) { subtitleEl.textContent = 'Try 102, 1.5, 1+2, 10-3, or -7'; return; }
   if (r.mode === 'whole') await renderWhole(r.k, r.exact);
   else if (r.mode === 'negative') await renderWhole(r.k, true, null, true);
-  else if (r.mode === 'mixed') await renderMixed(r.whole, r.n, r.exact);
-  else await demonstrateDecimal(r.n, r.exact);
+  else if (r.mode === 'mixed') await renderMixed(r.whole, r.n, r.exact, r.disp);
+  else await demonstrateDecimal(r.n, r.exact, r.disp);
 }
 function handle(raw) { stopTour(); present(raw); }
 
 function backToOne() {
   token++; mode = 'idle';
-  showSquareStage(); resetSquareToOne(); sizeSquare();
+  hideAnswer = false;
+  showNormalOneIntro();
   decimalEl.textContent = '1';
   fractionEl.innerHTML = ''; breakEl.innerHTML = '';
   subtitleEl.innerHTML = 'Type a number — a whole number like <b>102</b>, a decimal like <b>0.42</b>, or a mix like <b>1.5</b>.';
@@ -1397,11 +2298,11 @@ function checkGuess(raw) {
 }
 async function winRound() {
   hideAnswer = false; gamePhase = 'free';
-  decimalEl.textContent = String(gameTarget);
+  decimalEl.textContent = fmtInt(gameTarget);
   if (current && current.box) { current.box.classList.add('cheering');
     setTimeout(() => { if (current && current.box) current.box.classList.remove('cheering'); }, 1300); }
   celebrate();
-  subtitleEl.innerHTML = `🎉 Yes! It's <b>${gameTarget}</b>! Now type your <b>own</b> number.`;
+  subtitleEl.innerHTML = `🎉 Yes! It's <b>${fmtInt(gameTarget)}</b>! Now type your <b>own</b> number.`;
   breakEl.innerHTML = '';
   inputEl.value = ''; inputEl.placeholder = 'type any number...';
 }
@@ -1479,13 +2380,21 @@ square.addEventListener('click', () => { if (mode === 'decimal') { stopTour(); d
 stageWrap.addEventListener('click', () => {
   if (mode === 'whole' && current && current.shapes.length > 1) rotateShape();
 });
+stageWrap.addEventListener('wheel', (e) => {
+  if (!currentLarge) return;
+  e.preventDefault();
+  const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+  if (Math.abs(delta) < 8) return;
+  focusLargeGroup(currentLarge.focusIndex + (delta > 0 ? 1 : -1));
+}, { passive: false });
 
 let rT = null;
 window.addEventListener('resize', () => { clearTimeout(rT); rT = setTimeout(() => {
   sizeSquare();
-  if (mode === 'whole' && current) drawCurrent(false);   // re-fit blocks on rotate
+  if (currentLarge) renderLargeWhole(currentLarge.k, currentLarge.exact, currentLarge.combo, currentLarge.negative, currentLarge.focusIndex);
+  else if (mode === 'whole' && current) drawCurrent(false);   // re-fit blocks on rotate
 }, 200); });
-sizeSquare();
+backToOne();
 </script>
 </body>
 </html>

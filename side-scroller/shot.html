@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>shot</title>
+<style>*{margin:0}body{background:#111}canvas{display:block}</style></head>
+<body><canvas id="game"></canvas>
+<script type="module">
+  import { Engine } from './js/engine.js';
+  import { CONFIG } from './js/config.js';
+  const q = new URLSearchParams(location.search);
+  const lvl = parseInt(q.get('level') || '0');
+  const col = parseFloat(q.get('col') || '8');
+  const row = parseFloat(q.get('row') || '13');
+  const engine = new Engine(document.getElementById('game'));
+  engine.startLevel(lvl);
+  engine.gameState = 'playing';
+  const ts = CONFIG.tile.size;
+  const p = engine.player;
+  p.x = col * ts; p.y = row * ts - p.height;
+  const cam = engine.camera;
+  const L = engine.level;
+  cam.x = cam.targetX = Math.max(0, Math.min(p.x - 470, L.width - 960));
+  cam.y = cam.targetY = Math.max(0, Math.min(p.y - 260, L.height - 540));
+  // freeze physics so the player doesn't fall out of frame
+  engine.update = () => { cam.x = cam.targetX; cam.y = cam.targetY; };
+  window._engine = engine;
+</script></body></html>

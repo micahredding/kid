@@ -73,3 +73,12 @@ Original prompt: new game based on the 1966 Grinch animated movie — animation 
 - Engine lesson re-learned: 2-tile rises cause the wall-slide bounce loop — every climb in W1/W3 got 1-tile lips (same fix as the castle world).
 - test_grinch.mjs (hold-right bot + scripted segments): all 4 worlds complete, chimney drop lands in the living room and exits the door, W4 goal stays locked until all 5 houses are lit, presents carry across worlds, Q-switching completes W1. ALL CHECKS PASSED.
 - Visually verified via headless Chrome screenshots (title, W1, W2, W4, pose sheet).
+## 2026-08-11 (visual overhaul)
+
+Original prompt: overall stylistic enhancement to backgrounds and world — more detailed trees etc., no gameplay changes.
+
+- Rendering only; all changes in level.js draw functions. Gameplay/physics untouched (full bot regression clean across all 4 worlds).
+- Backgrounds: sky gradients per theme; sun with glow (grassland/jungle); moon, stars, and a distant castle skyline (castle); stalactite silhouettes + glowing crystals (underground); hanging canopy layers + distant trunks (jungle); two-depth hills with tree silhouettes, fluffier clouds, raised hills/bushes so they show above the ground line; cave backdrop is now a gradient.
+- Tiles: deterministic per-tile hash details (no flicker) — turf caps + grass blades only on true surfaces (buried dirt is plain + speckled), staggered brick mortar, chiseled stone blocks with cracks + moss on jungle/castle tops, cylindrical pipe/bamboo shading with edge-aware trunk highlights + node rings, one-way platforms drawn as planks/leafy branches, beveled ? blocks with rivets.
+- Decorations (non-colliding): flowers/ferns, glowing mushrooms + stalactites (underground), swaying vines from jungle branches, hanging roots under dirt ceilings, arched windows deep in castle masonry, weeds in flagstones. Goal flag now waves with a pole highlight.
+- shot.html added: headless-Chrome screenshot harness (?level=&col=&row=) used to visually verify all four worlds; 12 screenshots reviewed.

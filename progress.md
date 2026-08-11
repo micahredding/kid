@@ -60,3 +60,16 @@ Original prompt: make a 4th world, a jungle.
 - Finale: giant stairsteps down from the canopy to a sunny clearing, coin arc, flag at col 222. No lethal pits anywhere in this world.
 - Verified: floor route completes end-to-end (gorge, crocs, pyramid, pit, cave, flag); tree-climb, chamber (door+gem), and every novel canopy hop pass scripted checks; worlds 1-3 regression clean. Design fixes from testing: tree trunks hang with 2-tile walk-under clearance, no goomba camping the canopy on-ramp, canopy descent doesn't pinch the floor lane, floating block widened.
 - Title screen level select now shows 1-4.
+
+## 2026-08-11 (The Grinch)
+
+Original prompt: new game based on the 1966 Grinch animated movie — animation (very important), game mechanics, implementation, delivery through a local browser.
+
+- New game `grinch/`, seeded from the side-scroller engine, registered in the hub (`kid/server.mjs` + `kid/index.html`) as `grinch`.
+- Animation is the centerpiece: `js/characters.js` draws the Grinch and Max as path-based canvas figures with pose parameters — the slinky tiptoe sneak (walking IS sneaking; Shift runs), squash & stretch anchored at the feet, forward lean rotated at the hips, finger-wiggle, sly/wide/happy eyes, a grin that spreads on every collect, Santa suit + flopping hat, Max's antler + ear that lag vertical motion on a spring. `poses.html` is a dev showcase of every pose at large scale.
+- Four story worlds (programmatic level builders in `level.js`): W1 Down Mount Crumpit (descending snowy terraces), W2 Whoville (walk-through houses with working chimney drops into living rooms; Cindy Lou Who speech bubbles), W3 The Climb (ascending terraces, ravine with moving snow ledge), W4 Christmas Morning (dawn palette; return presents to 5 dark GiftHouses — each lights up, the HUD heart grows a size, goal feast unlocks only when all are lit; finale card: "his heart grew three sizes").
+- Reskins: coins→wrapped presents (4 wrap colors), goombas→mice, flyguys→who-birds (now with bounded patrol range), spikers→frost-lumps, goal flag→sleigh/feast. Themes: 3 night palettes + dawn gradient, stars/moon/mountains/Whoville-silhouette parallax, ambient snowfall, snow-capped tiles.
+- Original WebAudio sneaky-pizzicato loop + pop/chime/fanfare sfx (M mutes); story cards between worlds; ?level=N deep link.
+- Engine lesson re-learned: 2-tile rises cause the wall-slide bounce loop — every climb in W1/W3 got 1-tile lips (same fix as the castle world).
+- test_grinch.mjs (hold-right bot + scripted segments): all 4 worlds complete, chimney drop lands in the living room and exits the door, W4 goal stays locked until all 5 houses are lit, presents carry across worlds, Q-switching completes W1. ALL CHECKS PASSED.
+- Visually verified via headless Chrome screenshots (title, W1, W2, W4, pose sheet).

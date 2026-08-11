@@ -1,0 +1,11 @@
+{
+  "name": "grinch",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "python3 -m http.server 8123",
+    "start": "python3 -m http.server 8123",
+    "test": "node test_grinch.mjs"
+  }
+}

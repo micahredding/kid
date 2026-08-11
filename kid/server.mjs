@@ -62,6 +62,7 @@ const GAMES = {
   'family-tree':  join(__dirname, '..', 'family-tree'),
   'powers-of-2-numberblocks': join(__dirname, '..', 'powers-of-2-numberblocks'),
   'side-scroller': join(__dirname, '..', 'side-scroller'),
+  'grinch':       join(__dirname, '..', 'grinch'),
   'decimals':     join(__dirname, '..', 'decimals'),
 };
 

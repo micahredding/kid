@@ -49,6 +49,11 @@ function stepFrame() {
     if ((e.type === 'goomba' || e.type === 'flyguy' || e.type === 'spiker') && e.alive !== false) {
       if (e.x > p.x && e.x - (p.x + p.width) < 40 && Math.abs(e.y - p.y) < 48) enemyAhead = true;
     }
+    // locked door or pushblock jammed ahead → hop over it (entity collisions
+    // make onGround flicker, so the stuck-detector never fires against them)
+    if ((e.type === 'door' && !e.opened) || e.type === 'pushblock') {
+      if (e.x > p.x && e.x - (p.x + p.width) < 40 && Math.abs(e.y - p.y) < 64) enemyAhead = true;
+    }
   }
 
   if (Math.abs(p.x - prevX) < 0.2 && p.onGround) stuckFrames++; else stuckFrames = 0;

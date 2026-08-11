@@ -175,6 +175,47 @@ export const LEVELS = [
     goalRow: 15,        // flag in the jungle clearing
     undergroundRow: 17, // gorge + root cave get the dark backdrop
   },
+  {
+    name: 'World 1-5 Numberland',
+    theme: 'numberland',
+    playerStart: { col: 3, row: 15 },
+    tiles: [
+      '                                           CJ                                                                                                                      S  S                                                                 ',
+      '                                                                                                                                                                   SSSS                                                                 ',
+      '                                           9                                                                                                                       SSSS                                                                 ',
+      '                                           9                     CC     CCCC                                                                                       SSSS                                                                 ',
+      '                                           9          C    CC    CC     CCCC         j N                                                                           SSSS                  C         E                                    ',
+      '                                      C    9   F                                                                                                                   SSSS                       0000000000                                ',
+      '                                           9         IIII IIII  IIII    IIII        IIII                                                                           SSSS                 III   0000000000                                ',
+      '                                      8    9                                                                                                                       SSSS                    C  0000000000                                ',
+      '                                  C   8    9                                                                          F       Y                                    SSSS                       0000000000                                ',
+      '                                      8    9                                                                   CCC                             F                   SSSS                   III 0000000000                                ',
+      '                              C   5   8    9                                                                   CCC          55555                                  SSSS               C  C    0000000000                                ',
+      '                          C       5   8    9                                                        CC         CCC   4444   55555       CCC                        SSSS           C   C       0000000000                                ',
+      '      A  H  N     C   C       3   5   8    9                                                        CC         333   4444   55555       CCC                        SSSS       C   C   C III   0000000000                                ',
+      '               C        E 2   3   5   8    9                 E       E                              22         333 X 4444   55555                                           E C   C   C       0000000000                                ',
+      '                  1   1   2   3   5   8    9                                                1       22         333   4444   55555                                   L         C C C C C       0000000000                                ',
+      'GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG   GGGGGGG   GGGGGGGGGGGGGGGGGGGGGG   GGGGGGGGGGGGGGGGGGGG      GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG',
+      'GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG   GGGGGGG   GGGGGGGGGGGGGGGGGGGGGG   GGGGGGGGGGGGGGGGGGGG      GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG',
+      'GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG   GGGGGGG   GGGGGGGGGGGGGGGGGGGGGG   GGGGGGGGGGGGGGGGGGGG    SSGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG',
+      'GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG   GGGGGGG   GGGGGGGGGGGGGGGGGGGGGG   GGGGGGGGGGGGGGGGGGGG    SSGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG',
+      'GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG   GGGGGGG   GGGGGGGGGGGGGGGGG                              SSSSGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG',
+      'GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG   GGGGGGG   GGGGGGGGGGGGGGGGG  Y      CCCCC  CCCCC         SSSSGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG',
+      'GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG   GGGGGGG   GGGGGGGGGGGGGGGGG         CCCEC  CCCEC  H    SSSSSSGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG',
+      'GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG   GGGGGGG   GGGGGGGGGGGGGGGGG                            SSSSSSGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG',
+      'GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG   GGGGGGG   GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG',
+      'GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG   GGGGGGG   GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG',
+    ],
+    movingPlatforms: [
+      // Fibonacci elevator: the 8->13 rise outgrows your jump — ride instead
+      { col: 40, row: 8, widthTiles: 2, rangeX: 0, rangeY: 160, speed: 1.2 },
+      // ferry across the 8-wide power-of-two gap
+      { col: 79, row: 6, widthTiles: 3, rangeX: 112, rangeY: 0, speed: 1.3 },
+    ],
+    goalCol: 197,
+    goalRow: 5,         // flag flies from the top of the Hundred
+    undergroundRow: 17, // ten-frame vault gets the dark backdrop
+  },
 ];
 
 // =============================================================================
@@ -345,7 +386,7 @@ export function drawTiles(ctx, tiles, theme, camera) {
               ctx.fillRect(x + 2 + i * 8 + ((h >> i) % 3), y + 6, 4, 3);
             }
             // grass blades poking up
-            if (style === 'Grassland' || style === 'Jungle') {
+            if (style === 'Grassland' || style === 'Jungle' || style === 'Numberland') {
               ctx.strokeStyle = shade(tileDef.topColor, 1.15);
               ctx.lineWidth = 2;
               ctx.beginPath();
@@ -505,6 +546,20 @@ export function drawTiles(ctx, tiles, theme, camera) {
           break;
         }
 
+        case '0': case '1': case '2': case '3': case '4':
+        case '5': case '6': case '7': case '8': case '9': {
+          ctx.fillStyle = base;
+          ctx.fillRect(x, y, ts, ts);
+          ctx.fillStyle = shade(base, 1.28);
+          ctx.fillRect(x, y, ts, 3); ctx.fillRect(x, y, 3, ts);
+          ctx.fillStyle = shade(base, 0.72);
+          ctx.fillRect(x, y + ts - 3, ts, 3); ctx.fillRect(x + ts - 3, y, 3, ts);
+          ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(x + 0.5, y + 0.5, ts - 1, ts - 1);
+          break;
+        }
+
         default: {
           ctx.fillStyle = base;
           ctx.fillRect(x, y, ts, ts);
@@ -538,7 +593,7 @@ export function drawTiles(ctx, tiles, theme, camera) {
 
       // flowers / ferns / mushrooms on walkable grass
       if (tch === 'G' && surface) {
-        if ((style === 'Grassland' || style === 'Jungle') && h % 7 === 0) {
+        if ((style === 'Grassland' || style === 'Jungle' || style === 'Numberland') && h % 7 === 0) {
           const fx = x + 8 + (h % 16);
           ctx.strokeStyle = '#2e7d32';
           ctx.lineWidth = 2;
@@ -615,6 +670,33 @@ export function drawTiles(ctx, tiles, theme, camera) {
         }
       }
 
+      // numberblock structures: face on top + self-labeling numeral
+      if ('0123456789'.includes(tch) && surface && at(col - 1, row) !== tch) {
+        let w = 0; while (at(col + w, row) === tch) w++;
+        let hgt = 0; while (at(col, row + hgt) === tch) hgt++;
+        const fx = x + (w * ts) / 2;
+        // eyes
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.arc(fx - 7, y + 11, 5, 0, Math.PI * 2); ctx.arc(fx + 7, y + 11, 5, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#222';
+        ctx.beginPath(); ctx.arc(fx - 6, y + 12, 2.4, 0, Math.PI * 2); ctx.arc(fx + 8, y + 12, 2.4, 0, Math.PI * 2); ctx.fill();
+        // smile
+        ctx.strokeStyle = '#222'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(fx, y + 17, 6, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();
+        // numeral: the structure labels itself
+        if (!(w === 1 && hgt === 1)) {
+          const label = tch === '0' ? '100' : (w > 1 ? `${w}×${hgt}` : String(hgt));
+          const lx = x + (w * ts) / 2;
+          const ly = y + Math.max((hgt * ts) / 2 + 8, 44);
+          ctx.font = 'bold 22px monospace';
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+          ctx.strokeText(label, lx, ly);
+          ctx.fillStyle = '#fff';
+          ctx.fillText(label, lx, ly);
+        }
+      }
+
       // arched windows deep in castle masonry
       if (style === 'Castle' && tch === 'S'
           && !empty(col, row - 1) && !empty(col, row + 1)
@@ -646,15 +728,29 @@ export function drawBackground(ctx, theme, camera, levelWidth, undergroundY = nu
   const style = theme.name;
 
   // Sky gradient (screen space — runs before the camera transform)
-  const skyTops = { Grassland: '#3f7fe8', Underground: '#000000', Castle: '#0d0d1f', Jungle: '#5aa84f' };
-  const skyBots = { Grassland: '#9fd4ff', Underground: '#14141f', Castle: '#33334f', Jungle: '#a9d98b' };
+  const skyTops = { Grassland: '#3f7fe8', Underground: '#000000', Castle: '#0d0d1f', Jungle: '#5aa84f', Numberland: '#6fa8f0' };
+  const skyBots = { Grassland: '#9fd4ff', Underground: '#14141f', Castle: '#33334f', Jungle: '#a9d98b', Numberland: '#e8f4ff' };
   const grad = ctx.createLinearGradient(0, 0, 0, ch);
   grad.addColorStop(0, skyTops[style] || theme.sky);
   grad.addColorStop(1, skyBots[style] || theme.sky);
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, cw, ch);
 
-  if (style === 'Grassland' || style === 'Jungle') {
+  if (style === 'Numberland') {
+    // faint rainbow arcing across the sky
+    const rx = cw * 0.45 - camera.x * 0.15;
+    const ry = ch + 60 + camera.y * 0.1;
+    const bands = ['#e03c3c', '#f08c28', '#f5d327', '#3fa93f', '#3f6fd8', '#8f4fd8'];
+    ctx.lineWidth = 14;
+    for (let i = 0; i < bands.length; i++) {
+      ctx.strokeStyle = bands[i] + '55';
+      ctx.beginPath();
+      ctx.arc(rx, ry, 430 - i * 14, Math.PI * 1.05, Math.PI * 1.95);
+      ctx.stroke();
+    }
+  }
+
+  if (style === 'Grassland' || style === 'Jungle' || style === 'Numberland') {
     // sun with soft glow
     const sx = cw - 140 - camera.x * 0.05, sy = 70 - camera.y * 0.05;
     const glow = ctx.createRadialGradient(sx, sy, 8, sx, sy, 70);

@@ -94,3 +94,12 @@ Original prompt: make an option to set any background color for the canvas, with
 - Saved PNGs (print) and the drawing log entry carry the chosen background; log background is now {name, rgb} instead of a string.
 - Tested with a stub-DOM harness driving the real inline script: 17 checks (entry commands, picker, cancel paths, stamping, logging, status bar) all pass.
 - Note: Asher is now on a different MacBook Air — the passive ip/device stamps in logs will show a new IP for him from ~2026-08-12 on.
+
+## 2026-08-11 (World 1-5 Numberland)
+
+Original prompt: a 5th level with math built into the landscape (not math problems as barriers) — Fibonacci, powers of two, squares, powers of ten, at full difficulty.
+
+- New numberland theme: numberblock tiles 0-9 in show colors; renderer draws faces on structure tops and self-labeling numerals (1-wide towers label their height, multi-column structures label w×h, the Hundred labels 100); rainbow parallax arc.
+- The math IS the terrain: Fibonacci towers 1,1,2,3,5,8,13 (1-wide so unit blocks count true; the hop rises are ALSO Fibonacci 0,1,1,2,3 — and the final +5 outgrows your jump, so an elevator platform carries you, with a blue gem crowning the 13) -> powers-of-two sky run (gaps double 1,2,4,8; coin clusters double 1,2,4,8; the 8-gap needs the ferry platform; red gem + banana beyond) -> square-number garden (grounded 2×2/3×3/4×4/5×5 numberblock squares with 4- and 9-coin arrays, two lethal pits, spiker, flyguy, gold key on the 5×5) -> ten-frame vault underground (2×5 coin frames ×2, backup gold key, cherry, goombas, exit stairs) -> gold gate -> pi meadow (coin stacks 3,1,4,1,5) -> THE HUNDRED: a monumental 10×10 block with a scaffold climb, goomba on the summit, flag on top.
+- Full difficulty: two lethal pits, forced Fibonacci climb (the towers wall the route; elevator is the assist), key gate with no-soft-lock backup, 79 coins, 7 goombas, 3 flyguys, spiker.
+- Verified: bot routes complete (squares+key, gate+Hundred to level_complete, Fibonacci climb, vault) and every hop class passes scripted checks (sky gaps, stairs, scaffold, key grabs). Two real bugs found and fixed by testing: the vault stairwell was sealed by an uncarved rock plug, and pit 2 originally dumped players against the 3×3 with no runway. Worlds 1-4 regression clean.

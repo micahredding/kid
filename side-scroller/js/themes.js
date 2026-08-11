@@ -99,6 +99,49 @@ export const THEMES = {
     },
   },
 
+  numberland: {
+    name: 'Numberland',
+    sky: '#8fb8e8',
+    tiles: {
+      G: { color: '#8a6a3d', topColor: '#59c94f', label: '' },
+      B: { color: '#c98a4b', topColor: '#daa05f', label: '' },
+      '?': { color: '#FFD700', topColor: '#FFC800', label: '?' },
+      P: { color: '#4aa8a0', topColor: '#7fd0c8', label: '' },
+      p: { color: '#4aa8a0', topColor: '#4aa8a0', label: '' },
+      S: { color: '#8a93a8', topColor: '#a8b0c2', label: '' },
+      I: { color: '#9a8fb8', topColor: '#cfc8e8', label: '' },
+      D: { color: '#b08350', topColor: '#c9a06b', label: '' },
+      // Numberblock tiles — solid, colored by number
+      '1': { color: '#e03c3c', topColor: '#f06060', label: '' },
+      '2': { color: '#f08c28', topColor: '#ffb050', label: '' },
+      '3': { color: '#f5d327', topColor: '#ffe866', label: '' },
+      '4': { color: '#3fa93f', topColor: '#66cc66', label: '' },
+      '5': { color: '#3f6fd8', topColor: '#6f9fff', label: '' },
+      '6': { color: '#5a3fb8', topColor: '#8468d8', label: '' },
+      '7': { color: '#8f4fd8', topColor: '#b07fe8', label: '' },
+      '8': { color: '#e858a8', topColor: '#ff88c8', label: '' },
+      '9': { color: '#8a8a92', topColor: '#aaaab2', label: '' },
+      '0': { color: '#f2f2f2', topColor: '#e04848', label: '' },
+    },
+    player: {
+      bodyColor: '#FF0000',
+      headColor: '#FFB366',
+      overallsColor: '#0000CC',
+    },
+    enemies: {
+      goomba: { bodyColor: '#A0522D', headColor: '#8B4513' },
+      koopa: { bodyColor: '#228B22', shellColor: '#006400' },
+      flyguy: { bodyColor: '#CC4444', wingColor: '#FFFFFF' },
+      spiker: { bodyColor: '#666666', spikeColor: '#CCCCCC' },
+    },
+    coin: { color: '#FFD700', sparkle: '#FFF8DC' },
+    background: {
+      hillColor: '#3CB371',
+      cloudColor: '#FFFFFF',
+      bushColor: '#2E8B57',
+    },
+  },
+
   castle: {
     name: 'Castle',
     sky: '#1a1a2e',

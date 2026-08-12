@@ -262,12 +262,12 @@ function serverLog(entry) {
   }).catch(() => { /* server not running — silently skip */ });
 }
 
-async function serverSaveDrawing(dataUrl) {
+async function serverSaveDrawing(dataUrl, extra = {}) {
   try {
     const res = await fetch(`${SERVER}/save-drawing`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dataUrl, who: WHO }),
+      body: JSON.stringify({ dataUrl, who: WHO, ...extra }),
     });
     if (res.ok) {
       const { filepath } = await res.json();
@@ -990,6 +990,56 @@ let awaitingBackground = false; // true after Tab+B, waiting for a background pi
 let colorIndexBeforeTab = 0;    // so Tab+B doesn't leave the pen color shifted
 let drawBackground = { ...COLORS.white };
 
+// ---- Autosave: don't lose a drawing if the browser closes mid-draw ----
+// Every AUTOSAVE_MS while drawing (and on tab-hide/close via sendBeacon), push
+// the un-flushed history actions to the log and overwrite one PNG snapshot per
+// drawing session on the server. A clean exit saves the real print and tells
+// the server to drop the snapshot.
+const AUTOSAVE_MS = 4000;
+let drawingId = null;      // unique per draw session; links autosaves, log, and final print
+let flushedActions = 0;    // how many history entries have already been sent
+let drawDirty = false;     // grid or background changed since last snapshot
+let autosaveTimer = null;
+
+function flushDrawActions(useBeacon = false) {
+  if (history.length <= flushedActions) return;
+  const entry = { type: 'drawing_actions', drawingId, seq: flushedActions,
+                  background: { ...drawBackground }, actions: history.slice(flushedActions) };
+  if (WHO) entry.who = WHO;
+  if (useBeacon && navigator.sendBeacon) {
+    navigator.sendBeacon(`${SERVER}/log`,
+      new Blob([JSON.stringify(entry)], { type: 'application/json' }));
+  } else {
+    serverLog(entry);
+  }
+  flushedActions = history.length;
+}
+
+function autosaveDrawing(useBeacon = false) {
+  if (!drawingId) return;
+  flushDrawActions(useBeacon);
+  if (!drawDirty) return;
+  drawDirty = false;
+  const dataUrl = renderDrawingToDataUrl({ grid, cols: COLS, rows: ROWS, background: drawBackground });
+  const body = JSON.stringify({ dataUrl, who: WHO, autosaveId: drawingId });
+  if (useBeacon && navigator.sendBeacon) {
+    navigator.sendBeacon(`${SERVER}/save-drawing`, new Blob([body], { type: 'application/json' }));
+  } else {
+    fetch(`${SERVER}/save-drawing`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body,
+    }).catch(() => { /* server not running */ });
+  }
+}
+
+// pagehide fires on close/navigate; visibilitychange->hidden on tab switch or
+// minimize. Both use sendBeacon, which survives page teardown.
+function onDrawPageHide() { autosaveDrawing(true); }
+function onDrawVisibility() {
+  if (document.visibilityState === 'hidden') autosaveDrawing(true);
+}
+
 function isLightRgb([r, g, b]) {
   return (0.2126 * r + 0.7152 * g + 0.0722 * b) > 140;
 }
@@ -1009,6 +1059,7 @@ function drawBackgroundName() {
 function setDrawBackground(color) {
   drawBackground = { name: color.name || null, rgb: [...color.rgb] };
   drawMode.style.backgroundColor = drawBackgroundColor();
+  drawDirty = true;
   renderCanvas();
 }
 
@@ -1056,13 +1107,23 @@ function sameCell(a, b) {
   return !!a.color && !!b.color && arraysEqual(a.color, b.color);
 }
 
+function pushHistory(entry) {
+  history.push(entry);
+  // If the cap trims the front, keep the flushed-count honest so autosave
+  // increments still line up with what was already sent.
+  if (history.length > 20000) {
+    history.shift();
+    if (flushedActions > 0) flushedActions--;
+  }
+  drawDirty = true;
+}
+
 function setCell(x, y, cell) {
   const prev = grid[y][x];
   if (sameCell(prev, cell)) return;
   undoStack.push({ x, y, prev });
   if (undoStack.length > 2000) undoStack.shift();
-  history.push({ action: 'set', x, y, prev: { ...prev }, next: { ...cell } });
-  if (history.length > 20000) history.shift();
+  pushHistory({ action: 'set', x, y, prev: { ...prev }, next: { ...cell } });
   grid[y][x] = cell;
 }
 
@@ -1073,8 +1134,7 @@ function undoLast() {
   grid[last.y][last.x] = last.prev;
   cursorX = last.x;
   cursorY = last.y;
-  history.push({ action: 'undo', x: last.x, y: last.y, prev: { ...undone }, next: { ...last.prev } });
-  if (history.length > 20000) history.shift();
+  pushHistory({ action: 'undo', x: last.x, y: last.y, prev: { ...undone }, next: { ...last.prev } });
 }
 
 function stamp() {
@@ -1141,10 +1201,21 @@ function enterDrawMode(background = COLORS.white) {
   initGrid();
   renderCanvas();
   document.addEventListener('keydown', onDrawKey, true);
+
+  drawingId = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  flushedActions = 0;
+  drawDirty = false;
+  autosaveTimer = setInterval(() => autosaveDrawing(), AUTOSAVE_MS);
+  window.addEventListener('pagehide', onDrawPageHide);
+  document.addEventListener('visibilitychange', onDrawVisibility);
 }
 
 function exitDrawMode() {
   document.removeEventListener('keydown', onDrawKey, true);
+  clearInterval(autosaveTimer);
+  autosaveTimer = null;
+  window.removeEventListener('pagehide', onDrawPageHide);
+  document.removeEventListener('visibilitychange', onDrawVisibility);
 
   // Snapshot grid for later use
   lastDrawing = {
@@ -1152,13 +1223,15 @@ function exitDrawMode() {
     cols: COLS,
     rows: ROWS,
     background: { ...drawBackground },
+    drawingId,
     canvas,       // keep live canvas reference for quick re-render
   };
 
   // Log the drawing (canvas data, same format as TUI) plus the full action
   // history — the append-only record of everything drawn, including undos.
   const canvasData = grid.map(row => row.map(cell => ({ char: cell.char, color: cell.color })));
-  serverLog({ type: 'drawing', canvas: canvasData, background: { ...drawBackground }, history });
+  serverLog({ type: 'drawing', drawingId, canvas: canvasData, background: { ...drawBackground }, history });
+  drawingId = null;
 
   drawMode.style.display = 'none';
   replMode.style.display = 'flex';
@@ -1253,10 +1326,8 @@ function onDrawKey(e) {
   }
 }
 
-async function saveDrawing() {
-  const d = lastDrawing;
-
-  // Render to an off-screen canvas (cursor-free)
+// Render a drawing ({grid, cols, rows, background}) to a cursor-free PNG data URL.
+function renderDrawingToDataUrl(d) {
   const off = document.createElement('canvas');
   off.width  = d.cols * CELL_W;
   off.height = d.rows * CELL_H;
@@ -1279,11 +1350,16 @@ async function saveDrawing() {
       }
     }
   }
+  return off.toDataURL('image/png');
+}
 
-  const dataUrl = off.toDataURL('image/png');
+async function saveDrawing() {
+  const d = lastDrawing;
+  const dataUrl = renderDrawingToDataUrl(d);
 
-  // Try to save via server (writes to prints/ directory)
-  const filepath = await serverSaveDrawing(dataUrl);
+  // Try to save via server (writes to prints/ directory). finalOf tells the
+  // server this drawing is done, so it can drop the session's autosave file.
+  const filepath = await serverSaveDrawing(dataUrl, { finalOf: d.drawingId });
 
   if (filepath) {
     // Server saved it — show path, no forced download needed

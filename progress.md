@@ -113,3 +113,12 @@ Original prompt: build the doubling cave idea.
 - Great cavern: monument numberblocks 1, 2, 4, 8 (gold key on the 8) and a SIXTEEN lying down — a 16-tile floor inlay you walk along (new label rule: 1-row strips label their length). Two doubling elevators carry you where the next power outgrows your jump (4->8, 8->ceiling). A halving coin trail (8, 4, 2, 1 coins on crystal ledges) runs under the ceiling to the blue gem — the series' end. Floor coins double per chamber (1, 2, 4, 8). Two 2-deep spiker trenches (backup gold key + red gem in the second). Gold door guards the halving exit.
 - Doubled details: pipe pair (1-tall, 2-tall), goombas per chamber 1-2-3, mirrored stalactite/stalagmite pairs.
 - Verified: chambers route, monument climb, door + halving exit to level_complete, all 5 trail hops + trench exits + stalagmite + both key grabs + gem scripted; elevator ranges checked; worlds 1-5 regression clean. Testing caught the ceiling being too close to the original trail (bonk-truncated jumps) and a 16-pillar that sealed the cavern — hence the lying-down 16.
+## 2026-08-12 (draw: autosave — survive browser close)
+
+Original prompt: closing the browser mid-drawing lost the picture entirely; add autosave (with a beacon as belt-and-suspenders).
+
+- Draw mode now autosaves every 4s while dirty, and last-gasp flushes via navigator.sendBeacon on pagehide and on visibilitychange→hidden — closing the tab, quitting the browser, or switching away mid-draw no longer loses the drawing (worst case: the last <4s).
+- Each draw session gets a drawingId. Autosave posts (a) incremental history actions to /log as drawing_actions entries (seq-numbered, only what's new since the last flush), and (b) a PNG snapshot to /save-drawing with autosaveId — the server keeps ONE prints/autosave-<who->-<id>.png per session, overwritten each time.
+- Clean exit (Escape) works as before — full drawing+history log entry (now tagged with drawingId) and the timestamped print — and passes finalOf so the server deletes that session's autosave file. An orphaned autosave-*.png in prints/ therefore means exactly one thing: a drawing that was never properly exited.
+- History's 20k cap now decrements the flushed-counter when it trims, so increments stay aligned; server logs only a session's first autosave write, not every 4s overwrite.
+- Tests: stub-DOM harness grew to 30 checks (beacon payloads, incremental seq, idle no-op, listener cleanup, finalOf linkage); live-server curl test verified autosave create/overwrite → final → cleanup, and id sanitization.

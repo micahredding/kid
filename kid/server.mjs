@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { createServer } from 'node:http';
-import { readFileSync, appendFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
+import { readFileSync, appendFileSync, writeFileSync, mkdirSync, existsSync, unlinkSync } from 'node:fs';
 import { join, dirname, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -45,6 +45,13 @@ function shortDevice(ua = '') {
 // Sanitize a client-supplied "who" (Option B) for use in logs and filenames.
 function cleanWho(who) {
   return who ? String(who).replace(/[^a-z0-9_-]/gi, '').slice(0, 20) : '';
+}
+// Sanitize a client-supplied drawing id for use in autosave filenames.
+function cleanId(id) {
+  return id ? String(id).replace(/[^a-z0-9]/gi, '').slice(0, 32) : '';
+}
+function autosavePath(tag, id) {
+  return join(printsDir, `autosave-${tag ? tag + '-' : ''}${id}.png`);
 }
 
 log({ type: 'start', version: '1.0.0' });
@@ -146,18 +153,43 @@ const server = createServer(async (req, res) => {
     return;
   }
 
-  // Save a drawing PNG
+  // Save a drawing PNG. Two flavors:
+  // - autosaveId: in-progress snapshot — one file per drawing session, overwritten
+  //   each time, so a browser closed mid-draw still leaves the latest picture.
+  // - finalOf: the real print on clean exit — removes that session's autosave file.
   if (req.method === 'POST' && req.url === '/save-drawing') {
     const body = await readBody(req);
     try {
-      const { dataUrl, who } = JSON.parse(body);
+      const { dataUrl, who, autosaveId, finalOf } = JSON.parse(body);
       const base64 = dataUrl.replace(/^data:image\/png;base64,/, '');
       const buf = Buffer.from(base64, 'base64');
-      const ts = new Date().toISOString().replace(/[:.]/g, '-');
       const tag = cleanWho(who);
+
+      if (autosaveId) {
+        const id = cleanId(autosaveId);
+        if (!id) { res.writeHead(400); res.end('Bad autosave id'); return; }
+        const filepath = autosavePath(tag, id);
+        const isNew = !existsSync(filepath);
+        writeFileSync(filepath, buf);
+        // Log only the first snapshot of a session, not every overwrite.
+        if (isNew) log({ type: 'autosave', filepath, who: tag || undefined, ip: clientIp(req), device: shortDevice(req.headers['user-agent']) });
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ filepath }));
+        return;
+      }
+
+      const ts = new Date().toISOString().replace(/[:.]/g, '-');
       const filepath = join(printsDir, `drawing-${tag ? tag + '-' : ''}${ts}.png`);
       writeFileSync(filepath, buf);
-      log({ type: 'print', filepath, who: cleanWho(who) || undefined, ip: clientIp(req), device: shortDevice(req.headers['user-agent']) });
+      log({ type: 'print', filepath, who: tag || undefined, ip: clientIp(req), device: shortDevice(req.headers['user-agent']) });
+
+      const finalId = cleanId(finalOf);
+      if (finalId) {
+        for (const p of [autosavePath(tag, finalId), autosavePath('', finalId)]) {
+          try { if (existsSync(p)) unlinkSync(p); } catch { /* leave it */ }
+        }
+      }
+
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ filepath }));
     } catch {

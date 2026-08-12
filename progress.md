@@ -82,3 +82,15 @@ Original prompt: overall stylistic enhancement to backgrounds and world — more
 - Tiles: deterministic per-tile hash details (no flicker) — turf caps + grass blades only on true surfaces (buried dirt is plain + speckled), staggered brick mortar, chiseled stone blocks with cracks + moss on jungle/castle tops, cylindrical pipe/bamboo shading with edge-aware trunk highlights + node rings, one-way platforms drawn as planks/leafy branches, beveled ? blocks with rivets.
 - Decorations (non-colliding): flowers/ferns, glowing mushrooms + stalactites (underground), swaying vines from jungle branches, hanging roots under dirt ceilings, arched windows deep in castle masonry, weeds in flagstones. Goal flag now waves with a pole highlight.
 - shot.html added: headless-Chrome screenshot harness (?level=&col=&row=) used to visually verify all four worlds; 12 screenshots reviewed.
+## 2026-08-12 (draw: any background color)
+
+Original prompt: make an option to set any background color for the canvas, within the draw UI itself.
+
+- Draw-mode background is now a full color object (any palette color), not just black/white.
+- In-draw picker: Tab then B arms a background pick — 1-9/0 chooses from the same palette as the pen picker, B again gives black. Pen color is restored after Tab+B so picking a background never shifts the pen. Any other key cancels and acts normally (plain letters still type characters).
+- Status bar shows a background swatch + name alongside the pen swatch; hint line documents Tab B 1-0.
+- REPL entry generalized: "draw <color>" accepts any color expression ("draw purple", "draw red + blue"); "draw black"/"draw white" unchanged; a non-color argument ("draw cat") still falls through to the evaluator.
+- Cursor visibility generalized: when the pen color is near the background color, the cursor uses a contrasting gray (was a white-on-white special case). Typed characters contrast by background luminance.
+- Saved PNGs (print) and the drawing log entry carry the chosen background; log background is now {name, rgb} instead of a string.
+- Tested with a stub-DOM harness driving the real inline script: 17 checks (entry commands, picker, cancel paths, stamping, logging, status bar) all pass.
+- Note: Asher is now on a different MacBook Air — the passive ip/device stamps in logs will show a new IP for him from ~2026-08-12 on.

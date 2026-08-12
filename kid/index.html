@@ -189,7 +189,7 @@
   <div id="output">
     <div class="output-line welcome">Welcome! Type anything and press Enter.</div>
     <div class="output-line welcome">Try: 4 + 4 &nbsp; 3 trex &nbsp; 5 red &nbsp; red + blue</div>
-    <div class="output-line welcome">Type "draw", "draw black", or "draw white" to draw; "print" saves!</div>
+    <div class="output-line welcome">Type "draw" or "draw blue" (any color!) to draw; "print" saves!</div>
     <div class="output-line welcome">Try: white &nbsp; dark &nbsp; red screen &nbsp; blue+green screen</div>
     <div class="output-line welcome">&nbsp;</div>
   </div>
@@ -210,7 +210,11 @@
     <span>|</span>
     <span class="status-swatch" id="status-swatch"></span>
     <span id="status-color-name">red</span>
-    <span class="status-hint">Space: pen &nbsp;&nbsp; Tab then 1-0: color &nbsp;&nbsp; Arrows: move &nbsp;&nbsp; Del: undo &nbsp;&nbsp; ESC: exit</span>
+    <span>|</span>
+    <span>bg</span>
+    <span class="status-swatch" id="status-bg-swatch"></span>
+    <span id="status-bg-name">white</span>
+    <span class="status-hint">Space: pen &nbsp;&nbsp; Tab then 1-0: color &nbsp;&nbsp; Tab B 1-0: background &nbsp;&nbsp; Arrows: move &nbsp;&nbsp; Del: undo &nbsp;&nbsp; ESC: exit</span>
   </div>
 </div>
 
@@ -919,12 +923,24 @@ inputEl.addEventListener('keydown', (e) => {
 
   if (tryThemeCommand(trimmed)) return;
 
-  const drawCommand = trimmed.toLowerCase().match(/^(draw|color|colour)(?:\s+(black|white))?$/);
+  const drawCommand = trimmed.toLowerCase().match(/^(draw|color|colour)(?:\s+(.+))?$/);
   if (drawCommand) {
-    const background = drawCommand[2] || 'white';
-    serverLog({ type: 'input', raw: trimmed, display: `[entering drawing mode: ${background}]` });
-    enterDrawMode(background);
-    return;
+    let background = { ...COLORS.white };
+    let recognized = !drawCommand[2];
+    if (drawCommand[2]) {
+      const result = evaluate(drawCommand[2]);
+      if (result.type === 'color') {
+        background = result.data;
+        recognized = true;
+      }
+    }
+    if (recognized) {
+      const bgName = background.name || matchScreenColorName(background.rgb);
+      serverLog({ type: 'input', raw: trimmed, display: `[entering drawing mode: ${bgName}]` });
+      enterDrawMode(background);
+      return;
+    }
+    // "draw something-not-a-color" falls through to the evaluator, as before.
   }
 
   if (trimmed.toLowerCase() === 'print') {
@@ -963,24 +979,42 @@ const ctx       = canvas.getContext('2d');
 const elPen     = document.getElementById('status-pen');
 const elSwatch  = document.getElementById('status-swatch');
 const elColor   = document.getElementById('status-color-name');
+const elBgSwatch = document.getElementById('status-bg-swatch');
+const elBgName   = document.getElementById('status-bg-name');
 
 const CELL_W = 16;
 const CELL_H = 20;
 let COLS, ROWS, grid, cursorX, cursorY, colorIndex, penDown, undoStack, history;
-let awaitingColor = false;   // true after Tab, waiting for a 1-9/0 quick-pick digit
-let drawBackground = 'white';
+let awaitingColor = false;      // true after Tab, waiting for a 1-9/0 quick-pick digit
+let awaitingBackground = false; // true after Tab+B, waiting for a background pick
+let colorIndexBeforeTab = 0;    // so Tab+B doesn't leave the pen color shifted
+let drawBackground = { ...COLORS.white };
+
+function isLightRgb([r, g, b]) {
+  return (0.2126 * r + 0.7152 * g + 0.0722 * b) > 140;
+}
 
 function drawBackgroundColor() {
-  return drawBackground === 'black' ? '#000' : '#fff';
+  return rgbStr(drawBackground.rgb);
 }
 
 function drawTextColor() {
-  return drawBackground === 'black' ? '#fff' : '#000';
+  return isLightRgb(drawBackground.rgb) ? '#000' : '#fff';
+}
+
+function drawBackgroundName() {
+  return drawBackground.name || matchScreenColorName(drawBackground.rgb);
+}
+
+function setDrawBackground(color) {
+  drawBackground = { name: color.name || null, rgb: [...color.rgb] };
+  drawMode.style.backgroundColor = drawBackgroundColor();
+  renderCanvas();
 }
 
 window.render_game_to_text = () => JSON.stringify({
   mode: drawMode.style.display === 'flex' ? 'draw' : 'repl',
-  background: drawBackground,
+  background: drawBackgroundName(),
   cursor: { x: cursorX ?? 0, y: cursorY ?? 0 },
   penDown: penDown ?? false,
   color: COLOR_CYCLE[(colorIndex ?? 0) % COLOR_CYCLE.length]?.name || 'red',
@@ -1006,6 +1040,7 @@ function initGrid() {
   colorIndex = 0;
   penDown = false;
   awaitingColor = false;
+  awaitingBackground = false;
   undoStack = [];   // rewindable — consumed by undo
   history  = [];    // append-only — every action, kept for the record
 }
@@ -1070,14 +1105,17 @@ function renderCanvas() {
 
   // Cursor. Over a colored pixel, contrast against that pixel (black or white by
   // luminance) so the cursor never disappears; over empty canvas, use the pen
-  // color (gray for white pen, which would vanish on the white background).
+  // color — unless it's too close to the background color, in which case use a
+  // gray that contrasts with the background (white pen on white bg, etc.).
   const col = COLOR_CYCLE[colorIndex % COLOR_CYCLE.length];
   const under = grid[cursorY][cursorX];
   if (under.color) {
-    const [r, g, b] = under.color;
-    ctx.strokeStyle = (0.2126 * r + 0.7152 * g + 0.0722 * b) > 140 ? '#000' : '#fff';
+    ctx.strokeStyle = isLightRgb(under.color) ? '#000' : '#fff';
   } else {
-    ctx.strokeStyle = isWhiteRgb(col.rgb) && drawBackground === 'white' ? '#999' : rgbStr(col.rgb);
+    const nearBackground = col.rgb.every((v, i) => Math.abs(v - drawBackground.rgb[i]) < 48);
+    ctx.strokeStyle = nearBackground
+      ? (isLightRgb(drawBackground.rgb) ? '#666' : '#bbb')
+      : rgbStr(col.rgb);
   }
   ctx.lineWidth = 2;
   ctx.strokeRect(cursorX * CELL_W + 1, cursorY * CELL_H + 1, CELL_W - 2, CELL_H - 2);
@@ -1087,11 +1125,16 @@ function renderCanvas() {
   elPen.classList.toggle('down', penDown);
   elSwatch.style.backgroundColor = rgbStr(col.rgb);
   elSwatch.style.border = isWhiteRgb(col.rgb) ? '1px solid #888' : '1px solid #555';
-  elColor.textContent = (col.name || 'mixed') + (awaitingColor ? '  — press 1-9 or 0' : '');
+  elColor.textContent = (col.name || 'mixed')
+    + (awaitingColor ? '  — press 1-9 or 0 (B: background)'
+     : awaitingBackground ? '  — background: 1-9, 0, or B for black' : '');
+  elBgSwatch.style.backgroundColor = drawBackgroundColor();
+  elBgSwatch.style.border = isWhiteRgb(drawBackground.rgb) ? '1px solid #888' : '1px solid #555';
+  elBgName.textContent = drawBackgroundName();
 }
 
-function enterDrawMode(background = 'white') {
-  drawBackground = background;
+function enterDrawMode(background = COLORS.white) {
+  drawBackground = { name: background.name || null, rgb: [...background.rgb] };
   drawMode.style.backgroundColor = drawBackgroundColor();
   replMode.style.display = 'none';
   drawMode.style.display = 'flex';
@@ -1108,14 +1151,14 @@ function exitDrawMode() {
     grid: grid.map(r => r.map(c => ({ ...c }))),
     cols: COLS,
     rows: ROWS,
-    background: drawBackground,
+    background: { ...drawBackground },
     canvas,       // keep live canvas reference for quick re-render
   };
 
   // Log the drawing (canvas data, same format as TUI) plus the full action
   // history — the append-only record of everything drawn, including undos.
   const canvasData = grid.map(row => row.map(cell => ({ char: cell.char, color: cell.color })));
-  serverLog({ type: 'drawing', canvas: canvasData, background: drawBackground, history });
+  serverLog({ type: 'drawing', canvas: canvasData, background: { ...drawBackground }, history });
 
   drawMode.style.display = 'none';
   replMode.style.display = 'flex';
@@ -1129,8 +1172,9 @@ function onDrawKey(e) {
   if (DRAW_PREVENT.has(e.key)) e.preventDefault();
 
   // Armed by a preceding Tab: the next digit jumps straight to that palette
-  // color (1=first … 9=ninth, 0=tenth). Anything else cancels the arm and is
-  // handled normally, so a digit only picks a color right after Tab.
+  // color (1=first … 9=ninth, 0=tenth), and B arms a background pick instead.
+  // Anything else cancels the arm and is handled normally, so a digit only
+  // picks a color right after Tab.
   if (awaitingColor) {
     awaitingColor = false;
     if (/^[0-9]$/.test(e.key)) {
@@ -1140,6 +1184,32 @@ function onDrawKey(e) {
       renderCanvas();
       return;
     }
+    if (e.key === 'b' || e.key === 'B') {
+      e.preventDefault();
+      colorIndex = colorIndexBeforeTab;  // undo the lone-Tab pen-color step
+      awaitingBackground = true;
+      renderCanvas();
+      return;
+    }
+  }
+
+  // Armed by Tab+B: a digit paints the whole background that palette color;
+  // B again makes it black. Anything else cancels.
+  if (awaitingBackground) {
+    awaitingBackground = false;
+    if (/^[0-9]$/.test(e.key)) {
+      e.preventDefault();
+      const n = e.key === '0' ? 10 : Number(e.key);
+      if (n >= 1 && n <= COLOR_CYCLE.length) setDrawBackground(COLOR_CYCLE[n - 1]);
+      else renderCanvas();
+      return;
+    }
+    if (e.key === 'b' || e.key === 'B') {
+      e.preventDefault();
+      setDrawBackground(COLORS.black);
+      return;
+    }
+    renderCanvas();  // clear the hint, then handle the key normally
   }
 
   switch (e.key) {
@@ -1163,7 +1233,9 @@ function onDrawKey(e) {
       if (penDown) stamp();
       renderCanvas(); break;
     case 'Tab':
-      // A lone Tab still cycles one step; press a digit next to jump directly.
+      // A lone Tab still cycles one step; press a digit next to jump directly,
+      // or B then a digit to pick the background color.
+      colorIndexBeforeTab = colorIndex;
       colorIndex++;
       awaitingColor = true;
       renderCanvas(); break;
@@ -1189,8 +1261,8 @@ async function saveDrawing() {
   off.width  = d.cols * CELL_W;
   off.height = d.rows * CELL_H;
   const c = off.getContext('2d');
-  const background = d.background === 'black' ? 'black' : 'white';
-  c.fillStyle = background === 'black' ? '#000' : '#fff';
+  const textColor = isLightRgb(d.background.rgb) ? '#000' : '#fff';
+  c.fillStyle = rgbStr(d.background.rgb);
   c.fillRect(0, 0, off.width, off.height);
   c.font = `${CELL_H - 2}px monospace`;
   c.textBaseline = 'top';
@@ -1202,7 +1274,7 @@ async function saveDrawing() {
         c.fillStyle = rgbStr(cell.color);
         c.fillRect(px, py, CELL_W, CELL_H);
       } else if (cell.char !== ' ') {
-        c.fillStyle = background === 'black' ? '#fff' : '#000';
+        c.fillStyle = textColor;
         c.fillText(cell.char, px, py);
       }
     }

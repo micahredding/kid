@@ -122,6 +122,8 @@ export const THEMES = {
       '8': { color: '#e858a8', topColor: '#ff88c8', label: '' },
       '9': { color: '#8a8a92', topColor: '#aaaab2', label: '' },
       '0': { color: '#f2f2f2', topColor: '#e04848', label: '' },
+      // Thirteen: ten white blocks (color) under a three-block yellow cap (topColor)
+      t: { color: '#f2f2f2', topColor: '#f5d327', label: '' },
     },
     player: {
       bodyColor: '#FF0000',

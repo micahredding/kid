@@ -142,6 +142,48 @@ export const THEMES = {
     },
   },
 
+  crystalcave: {
+    name: 'Crystal Cave',
+    sky: '#0a0a14',
+    tiles: {
+      G: { color: '#4a3a30', topColor: '#6a8a5a', label: '' },   // cave dirt + moss
+      B: { color: '#5a4a7a', topColor: '#7a6a9a', label: '' },
+      '?': { color: '#FFD700', topColor: '#FFC800', label: '?' },
+      P: { color: '#5a7ab8', topColor: '#8fb8e8', label: '' },   // crystal pillar
+      p: { color: '#5a7ab8', topColor: '#5a7ab8', label: '' },
+      S: { color: '#3a4a6a', topColor: '#4a5c80', label: '' },   // deep blue stone
+      I: { color: '#7a9ac8', topColor: '#b8d4f0', label: '' },   // crystal ledge
+      D: { color: '#7a6644', topColor: '#8a7755', label: '' },
+      '1': { color: '#e03c3c', topColor: '#f06060', label: '' },
+      '2': { color: '#f08c28', topColor: '#ffb050', label: '' },
+      '3': { color: '#f5d327', topColor: '#ffe866', label: '' },
+      '4': { color: '#3fa93f', topColor: '#66cc66', label: '' },
+      '5': { color: '#3f6fd8', topColor: '#6f9fff', label: '' },
+      '6': { color: '#5a3fb8', topColor: '#8468d8', label: '' },
+      '7': { color: '#8f4fd8', topColor: '#b07fe8', label: '' },
+      '8': { color: '#e858a8', topColor: '#ff88c8', label: '' },
+      '9': { color: '#8a8a92', topColor: '#aaaab2', label: '' },
+      '0': { color: '#f2f2f2', topColor: '#e04848', label: '' },
+    },
+    player: {
+      bodyColor: '#FF0000',
+      headColor: '#FFB366',
+      overallsColor: '#0000CC',
+    },
+    enemies: {
+      goomba: { bodyColor: '#6B3A2A', headColor: '#5B2A1A' },
+      koopa: { bodyColor: '#225522', shellColor: '#004400' },
+      flyguy: { bodyColor: '#993333', wingColor: '#CCCCCC' },
+      spiker: { bodyColor: '#555555', spikeColor: '#99aacc' },
+    },
+    coin: { color: '#FFD700', sparkle: '#FFF8DC' },
+    background: {
+      hillColor: null,
+      cloudColor: null,
+      bushColor: null,
+    },
+  },
+
   castle: {
     name: 'Castle',
     sky: '#1a1a2e',

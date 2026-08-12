@@ -26,18 +26,18 @@ export const LEVELS = [
       '                                                                                                                                                                                                                                        ',
       '                                                                                                                                                                                                                                        ',
       '                                                                                                                                                                           C                                                            ',
-      '                                                                                                                                                              C                           J                                             ',
-      '                                                                                                                                                                   CCCC   III                  F                                        ',
-      '                                                                                                                                                  C  C C A   III                         BBBB         C                                 ',
-      '                                                                                                                                                                   BBBB                         III                                     ',
-      '                                                                                              C                                               C   BBGGGGGG                                           III                                ',
-      '                                                                       C                      C                                                 BBBBGGGGGG                                                                              ',
-      '                                C  C  C                         F      C                     BBB                                          C   BBBBBBGGGGGG                                                                              ',
-      '               ?    B?B?B                        BBBB                  C                     BBB                                            BBBBBBBBGGGGGG                                                                              ',
-      '                                                                                          BBBBBB                                      C   BBBBBBBBBBGGGGGG                                                            C                 ',
-      '    C          A   H   N               E       I I I I         C  C  C       D D          BBBBBBB      J                                BBBBBBBBBBBBGGGGGG  C                                                        C C                ',
-      '         E                                                   B?B?B?B     Y     E    X  BBBBBBBBBB    E                                BBBBBBBBBBBBBBGGGGGG            C       C       C       C     C   C           C   C  A   E        ',
-      '                         PP                PP                                          BBBBBBBBBB     L                             BBBBBBBBBBBBBBBBGGGGGG                                                                              ',
+      '                                                                                           C                                                                  C                           J                                             ',
+      '                                                                                           C                                                                       CCCC   III                  F                                        ',
+      '                                                                                          B B                                                     C  C C A   III                         BBBB         C                                 ',
+      '                                                                                          B B                                                                      BBBB                         III                                     ',
+      '                                                                                          B B                                                 C   BBGGGGGG                                           III                                ',
+      '                                                                       C                  B B                                                   BBBBGGGGGG                                                                              ',
+      '                                C  C  C                         F      C                  B B                                             C   BBBBBBGGGGGG                                                                              ',
+      '               ?    B?B?B                        BBBB                  C                  B B                                               BBBBBBBBGGGGGG                                                                              ',
+      '                                                                                          B B                                         C   BBBBBBBBBBGGGGGG                                                            C                 ',
+      '    C          A   H   N               E       I I I I         C  C  C       D D          B B          J                                BBBBBBBBBBBBGGGGGG  C                                                        C C                ',
+      '         E                                                   B?B?B?B     Y     E    X     B B     E                                   BBBBBBBBBBBBBBGGGGGG            C       C       C       C     C   C           C   C  A   E        ',
+      '                         PP                PP                                             B B         L                             BBBBBBBBBBBBBBBBGGGGGG                                                                              ',
       '  GGGGGGGGGGGGGGGG  GGGGppGGGGGGGGGGGGGGGGppGGGGGGGGGGGGGGGGGGGGGGGGGGG   GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG      GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG        GGGGGGGGGGGGGGGGGGGGGG',
       '  GGGGGGGGGGGGGGGG  GGGGppGGGGGGGGGGGGGGGGppGGGGGGGGGGGGGGGGGGGGGGGGGGG   GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG  C   GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG      GGGGGGGGGGGGGGGGGGGGGGGG',
       '  GGGGGGGGGGGGGGGG  GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG   GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG      GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG    GGGGGGGGGGGGGGGGGGGGGGGGGG',
@@ -182,19 +182,19 @@ export const LEVELS = [
     tiles: [
       '                                           CJ                                                                                                                      S  S                                                                 ',
       '                                                                                                                                                                   SSSS                                                                 ',
-      '                                           3                                                                                                                       SSSS                                                                 ',
-      '                                           3                     CC     CCCC                                                                                       SSSS                                                                 ',
-      '                                           3          C    CC    CC     CCCC         j N                                                                           SSSS                  C         E                                    ',
-      '                                      C    0   F                                                                                                                   SSSS                       0000000000                                ',
-      '                                           0         IIII IIII  IIII    IIII        IIII                                                                           SSSS                 III   0000000000                                ',
-      '                                      8    0                                                                                                                       SSSS                    C  0000000000                                ',
-      '                                  C   8    0                                                                          F       Y                                    SSSS                       0000000000                                ',
-      '                                      8    0                                                                   CCC                             F                   SSSS                   III 0000000000                                ',
-      '                              C   5   8    0                                                                   CCC          55555                                  SSSS               C  C    0000000000                                ',
-      '                          C       5   8    0                                                        CC         CCC   4444   55555       CCC                        SSSS           C   C       0000000000                                ',
-      '      A  H  N     C   C       3   5   8    0                                                        CC         333   4444   55555       CCC                        SSSS       C   C   C III   0000000000                                ',
-      '               C        E 2   3   5   8    0                 E       E                              22         333 X 4444   55555                                           E C   C   C       0000000000                                ',
-      '                  1   1   2   3   5   8    0                                                1       22         333   4444   55555                                   L         C C C C C       0000000000                                ',
+      '                                           9                                                                                                                       SSSS                                                                 ',
+      '                                           9                     CC     CCCC                                                                                       SSSS                                                                 ',
+      '                                           9          C    CC    CC     CCCC         j N                                                                           SSSS                  C         E                                    ',
+      '                                      C    9   F                                                                                                                   SSSS                       0000000000                                ',
+      '                                           9         IIII IIII  IIII    IIII        IIII                                                                           SSSS                 III   0000000000                                ',
+      '                                      8    9                                                                                                                       SSSS                    C  0000000000                                ',
+      '                                  C   8    9                                                                          F       Y                                    SSSS                       0000000000                                ',
+      '                                      8    9                                                                   CCC                             F                   SSSS                   III 0000000000                                ',
+      '                              C   5   8    9                                                                   CCC          55555                                  SSSS               C  C    0000000000                                ',
+      '                          C       5   8    9                                                        CC         CCC   4444   55555       CCC                        SSSS           C   C       0000000000                                ',
+      '      A  H  N     C   C       3   5   8    9                                                        CC         333   4444   55555       CCC                        SSSS       C   C   C III   0000000000                                ',
+      '               C        E 2   3   5   8    9                 E       E                              22         333 X 4444   55555                                           E C   C   C       0000000000                                ',
+      '                  1   1   2   3   5   8    9                                                1       22         333   4444   55555                                   L         C C C C C       0000000000                                ',
       'GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG   GGGGGGG   GGGGGGGGGGGGGGGGGGGGGG   GGGGGGGGGGGGGGGGGGGG      GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG',
       'GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG   GGGGGGG   GGGGGGGGGGGGGGGGGGGGGG   GGGGGGGGGGGGGGGGGGGG      GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG',
       'GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG   GGGGGGG   GGGGGGGGGGGGGGGGGGGGGG   GGGGGGGGGGGGGGGGGGGG    SSGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG',
@@ -207,27 +207,53 @@ export const LEVELS = [
       'GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG   GGGGGGG   GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG',
     ],
     movingPlatforms: [
-      // Elevators for every climb taller than a comfy hop. Each one's low point is a
-      // walk-on (or one small hop) and its high point overshoots the destination top
-      // by half a tile, so boarding/exiting is a walk, not a timed jump.
-      // 3-top (row 12) <-> 5-top (row 10)
-      { col: 31, row: 11, widthTiles: 3, rangeX: 0, rangeY: 48, speed: 1.0 },
-      // 5-top (row 10) <-> 8-top (row 7)
-      { col: 35, row: 8.5, widthTiles: 2, rangeX: 0, rangeY: 64, speed: 1.0 },
-      // ground hop-on (row 13.5) <-> 13-tower summit (row 2)
-      { col: 40, row: 7.5, widthTiles: 3, rangeX: 0, rangeY: 192, speed: 1.0 },
+      // Fibonacci elevator: the 8->13 rise outgrows your jump — ride instead
+      { col: 40, row: 8, widthTiles: 2, rangeX: 0, rangeY: 160, speed: 1.2 },
       // ferry across the 8-wide power-of-two gap
       { col: 79, row: 6, widthTiles: 3, rangeX: 112, rangeY: 0, speed: 1.3 },
-      // number-ridge lift: short hop-on above the ground shelf, up to the 333
-      // rooftop, replacing the rise-3 jump onto the ridge
-      { col: 108, row: 12.75, widthTiles: 3, rangeX: 0, rangeY: 40, speed: 1.0 },
-      // finale lift up the left face of the Hundred: ground <-> summit (flag).
-      // Must sit left of goalCol 197 — crossing that x completes the level.
-      { col: 189, row: 9.25, widthTiles: 2, rangeX: 0, rangeY: 152, speed: 1.0 },
     ],
     goalCol: 197,
     goalRow: 5,         // flag flies from the top of the Hundred
     undergroundRow: 17, // ten-frame vault gets the dark backdrop
+  },
+  {
+    name: 'World 1-6 The Doubling Cave',
+    theme: 'crystalcave',
+    playerStart: { col: 4, row: 20 },
+    tiles: [
+      'SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS',
+      'SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS',
+      'SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS',
+      'SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS',
+      'SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS                      S                                   S     SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS',
+      'SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS                      S                                   S     SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS',
+      'SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS                                       CCCC  CC   CC            SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS',
+      'SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS                         IIIIII        CCCC  CC        C J      SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS',
+      'SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS                                 IIII  IIII  III  II            SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS',
+      'SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS               F                                       III      SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS',
+      'SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS                  Y               F                             SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS',
+      'SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS                                                                SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS',
+      'SS            SSSSSSSSSSSSSSSSSSSSSSSS                                                  8                                             S               SSSSSSSSSSSS                SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS',
+      'SS            SSSSSSSSSSSSSSSSSSSSSSSS                                                  8                                             S               SSSSSSSSSSSS                SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS',
+      'SS            SSSSSSSSSSSSSSSSSSSSSSSS                                           C      8                                             S               SSSSSSSSSSSS                SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS',
+      'SS            SSSSSSSSSSSSSSSSSSSSSSSS                                                  8                                             S               SSSSSSSSSSSS     C          SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS',
+      'SS            SSSSSSSS                          CC                           C   4      8                                             S                       SSSS    C C         SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS',
+      'SS  A H N  C  SSSSSSSS      C C                 CC                H       C      4      8                             CCCC      S     S                       SSSS   C   C        SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS',
+      'SS                C                                      P                   2   4      8             S               CCCC      S         C  C  C  C    CN C   C                  SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS',
+      'SS                              E         P  E           p  E             1  2  E4      8          E  S                   E     S     L     E                                     SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS',
+      'SSGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG X GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG6666666666666666XYjGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS',
+      'SSGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGC CGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG   GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS',
+      'SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS',
+      'SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS',
+      'SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS',
+    ],
+    movingPlatforms: [
+      // doubling elevators: ride when the next power outgrows your jump
+      { col: 84, row: 14, widthTiles: 2, rangeX: 0, rangeY: 96, speed: 1.2 },  // 4 -> 8
+      { col: 92, row: 8, widthTiles: 2, rangeX: 0, rangeY: 128, speed: 1.1 },  // 8 -> ceiling trail
+    ],
+    goalCol: 170,
+    goalRow: 20,        // flag in the last hall
   },
 ];
 
@@ -631,7 +657,7 @@ export function drawTiles(ctx, tiles, theme, camera) {
             ctx.quadraticCurveTo(fx + a * 8, y - 12, fx + a * 12, y - 8);
             ctx.stroke();
           }
-        } else if (style === 'Underground' && h % 9 === 2) {
+        } else if ((style === 'Underground' || style === 'Crystal Cave') && h % 9 === 2) {
           // glowing mushroom
           const mx = x + 8 + (h % 14);
           ctx.fillStyle = '#d8d0c0';
@@ -653,7 +679,7 @@ export function drawTiles(ctx, tiles, theme, camera) {
       }
 
       // stalactites on underground ceilings
-      if (style === 'Underground' && (tch === 'S' || tch === 'G') && empty(col, row + 1) && h % 5 < 2) {
+      if ((style === 'Underground' || style === 'Crystal Cave') && (tch === 'S' || tch === 'G') && empty(col, row + 1) && h % 5 < 2) {
         const base2 = theme.tiles[tch].color;
         ctx.fillStyle = shade(base2, 0.85);
         const sx = x + 4 + (h % 12);
@@ -698,7 +724,7 @@ export function drawTiles(ctx, tiles, theme, camera) {
         ctx.beginPath(); ctx.arc(fx, y + 17, 6, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();
         // numeral: the structure labels itself
         if (!(w === 1 && hgt === 1)) {
-          const label = tch === '0' ? '100' : (w > 1 ? `${w}×${hgt}` : String(hgt));
+          const label = tch === '0' ? '100' : (hgt === 1 && w > 1 ? String(w) : (w > 1 ? `${w}×${hgt}` : String(hgt)));
           const lx = x + (w * ts) / 2;
           const ly = y + Math.max((hgt * ts) / 2 + 8, 44);
           ctx.font = 'bold 22px monospace';
@@ -741,8 +767,8 @@ export function drawBackground(ctx, theme, camera, levelWidth, undergroundY = nu
   const style = theme.name;
 
   // Sky gradient (screen space — runs before the camera transform)
-  const skyTops = { Grassland: '#3f7fe8', Underground: '#000000', Castle: '#0d0d1f', Jungle: '#5aa84f', Numberland: '#6fa8f0' };
-  const skyBots = { Grassland: '#9fd4ff', Underground: '#14141f', Castle: '#33334f', Jungle: '#a9d98b', Numberland: '#e8f4ff' };
+  const skyTops = { Grassland: '#3f7fe8', Underground: '#000000', Castle: '#0d0d1f', Jungle: '#5aa84f', Numberland: '#6fa8f0', 'Crystal Cave': '#08081a' };
+  const skyBots = { Grassland: '#9fd4ff', Underground: '#14141f', Castle: '#33334f', Jungle: '#a9d98b', Numberland: '#e8f4ff', 'Crystal Cave': '#181834' };
   const grad = ctx.createLinearGradient(0, 0, 0, ch);
   grad.addColorStop(0, skyTops[style] || theme.sky);
   grad.addColorStop(1, skyBots[style] || theme.sky);
@@ -802,7 +828,7 @@ export function drawBackground(ctx, theme, camera, levelWidth, undergroundY = nu
     }
   }
 
-  if (style === 'Underground') {
+  if (style === 'Underground' || style === 'Crystal Cave') {
     // rock strata + distant stalactite silhouettes
     ctx.fillStyle = '#1a1a24';
     const stOff = camera.x * 0.2;

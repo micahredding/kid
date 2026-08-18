@@ -981,7 +981,7 @@ function addLine(content, cls = 'result') {
 
 // Log session start
 serverLog({ type: 'start', version: '1.0.0' });
-if (WHO) addLine(`Playing as ${WHO} 👋`, 'welcome');
+if (WHO) addLine(`Hello, ${WHO[0].toUpperCase()}${WHO.slice(1)}`, 'welcome');
 
 inputEl.addEventListener('keydown', (e) => {
   const isEnter =

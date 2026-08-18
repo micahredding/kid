@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>touch controls test</title>
+</head>
+<body>
+  <pre id="out"></pre>
+  <script type="module">
+    // Headless test: instantiates TouchControls directly (bypassing the
+    // device check), fires synthetic pointer events at the overlay, and
+    // asserts the key map the game reads. Run with:
+    //   chrome --headless=new --dump-dom http://localhost:8000/test_touch.html
+    import { Input } from './js/input.js';
+    import { TouchControls } from './js/touch.js';
+
+    const out = [];
+    const check = (name, cond) => out.push(`${cond ? 'PASS' : 'FAIL'} ${name}`);
+
+    const input = new Input();
+    const touch = new TouchControls(input, { gameState: 'title' }, 6);
+
+    const pe = (el, type, id, x, y) => el.dispatchEvent(new PointerEvent(type, {
+      pointerId: id, clientX: x, clientY: y, bubbles: true,
+    }));
+    const mid = (el) => {
+      const r = el.getBoundingClientRect();
+      return [r.left + r.width / 2, r.top + r.height / 2];
+    };
+
+    // --- d-pad: press left half, slide to right half, release
+    const pad = document.getElementById('t-dpad');
+    const [leftHalf, rightHalf] = pad.children;
+    pe(pad, 'pointerdown', 1, ...mid(leftHalf));
+    check('dpad left press', input.left && !input.right);
+    pe(pad, 'pointermove', 1, ...mid(rightHalf));
+    check('dpad slide to right', !input.left && input.right);
+    pe(pad, 'pointerup', 1, ...mid(rightHalf));
+    check('dpad release', !input.left && !input.right);
+
+    // --- two fingers on the pad at once
+    pe(pad, 'pointerdown', 1, ...mid(leftHalf));
+    pe(pad, 'pointerdown', 2, ...mid(rightHalf));
+    check('dpad two fingers', input.left && input.right);
+    pe(pad, 'pointerup', 1, ...mid(leftHalf));
+    check('dpad lift one finger', !input.left && input.right);
+    pe(pad, 'pointerup', 2, ...mid(rightHalf));
+
+    // --- jump zone: multi-touch, key held until ALL fingers lift
+    const zone = document.getElementById('t-jump');
+    pe(zone, 'pointerdown', 3, ...mid(zone));
+    check('jump press', input.jump);
+    input.update();
+    check('jump wasPressed after frame', input.jumpPressed);
+    pe(zone, 'pointerdown', 4, ...mid(zone));
+    pe(zone, 'pointerup', 3, ...mid(zone));
+    check('jump held while second finger down', input.jump);
+    pe(zone, 'pointerup', 4, ...mid(zone));
+    check('jump released', !input.jump);
+
+    // --- sprint toggle
+    const sprint = document.getElementById('t-sprint');
+    pe(sprint, 'pointerdown', 5, ...mid(sprint));
+    check('sprint toggled on', input.sprint);
+    pe(sprint, 'pointerup', 5, ...mid(sprint));
+    check('sprint stays on after lift', input.sprint);
+    pe(sprint, 'pointerdown', 6, ...mid(sprint));
+    check('sprint toggled off', !input.sprint);
+    pe(sprint, 'pointerup', 6, ...mid(sprint));
+
+    // --- grab (action) button maps to the 's' key
+    input.update(); // clear prior frame state
+    const grab = document.querySelector('.t-btn[data-key="s"]');
+    pe(grab, 'pointerdown', 7, ...mid(grab));
+    input.update();
+    check('grab actionPressed', input.actionPressed);
+    pe(grab, 'pointerup', 7, ...mid(grab));
+
+    // --- transform + switch buttons
+    const transform = document.querySelector('.t-btn[data-key="c"]');
+    pe(transform, 'pointerdown', 8, ...mid(transform));
+    input.update();
+    check('transformPressed', input.transformPressed);
+    pe(transform, 'pointerup', 8, ...mid(transform));
+    const sw = document.querySelector('.t-btn[data-key="q"]');
+    pe(sw, 'pointerdown', 9, ...mid(sw));
+    check('switch sets q', input.isDown('q'));
+    pe(sw, 'pointerup', 9, ...mid(sw));
+
+    // --- level chips: 6 chips, visible on title, chip 3 sets key '3'
+    const levels = document.getElementById('t-levels');
+    check('six level chips', levels.children.length === 6);
+    await new Promise(r => setTimeout(r, 350)); // let the state poller run
+    check('chips visible on title', levels.classList.contains('visible'));
+    const chip3 = levels.children[2];
+    pe(chip3, 'pointerdown', 10, ...mid(chip3));
+    input.update();
+    check('chip 3 wasPressed', input.wasPressed('3'));
+    pe(chip3, 'pointerup', 10, ...mid(chip3));
+
+    // --- chips hide once playing
+    touch.engine.gameState = 'playing';
+    await new Promise(r => setTimeout(r, 350));
+    check('chips hidden while playing', !levels.classList.contains('visible'));
+
+    document.getElementById('out').textContent =
+      out.join('\n') + `\nDONE ${out.filter(l => l.startsWith('FAIL')).length} failures`;
+  </script>
+</body>
+</html>

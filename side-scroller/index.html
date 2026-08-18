@@ -2,10 +2,14 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#111111">
   <title>Side-Scroller Engine</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
     body {
       background: #111;
       display: flex;
@@ -13,6 +17,7 @@
       align-items: center;
       min-height: 100vh;
       font-family: monospace;
+      touch-action: none;
     }
     canvas {
       border: 2px solid #333;
@@ -27,9 +32,14 @@
   <canvas id="game"></canvas>
   <script type="module">
     import { Engine } from './js/engine.js';
+    import { LEVELS } from './js/level.js';
+    import { TouchControls, isTouchDevice } from './js/touch.js';
     const canvas = document.getElementById('game');
     const engine = new Engine(canvas);
     window._engine = engine;
+    if (isTouchDevice()) {
+      window._touch = new TouchControls(engine.input, engine, LEVELS.length);
+    }
   </script>
 </body>
 </html>

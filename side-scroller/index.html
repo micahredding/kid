@@ -9,15 +9,22 @@
   <title>Side-Scroller Engine</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
+    html, body { height: 100%; overflow: hidden; overscroll-behavior: none; touch-action: none; }
     body {
+      /* fixed pins the page so iOS Safari can never pan it and strand the
+         fixed-position touch controls off-screen */
+      position: fixed;
+      inset: 0;
+      width: 100%;
       background: #111;
       display: flex;
       justify-content: center;
       align-items: center;
       min-height: 100vh;
       font-family: monospace;
-      touch-action: none;
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
     }
     canvas {
       border: 2px solid #333;

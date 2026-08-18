@@ -158,6 +158,20 @@ export class TouchControls {
     // Kill rubber-band scroll / pinch zoom while playing
     this._blockScroll = (e) => e.preventDefault();
     document.addEventListener('touchmove', this._blockScroll, { passive: false });
+    // iOS Safari fires proprietary gesture events for pinch — touchmove
+    // preventDefault alone doesn't always stop it, and dblclick covers
+    // double-tap zoom. Either one pans/zooms the visual viewport, which
+    // strands the fixed-position controls off-screen.
+    for (const type of ['gesturestart', 'gesturechange', 'gestureend', 'dblclick']) {
+      document.addEventListener(type, this._blockScroll, { passive: false });
+    }
+    // Belt and braces: if the visual viewport drifts anyway, snap it back.
+    this._snapBack = () => {
+      window.scrollTo(0, 0);
+      document.documentElement.scrollTop = 0;
+    };
+    window.visualViewport?.addEventListener('scroll', this._snapBack);
+    window.addEventListener('scroll', this._snapBack);
 
     // Level chips only make sense on the title screen
     this._stateTimer = setInterval(() => {
@@ -259,6 +273,11 @@ export class TouchControls {
   destroy() {
     clearInterval(this._stateTimer);
     document.removeEventListener('touchmove', this._blockScroll);
+    for (const type of ['gesturestart', 'gesturechange', 'gestureend', 'dblclick']) {
+      document.removeEventListener(type, this._blockScroll);
+    }
+    window.visualViewport?.removeEventListener('scroll', this._snapBack);
+    window.removeEventListener('scroll', this._snapBack);
     this.root.remove();
   }
 }

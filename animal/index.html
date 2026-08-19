@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>ANIMAL</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="ANIMAL">
+  <meta name="theme-color" content="#04120a">
+  <style>
+    :root {
+      --phosphor: #57ff9d;
+      --dim: #2f8f5b;
+      --warn: #ffcc55;
+      --bg: #04120a;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0; height: 100%; overflow: hidden;
+      background: var(--bg); color: var(--phosphor);
+      font-family: "SF Mono", Menlo, Consolas, monospace;
+      -webkit-text-size-adjust: 100%;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+    body { position: fixed; inset: 0; }
+    /* No accidental text selection when a kid holds a finger down. */
+    #bar, #controls, #say, #note { -webkit-user-select: none; user-select: none; }
+
+    #crt {
+      position: relative; height: 100%;
+      max-width: 980px; margin: 0 auto;
+      display: flex; flex-direction: column;
+      padding: 0 max(14px, env(safe-area-inset-left)) max(14px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-right));
+      text-shadow: 0 0 8px rgba(87, 255, 157, 0.45);
+    }
+    /* Scanlines + vignette over the whole screen, never clickable. */
+    body::after {
+      content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 9;
+      background:
+        repeating-linear-gradient(180deg, rgba(0,0,0,0) 0 2px, rgba(0,0,0,0.22) 2px 4px),
+        radial-gradient(ellipse at center, rgba(0,0,0,0) 55%, rgba(0,0,0,0.55) 100%);
+    }
+
+    #bar {
+      display: flex; align-items: baseline; gap: 12px;
+      padding: max(10px, env(safe-area-inset-top)) 2px 10px;
+      border-bottom: 1px solid var(--dim);
+      font-size: clamp(11px, 2.4vw, 14px); letter-spacing: 0.16em;
+    }
+    #title { font-weight: 700; }
+    #size { color: var(--dim); }
+    #sync { margin-left: auto; color: var(--dim); font-size: 0.9em; letter-spacing: 0.08em; }
+    #sync.warn { color: var(--warn); }
+
+    #stage {
+      flex: 1; min-height: 0; overflow-y: auto;
+      display: flex; flex-direction: column; justify-content: center;
+      gap: 18px; padding: 20px 4px;
+    }
+    #say {
+      font-size: clamp(22px, 5.2vw, 40px); line-height: 1.25;
+      letter-spacing: 0.02em; text-wrap: balance;
+    }
+    #note { color: var(--dim); font-size: clamp(13px, 2.6vw, 17px); line-height: 1.5; }
+
+    #controls { padding-top: 8px; }
+    #yesno { display: flex; gap: 14px; }
+    button {
+      font: inherit; color: var(--phosphor); background: transparent;
+      border: 2px solid var(--dim); border-radius: 4px;
+      padding: 18px 10px; letter-spacing: 0.18em; font-size: clamp(16px, 3.6vw, 22px);
+      cursor: pointer; touch-action: manipulation;
+      text-shadow: inherit;
+    }
+    button:active { background: rgba(87, 255, 157, 0.16); border-color: var(--phosphor); }
+    #yesno button { flex: 1; min-height: 84px; }
+    #single button, #typing button { width: 100%; min-height: 66px; }
+
+    #typing { display: flex; gap: 12px; align-items: stretch; }
+    #answer {
+      flex: 1; min-width: 0; font: inherit; font-size: clamp(17px, 3.6vw, 22px);
+      color: var(--phosphor); background: rgba(87, 255, 157, 0.06);
+      border: 2px solid var(--dim); border-radius: 4px; padding: 14px;
+    }
+    #answer:focus { outline: none; border-color: var(--phosphor); }
+    #answer::placeholder { color: var(--dim); }
+    #typing button { width: auto; min-width: 96px; }
+
+    #oops {
+      margin-top: 12px; width: 100%; border-color: transparent; color: var(--dim);
+      font-size: clamp(12px, 2.4vw, 15px); min-height: 0; padding: 10px;
+      letter-spacing: 0.1em;
+    }
+    #oops:active { background: transparent; color: var(--phosphor); }
+    [hidden] { display: none !important; }
+
+    /* Landscape phones have almost no vertical room — tighten everything. */
+    @media (max-height: 460px) {
+      #say { font-size: clamp(18px, 4vw, 26px); }
+      #stage { gap: 10px; padding: 10px 4px; }
+      #yesno button { min-height: 62px; padding: 12px 8px; }
+      #single button, #typing button { min-height: 54px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="crt">
+    <header id="bar">
+      <span id="title">ANIMAL</span>
+      <span id="size"></span>
+      <span id="sync"></span>
+    </header>
+
+    <main id="stage">
+      <div id="say">Waking up…</div>
+      <div id="note"></div>
+    </main>
+
+    <footer id="controls">
+      <div id="yesno" hidden>
+        <button id="btn-no" type="button">NO</button>
+        <button id="btn-yes" type="button">YES</button>
+      </div>
+      <form id="typing" hidden autocomplete="off">
+        <input id="answer" type="text" autocomplete="off" autocorrect="off"
+               autocapitalize="none" spellcheck="false" enterkeyhint="go">
+        <button id="btn-ok" type="submit">OK</button>
+      </form>
+      <div id="single" hidden>
+        <button id="btn-go" type="button">CONTINUE</button>
+      </div>
+      <button id="oops" type="button" hidden>oops — forget that</button>
+    </footer>
+  </div>
+
+  <script type="module">
+    import { Store } from './js/store.js';
+    import { Animal } from './js/game.js';
+
+    const els = {
+      say:    document.getElementById('say'),
+      note:   document.getElementById('note'),
+      size:   document.getElementById('size'),
+      sync:   document.getElementById('sync'),
+      yesno:  document.getElementById('yesno'),
+      yes:    document.getElementById('btn-yes'),
+      no:     document.getElementById('btn-no'),
+      form:   document.getElementById('typing'),
+      input:  document.getElementById('answer'),
+      single: document.getElementById('single'),
+      go:     document.getElementById('btn-go'),
+      oops:   document.getElementById('oops'),
+    };
+
+    const who = new URLSearchParams(location.search).get('who') || '';
+    const store = new Store(who.replace(/[^a-z0-9_-]/gi, '').slice(0, 20));
+
+    // Start from whatever is already on this device, then reconcile with mini4.
+    const game = new Animal(store, els);
+    window._animal = game;
+    store.load().then(() => game.refresh());
+    window.addEventListener('online', () => store.flush());
+  </script>
+</body>
+</html>

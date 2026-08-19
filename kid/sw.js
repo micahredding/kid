@@ -12,7 +12,12 @@
 // =============================================================================
 
 const CACHE = 'kid-games-static';
-const PASSTHROUGH = new Set(['/log', '/save-drawing', '/sw-manifest.json', '/sw.js']);
+// ANIMAL's brain must never be served stale from cache — the page keeps its own
+// localStorage copy and queues lessons, so it handles being offline itself.
+const PASSTHROUGH = new Set([
+  '/log', '/save-drawing', '/sw-manifest.json', '/sw.js',
+  '/animal-brain', '/animal-teach',
+]);
 
 async function precache() {
   const cache = await caches.open(CACHE);

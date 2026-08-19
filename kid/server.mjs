@@ -12,8 +12,10 @@ const PORT = 3131;
 const sessionTimestamp = new Date().toISOString().replace(/[:.]/g, '-');
 const logsDir   = join(__dirname, 'logs');
 const printsDir = join(__dirname, 'prints');
+const brainDir  = join(__dirname, 'brain');
 mkdirSync(logsDir,   { recursive: true });
 mkdirSync(printsDir, { recursive: true });
+mkdirSync(brainDir,  { recursive: true });
 
 const logFile = join(logsDir, `session-${sessionTimestamp}.jsonl`);
 
@@ -71,7 +73,52 @@ const GAMES = {
   'side-scroller': join(__dirname, '..', 'side-scroller'),
   'grinch':       join(__dirname, '..', 'grinch'),
   'decimals':     join(__dirname, '..', 'decimals'),
+  'animal':       join(__dirname, '..', 'animal'),
 };
+
+// ---- ANIMAL's brain --------------------------------------------------------
+// The permanent record is this append-only list of lessons, one JSON object per
+// line. The question tree itself is derived by replaying the log over the seed
+// in animal/js/brain.js, so it is always rebuildable and never authoritative.
+// A retired lesson gets a {type:'forget'} line rather than having its line cut.
+const brainFile = join(brainDir, 'animal-lessons.jsonl');
+const MAX_LESSONS = 20000;
+
+function readLessons() {
+  try {
+    return readFileSync(brainFile, 'utf8').split('\n').filter(Boolean).map((line) => {
+      try { return JSON.parse(line); } catch { return null; }
+    }).filter(Boolean);
+  } catch { return []; }
+}
+
+function cleanText(value, max) {
+  return typeof value === 'string'
+    ? value.replace(/[\u0000-\u001f]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max)
+    : '';
+}
+
+// Reject anything that would not replay into a sane tree; keep the rest exact.
+function sanitizeLesson(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  const id = cleanText(raw.id, 40) || `${Date.now().toString(36)}-srv`;
+  if (raw.type === 'forget') {
+    const target = cleanText(raw.target, 40);
+    return target ? { id, type: 'forget', target } : null;
+  }
+  const answer = cleanText(raw.answer, 30).toLowerCase();
+  const question = cleanText(raw.question, 120);
+  if (!answer || question.length < 4) return null;
+  const path = Array.isArray(raw.path)
+    ? raw.path.filter((p) => p === 'y' || p === 'n').slice(0, 200)
+    : [];
+  return {
+    id, type: 'teach', answer, question,
+    newIsYes: !!raw.newIsYes,
+    wrongGuess: cleanText(raw.wrongGuess, 30).toLowerCase(),
+    path,
+  };
+}
 
 const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -185,6 +232,49 @@ const server = createServer(async (req, res) => {
     } catch {
       res.writeHead(404); res.end('Not found');
     }
+    return;
+  }
+
+  // ANIMAL: hand over the whole lesson log. The client replays it over its own
+  // seed, so this stays a dumb store — no tree logic on the server.
+  if (req.method === 'GET' && req.url.split('?')[0] === '/animal-brain') {
+    const lessons = readLessons();
+    res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+    res.end(JSON.stringify({ lessons, count: lessons.length }));
+    return;
+  }
+
+  // ANIMAL: append one lesson. Idempotent by id, because a client that never
+  // saw our response will retry the same lesson when it comes back online.
+  if (req.method === 'POST' && req.url.split('?')[0] === '/animal-teach') {
+    const body = await readBody(req);
+    let parsed = null, lesson = null;
+    try { parsed = JSON.parse(body); lesson = sanitizeLesson(parsed); } catch { /* malformed */ }
+    if (!lesson) { res.writeHead(400); res.end('Bad lesson'); return; }
+
+    const existing = readLessons();
+    if (existing.length >= MAX_LESSONS) { res.writeHead(507); res.end('Brain full'); return; }
+    if (existing.some((l) => l.id === lesson.id)) {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: true, id: lesson.id, duplicate: true }));
+      return;
+    }
+
+    lesson.who = cleanWho(parsed.who) || undefined;
+    // A lesson taught with no wifi keeps the moment it actually happened.
+    const taughtAt = cleanText(parsed.ts, 40);
+    if (taughtAt) lesson.taughtAt = taughtAt;
+    lesson.ts = new Date().toISOString();
+    lesson.device = shortDevice(req.headers['user-agent']);
+    lesson.ip = clientIp(req);
+    try {
+      appendFileSync(brainFile, JSON.stringify(lesson) + '\n');
+    } catch {
+      res.writeHead(500); res.end('Could not save'); return;
+    }
+    log({ type: 'animal-lesson', lesson: lesson.type, answer: lesson.answer, who: lesson.who, ip: lesson.ip, device: lesson.device });
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ ok: true, id: lesson.id, count: existing.length + 1 }));
     return;
   }
 

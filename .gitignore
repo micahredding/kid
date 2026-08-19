@@ -2,4 +2,5 @@ node_modules/
 .DS_Store
 kid/logs/
 kid/prints/
+kid/brain/
 .wrangler/

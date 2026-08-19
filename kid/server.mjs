@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { createServer } from 'node:http';
-import { readFileSync, appendFileSync, writeFileSync, mkdirSync, existsSync, unlinkSync } from 'node:fs';
+import { readFileSync, appendFileSync, writeFileSync, mkdirSync, existsSync, unlinkSync, readdirSync, statSync } from 'node:fs';
 import { join, dirname, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -92,6 +92,43 @@ const MIME_TYPES = {
   '.wasm': 'application/wasm',
 };
 
+// ---- Offline support: manifest of every cacheable file, for the service worker ----
+// The worker precaches this list, so the games keep working with no network.
+const SKIP_DIRS = new Set(['node_modules', 'tools', 'logs', 'prints']);
+const SKIP_FILES = /^(test_|debug_|playtest|\.)/i;
+
+function walkManifest(dir, urlBase, files) {
+  let entries = [];
+  try { entries = readdirSync(dir, { withFileTypes: true }); } catch { return; }
+  for (const e of entries) {
+    if (e.isDirectory()) {
+      if (!SKIP_DIRS.has(e.name) && !e.name.startsWith('.')) {
+        walkManifest(join(dir, e.name), `${urlBase}/${e.name}`, files);
+      }
+      continue;
+    }
+    if (SKIP_FILES.test(e.name)) continue;
+    const ext = extname(e.name).toLowerCase();
+    if (!(ext in MIME_TYPES)) continue;
+    const st = statSync(join(dir, e.name));
+    const stamp = `${Math.floor(st.mtimeMs)}-${st.size}`;
+    // Pages are requested as directory URLs, so key index.html that way
+    if (e.name === 'index.html') files[`${urlBase}/`] = stamp;
+    else files[`${urlBase}/${e.name}`] = stamp;
+  }
+}
+
+function buildManifest() {
+  const files = {};
+  const st = statSync(htmlPath);
+  files['/'] = `${Math.floor(st.mtimeMs)}-${st.size}`;
+  for (const [name, dir] of Object.entries(GAMES)) walkManifest(dir, `/${name}`, files);
+  const json = JSON.stringify(files);
+  let hash = 5381;
+  for (let i = 0; i < json.length; i++) hash = ((hash * 33) ^ json.charCodeAt(i)) >>> 0;
+  return { version: hash.toString(36), files };
+}
+
 function serveStatic(res, dir, urlPath) {
   // Strip leading slash and the game prefix segment
   let filePath = urlPath === '' || urlPath === '/' ? 'index.html' : urlPath.replace(/^\//, '');
@@ -130,6 +167,25 @@ const server = createServer(async (req, res) => {
         return;
       }
     }
+  }
+
+  // Service worker + its precache manifest. The worker source gets the current
+  // manifest version injected, so any file change rolls the worker and
+  // triggers a precache diff on the next online visit.
+  if (req.method === 'GET' && req.url.split('?')[0] === '/sw-manifest.json') {
+    res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
+    res.end(JSON.stringify(buildManifest()));
+    return;
+  }
+  if (req.method === 'GET' && req.url.split('?')[0] === '/sw.js') {
+    try {
+      const src = readFileSync(join(__dirname, 'sw.js'), 'utf8');
+      res.writeHead(200, { 'Content-Type': 'text/javascript', 'Cache-Control': 'no-cache' });
+      res.end(`const VERSION = '${buildManifest().version}';\n${src}`);
+    } catch {
+      res.writeHead(404); res.end('Not found');
+    }
+    return;
   }
 
   // Serve the HTML app (read per request so edits show up on refresh).

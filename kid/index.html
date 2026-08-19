@@ -346,13 +346,44 @@ const SERVER = window.location.origin;
 // Optional "who" tag from the URL, e.g. ?who=micah — added to every log entry.
 const WHO = (new URLSearchParams(window.location.search).get('who') || '').trim() || null;
 
+// Offline queue: log entries that can't reach the server wait in localStorage
+// and replay when the network comes back (or on the next visit).
+const LOG_QUEUE_KEY = 'kid-log-queue';
+
+function queueLog(entry) {
+  try {
+    const q = JSON.parse(localStorage.getItem(LOG_QUEUE_KEY) || '[]');
+    entry.queuedAt = entry.queuedAt || new Date().toISOString();
+    q.push(entry);
+    while (q.length > 300 || JSON.stringify(q).length > 2000000) q.shift();
+    localStorage.setItem(LOG_QUEUE_KEY, JSON.stringify(q));
+  } catch { /* storage full or disabled — drop */ }
+}
+
+function flushLogQueue() {
+  let q;
+  try { q = JSON.parse(localStorage.getItem(LOG_QUEUE_KEY) || '[]'); } catch { q = []; }
+  if (!q.length) return;
+  localStorage.removeItem(LOG_QUEUE_KEY); // failures re-queue themselves
+  for (const entry of q) serverLog(entry);
+}
+
 function serverLog(entry) {
   if (WHO) entry.who = WHO;
   fetch(`${SERVER}/log`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(entry),
-  }).catch(() => { /* server not running — silently skip */ });
+  }).then((res) => { if (!res.ok && res.status !== 501) queueLog(entry); })
+    .catch(() => queueLog(entry));
+}
+
+window.addEventListener('online', flushLogQueue);
+
+// Offline support: the worker precaches the hub and all games (~5MB), so
+// everything keeps working with no wifi once it has loaded online once.
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => { /* http or old browser */ });
 }
 
 async function serverSaveDrawing(dataUrl, extra = {}) {
@@ -979,8 +1010,9 @@ function addLine(content, cls = 'result') {
   outputEl.scrollTop = outputEl.scrollHeight;
 }
 
-// Log session start
+// Log session start; replay anything queued while offline
 serverLog({ type: 'start', version: '1.0.0' });
+flushLogQueue();
 if (WHO) addLine(`Hello, ${WHO[0].toUpperCase()}${WHO.slice(1)}`, 'welcome');
 
 inputEl.addEventListener('keydown', (e) => {

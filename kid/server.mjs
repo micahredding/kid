@@ -74,6 +74,7 @@ const GAMES = {
   'grinch':       join(__dirname, '..', 'grinch'),
   'decimals':     join(__dirname, '..', 'decimals'),
   'animal':       join(__dirname, '..', 'animal'),
+  'castle':       join(__dirname, '..', 'castle'),
 };
 
 // ---- ANIMAL's brain --------------------------------------------------------
@@ -185,7 +186,10 @@ function serveStatic(res, dir, urlPath) {
   if (!existsSync(fullPath)) { res.writeHead(404); res.end('Not found'); return; }
   const ext = extname(fullPath).toLowerCase();
   const mime = MIME_TYPES[ext] || 'application/octet-stream';
-  res.writeHead(200, { 'Content-Type': mime });
+  // Revalidate every time. Without this the browser heuristically caches game
+  // JS and a device can keep running old code after a deploy; the service
+  // worker is what provides offline, so nothing is lost by not caching here.
+  res.writeHead(200, { 'Content-Type': mime, 'Cache-Control': 'no-cache' });
   res.end(readFileSync(fullPath));
 }
 

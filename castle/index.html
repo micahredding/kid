@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>THE CASTLE</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Castle">
+  <meta name="theme-color" content="#000000">
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0; height: 100%; overflow: hidden; background: #000;
+      -webkit-text-size-adjust: 100%;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-user-select: none; user-select: none;
+      touch-action: none;
+      font-family: "SF Mono", Menlo, Consolas, monospace;
+    }
+    body { position: fixed; inset: 0; }
+    #wrap {
+      position: fixed; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      /* A dark surround, so the letterboxing reads as a monitor bezel. */
+      background: radial-gradient(ellipse at center, #14161c 0%, #000 100%);
+    }
+    #game {
+      display: block;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      box-shadow: 0 0 0 2px #23262e, 0 0 40px rgba(120, 160, 255, 0.12);
+    }
+    /* Parent-facing only: dim, tiny, and needs a second tap to actually fire. */
+    #reset {
+      position: fixed; top: max(6px, env(safe-area-inset-top)); right: max(6px, env(safe-area-inset-right));
+      background: rgba(255,255,255,0.06); color: #6d7484; border: 0; border-radius: 4px;
+      font: inherit; font-size: 11px; letter-spacing: 0.1em; padding: 6px 9px;
+      z-index: 5; cursor: pointer;
+    }
+    #reset.armed { color: #ffc21e; background: rgba(255,194,30,0.14); }
+  </style>
+</head>
+<body>
+  <div id="wrap"><canvas id="game" width="320" height="200"></canvas></div>
+  <button id="reset" type="button">START OVER</button>
+
+  <script type="module">
+    import { Castle, W, H } from './js/engine.js';
+
+    const canvas = document.getElementById('game');
+    const who = (new URLSearchParams(location.search).get('who') || '').replace(/[^a-z0-9_-]/gi, '').slice(0, 20);
+
+    // Fire-and-forget progress logging, same shape the other games use. The game
+    // itself never depends on it, so being offline changes nothing.
+    const SERVER = location.origin;
+    function log(entry) {
+      if (who) entry.who = who;
+      try { fetch(`${SERVER}/log`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(entry), keepalive: true,
+      }).catch(() => {}); } catch { /* nothing to do */ }
+    }
+
+    const castle = new Castle(canvas, { log });
+    window._castle = castle;
+
+    // Fractional scaling is fine here: on a 2x screen each logical pixel still
+    // lands on 6-8 device pixels, so the unevenness is not visible.
+    function fit() {
+      const vw = window.visualViewport?.width || window.innerWidth;
+      const vh = window.visualViewport?.height || window.innerHeight;
+      const s = Math.min(vw / W, vh / H);
+      canvas.style.width = `${Math.floor(W * s)}px`;
+      canvas.style.height = `${Math.floor(H * s)}px`;
+    }
+    fit();
+    addEventListener('resize', fit);
+    addEventListener('orientationchange', fit);
+    window.visualViewport?.addEventListener('resize', fit);
+
+    canvas.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      castle.tap(e.clientX, e.clientY);
+    });
+    // Keep iOS from treating quick repeat taps as a zoom gesture.
+    for (const type of ['gesturestart', 'gesturechange', 'dblclick', 'contextmenu']) {
+      document.addEventListener(type, (e) => e.preventDefault(), { passive: false });
+    }
+
+    const resetBtn = document.getElementById('reset');
+    let armed = 0;
+    resetBtn.addEventListener('click', () => {
+      if (Date.now() - armed < 3000) {
+        localStorage.removeItem('castle-state');
+        location.reload();
+        return;
+      }
+      armed = Date.now();
+      resetBtn.textContent = 'TAP AGAIN';
+      resetBtn.classList.add('armed');
+      setTimeout(() => {
+        resetBtn.textContent = 'START OVER';
+        resetBtn.classList.remove('armed');
+      }, 3000);
+    });
+
+    let last = performance.now();
+    function frame(now) {
+      const dt = Math.min(64, now - last); // a backgrounded tab must not teleport him
+      last = now;
+      castle.update(dt);
+      castle.draw();
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  </script>
+</body>
+</html>

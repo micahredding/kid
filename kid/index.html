@@ -352,6 +352,12 @@ const GAMES = {
   'castle':          '/castle/',
 };
 
+// Pass the who tag through to the game. Without it a launched game cannot
+// attribute its own log entries, and cannot greet the player by name.
+function gameUrl(key) {
+  return WHO ? `${GAMES[key]}?who=${encodeURIComponent(WHO)}` : GAMES[key];
+}
+
 function tryLaunchGame(trimmed) {
   const key = trimmed.toLowerCase();
   if (key === 'games') {
@@ -370,11 +376,11 @@ function tryLaunchGame(trimmed) {
   }
   if (!(key in GAMES)) return false;
   if (IS_STANDALONE) {
-    openGameOverlay(key, GAMES[key]);
+    openGameOverlay(key, gameUrl(key));
     return true;
   }
-  const win = window.open(GAMES[key], '_blank');
-  if (!win) openGameOverlay(key, GAMES[key]); // pop-up blocked — stay in-page
+  const win = window.open(gameUrl(key), '_blank');
+  if (!win) openGameOverlay(key, gameUrl(key)); // pop-up blocked — stay in-page
   return true;
 }
 

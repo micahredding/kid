@@ -62,7 +62,7 @@
       }).catch(() => {}); } catch { /* nothing to do */ }
     }
 
-    const castle = new Castle(canvas, { log });
+    const castle = new Castle(canvas, { log, who });
     window._castle = castle;
 
     // Fractional scaling is fine here: on a 2x screen each logical pixel still

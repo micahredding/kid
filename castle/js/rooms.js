@@ -1,26 +1,39 @@
 // =============================================================================
-// ROOMS — the castle hub and four worlds, plus the puzzle each one holds.
+// ROOMS — the castle hall and four worlds, plus the puzzles each one holds.
 //
-// Every world works the same way: carry the right thing to the dark lamp and it
-// lights, which lights that world's lamp back in the hall. Four lamps lit and
-// the castle wakes up. No door is ever locked, so a small player cannot get
-// stuck — the only thing gating progress is the lamp itself, and getting a lamp
-// wrong costs nothing but a shake.
+// Every world holds TWO braziers, each asking for one thing. Light both and that
+// world is done, which lights its lamp over the doorway back in the hall. All
+// four worlds done and the hall becomes a banquet with the player's name on the
+// banner. Dishes arrive on the table one world at a time, so the reward is
+// visible long before the end.
+//
+// One verb throughout: pick a thing up, carry it to a brazier. Word braziers
+// want a matching word, number braziers want a matching value.
 //
 // The reading ramp lives in how a puzzle is DISPLAYED, not in new rules:
-//   snow    plaque shows picture + word, things show picture + word   (match the picture)
-//   garden  plaque shows word only,      things show picture + word   (match the word)
-//   ark     plaque shows word only,      things are stencilled crates (word alone)
-//   rail    plaque shows a sum,          things are numbered blocks   (arithmetic)
+//   snow    signs show picture + word, things show picture + word  (match the picture)
+//   garden  signs show the word only,  things show picture + word  (match the word)
+//   ark     signs show the word only,  things are stencilled crates (word alone)
+//   rail    one sign is a sum,         things are numbered blocks   (arithmetic)
+//
+// Props are scenery you can tap to hear its name. They teach nothing new and
+// gate nothing — they are there so the room rewards poking at it, and so words
+// he is not being tested on still go past his eyes and ears.
 // =============================================================================
 
-import { PALETTE as P } from './pixels.js';
+// Shared stage layout. Braziers stand at the back with their signs above them;
+// the things you carry sit in a front row with labels underneath, clear of the
+// carrying strip at y=174. Nothing overlaps horizontally by construction.
+const FLOOR = { x: 12, y: 126, w: 296, h: 46 };
+const LAMP_X = [78, 230], LAMP_Y = 138;
+const SLOT_X = [40, 116, 192, 268], SLOT_Y = 158;
+const SPAWN = { x: 160, y: 168 };
+const BACK = { to: 'hall', x: 16, y: 122, w: 30, h: 44, name: 'BACK' };
 
 // ---- scenery helpers -------------------------------------------------------
 
 function stoneWall(p, x, y, w, h, dark = false) {
   p.dither(x, y, w, h, dark ? '#4a4f5c' : '#6d7484', dark ? '#3d4250' : '#5c6373', 2);
-  // Mortar courses, offset every other row like real blockwork.
   for (let row = 0, j = y; j < y + h; j += 12, row++) {
     p.rect(x, j, w, 1, dark ? '#31353f' : '#474d5a');
     for (let i = x + (row % 2 ? 0 : 16); i < x + w; i += 32) {
@@ -50,11 +63,6 @@ function firTree(p, x, base, h, color = '#235f27') {
   p.rect(x - 1, y - 4, 2, 5, color);
 }
 
-function star(p, x, y, bright) {
-  p.rect(x, y, 1, 1, bright ? '#ffffff' : '#9fb2c9');
-}
-
-// A warm pool of light on the ground under a lamp.
 function glow(p, x, y, r, color) {
   for (let i = r; i > 0; i -= 2) {
     p.ctx.globalAlpha = 0.06;
@@ -76,12 +84,11 @@ function lampPost(p, x, base, t) {
   p.rect(x - 2, base - 55, 5, 6, '#fff8dc');
 }
 
-// ---- lamp (the puzzle target) ---------------------------------------------
+// ---- brazier ---------------------------------------------------------------
 
 export function drawLamp(p, lamp, lit, t) {
   const { x, y } = lamp;
   if (lit) glow(p, x, y - 20, 40, '#ffcf6b');
-  // Three legs and a stone bowl, so it reads as something you put things in.
   p.rect(x - 9, y - 2, 19, 3, '#2a2f38');
   p.rect(x - 7, y - 14, 3, 13, '#353b46');
   p.rect(x + 5, y - 14, 3, 13, '#353b46');
@@ -99,6 +106,55 @@ export function drawLamp(p, lamp, lit, t) {
   }
 }
 
+// ---- the hall's banquet ----------------------------------------------------
+
+const DISHES = { snow: 'cake', garden: 'apple', ark: 'pie', rail: 'fish' };
+const DISH_X = { snow: 84, garden: 128, ark: 172, rail: 216 };
+
+function nameBanner(p, name, t) {
+  const text = (name || 'WELCOME').toUpperCase().slice(0, 12);
+  const tw = p.textWidth(text, 2);
+  const w = Math.max(tw + 26, 70), x = 160 - w / 2;
+  p.rect(x - 5, 10, w + 10, 3, '#5c3a1e');
+  p.rect(x, 13, w, 30, '#8f1f16');
+  p.rect(x + 3, 16, w - 6, 24, '#a82a1e');
+  // A notched tail along the bottom edge.
+  for (let i = 0; i < w / 2; i++) {
+    const d = Math.abs(i - (w / 2 - 1) / 2) / ((w / 2) / 2);
+    p.rect(x + i * 2, 43, 2, Math.max(0, Math.round(7 * (1 - d))), '#8f1f16');
+  }
+  p.text(text, 160 - tw / 2, 21, { scale: 2, color: '#ffe9a8', shadow: '#5e130d' });
+  for (const cx of [x - 12, x + w + 9]) {
+    p.rect(cx - 1, 26, 3, 16, '#e8e0cf');
+    const f = Math.sin((t + cx * 40) / 150) * 1.2;
+    glow(p, cx, 24, 12, '#ffcf6b');
+    p.rect(cx - 1, 21 - f, 3, 5, '#ffc21e');
+  }
+}
+
+// Index just past the last row with any pixels in it, so a dish can be stood on
+// a surface rather than floated by its blank bottom rows.
+function solidBottom(rows) {
+  for (let i = rows.length - 1; i >= 0; i--) if (/[^.]/.test(rows[i])) return i + 1;
+  return rows.length;
+}
+
+// The table turns up with the first dish, so the reward is visible early.
+function feastTable(p, done, sprites) {
+  if (!done.length) return;
+  p.rect(52, 148, 216, 7, '#7a4f2a');
+  p.rect(52, 148, 216, 2, '#9c6a36');
+  p.rect(58, 155, 6, 13, '#5c3a1e');
+  p.rect(256, 155, 6, 13, '#5c3a1e');
+  p.rect(56, 155, 208, 4, '#e8e0cf');
+  p.rect(56, 158, 208, 2, '#cfc6b4');
+  for (const world of done) {
+    const rows = sprites[DISHES[world]];
+    if (!rows) continue;
+    p.sprite(rows, DISH_X[world] - rows[0].length, 149 - solidBottom(rows) * 2, { scale: 2 });
+  }
+}
+
 // ---- the rooms -------------------------------------------------------------
 
 const HALL_DOORS = [
@@ -108,42 +164,46 @@ const HALL_DOORS = [
   { to: 'rail',   x: 258, world: 'rail',   tint: '#7fd3ff', name: 'RAILWAY' },
 ];
 
-export function buildRooms(puzzle) {
+export const WORLDS = HALL_DOORS.map((d) => d.world);
+
+export function buildRooms(puzzle, who = '') {
   return {
     // ---------------------------------------------------------------- HALL --
     hall: {
       id: 'hall',
       name: 'THE CASTLE',
-      floor: { x: 20, y: 138, w: 280, h: 48 },
-      spawn: { x: 160, y: 168 },
+      who,
+      // Walkable only in front of the table, so he never stands inside it.
+      floor: { x: 16, y: 164, w: 288, h: 22 },
+      spawn: { x: 160, y: 178 },
       things: [],
+      lamps: [],
+      // Each doorway's name, readable and speakable, inside the arch.
+      props: HALL_DOORS.map((d) => ({ word: d.name, x: d.x, y: 100, plaque: true })),
       doors: HALL_DOORS.map((d) => ({
-        id: `door-${d.to}`, to: d.to, x: d.x, y: 130, w: 34, h: 52,
+        id: `door-${d.to}`, to: d.to, x: d.x, y: 168,
         tint: d.tint, name: d.name, world: d.world,
       })),
-      paint(p, t, state) {
-        const allLit = HALL_DOORS.every((d) => state.lit[d.world]);
-        p.clear(allLit ? '#2c3242' : '#171a21');
-        stoneWall(p, 0, 0, 320, 140, !allLit);
-        // Doorways, each showing a slice of the world beyond.
+      paint(p, t, ctx) {
+        const done = WORLDS.filter((w) => ctx.worldDone(w));
+        const allDone = done.length === WORLDS.length;
+        p.clear(allDone ? '#2c3242' : '#171a21');
+        stoneWall(p, 0, 0, 320, 140, !allDone);
         for (const d of this.doors) {
-          const lit = state.lit[d.world];
-          // Frame and opening, both carried up into a round arch.
+          const lit = ctx.worldDone(d.world);
           p.ctx.fillStyle = '#20242c';
           p.ctx.beginPath(); p.ctx.arc(d.x, 80, 21, Math.PI, Math.PI * 2); p.ctx.fill();
           p.rect(d.x - 21, 78, 43, 60, '#20242c');
           p.ctx.fillStyle = lit ? d.tint : '#0d0f14';
           p.ctx.beginPath(); p.ctx.arc(d.x, 80, 17, Math.PI, Math.PI * 2); p.ctx.fill();
           p.rect(d.x - 17, 80, 34, 58, lit ? d.tint : '#0d0f14');
-          // A soft floor-to-ceiling fade, so it reads as depth beyond the arch.
           if (lit) {
-            const grad = p.ctx.createLinearGradient(0, 78, 0, 138);
+            const grad = p.ctx.createLinearGradient(0, 62, 0, 138);
             grad.addColorStop(0, 'rgba(255,255,255,0.35)');
             grad.addColorStop(1, 'rgba(0,0,0,0.35)');
             p.ctx.fillStyle = grad;
             p.ctx.fillRect(d.x - 17, 62, 34, 76);
           }
-          // The lamp above each door: this world's progress.
           const lampY = 50;
           if (lit) {
             glow(p, d.x, lampY, 22, '#ffcf6b');
@@ -154,15 +214,24 @@ export function buildRooms(puzzle) {
             p.rect(d.x - 3, lampY - 4, 7, 6, '#2a2f38');
           }
           p.rect(d.x - 5, lampY + 1, 11, 3, '#20242c');
+          // How far into this world he has got: one pip per brazier.
+          const lamps = ctx.lampStates(d.world);
+          if (lamps.length && !lit) {
+            const pw = lamps.length * 6 - 2;
+            lamps.forEach((on, i) => {
+              p.rect(d.x - pw / 2 + i * 6, 112, 4, 4, on ? '#ffc21e' : '#3a4152');
+            });
+          }
         }
-        // Paint the floor edge to edge; `floor` is only where he may walk.
-        checkerFloor(p, { x: 0, y: this.floor.y, w: 320, h: 200 - this.floor.y },
-          allLit ? '#6a5140' : '#3a3f4a', allLit ? '#5c4634' : '#33373f');
-        if (allLit) {
-          // The castle awake: a rug, and the lion come to see it.
-          p.rect(112, 150, 96, 30, '#8f1f16');
-          p.rect(116, 154, 88, 22, '#a82a1e');
-          p.strokeRect(112, 150, 96, 30, '#5e130d');
+        checkerFloor(p, { x: 0, y: 138, w: 320, h: 62 },
+          allDone ? '#6a5140' : '#3a3f4a', allDone ? '#5c4634' : '#33373f');
+        feastTable(p, done, ctx.sprites);
+        if (allDone) {
+          nameBanner(p, this.who, t);
+          // The friends he met, come to the feast.
+          p.sprite(ctx.sprites.bear, 14, 149 - solidBottom(ctx.sprites.bear) * 2, { scale: 2 });
+          p.sprite(ctx.sprites.lion, 272, 149 - solidBottom(ctx.sprites.lion) * 2, { scale: 2 });
+          p.sprite(ctx.sprites.dove, 34, 58, { scale: 1 });
         }
       },
     },
@@ -171,116 +240,120 @@ export function buildRooms(puzzle) {
     // Narnia, evoked not copied: a lamp post in a snowy wood.
     snow: {
       id: 'snow', name: 'THE SNOWY WOOD', world: 'snow',
-      floor: { x: 12, y: 132, w: 296, h: 54 },
-      spawn: { x: 34, y: 162 },
-      back: { to: 'hall', x: 16, y: 128, w: 30, h: 48, name: 'BACK' },
-      lamp: { x: 250, y: 150 },
-      lock: { kind: 'word', word: 'BEAR', showPicture: true },
+      floor: FLOOR, spawn: SPAWN, back: BACK,
+      lamps: [
+        { x: LAMP_X[0], y: LAMP_Y, lock: { kind: 'word', word: 'BEAR', showPicture: true } },
+        { x: LAMP_X[1], y: LAMP_Y, lock: { kind: 'word', word: 'MOON', showPicture: true } },
+      ],
       things: [
-        { id: 'bear', sprite: 'bear', word: 'BEAR', x: 122, y: 156, scale: 2 },
-        { id: 'cake', sprite: 'cake', word: 'CAKE', x: 180, y: 150, scale: 2 },
-        { id: 'moon', sprite: 'moon', word: 'MOON', x: 90,  y: 148, scale: 2 },
+        { id: 'bear', sprite: 'bear', word: 'BEAR', x: SLOT_X[0], y: SLOT_Y },
+        { id: 'cake', sprite: 'cake', word: 'CAKE', x: SLOT_X[1], y: SLOT_Y },
+        { id: 'moon', sprite: 'moon', word: 'MOON', x: SLOT_X[2], y: SLOT_Y },
+        { id: 'fish', sprite: 'fish', word: 'FISH', x: SLOT_X[3], y: SLOT_Y },
+      ],
+      props: [
+        { word: 'STAR', x: 56,  y: 30,  w: 26, h: 22 },
+        { word: 'LAMP', x: 286, y: 84,  w: 24, h: 30 },
+        { word: 'TREE', x: 312, y: 106, w: 24, h: 32 },
       ],
       paint(p, t) {
-        // Night sky in bands, darkest at the top.
         const bands = ['#0b1026', '#121a38', '#1b2749', '#26365c', '#33456e'];
         bands.forEach((c, i) => p.rect(0, i * 14, 320, 15, c));
         p.rect(0, 70, 320, 22, '#3c5079');
         for (let i = 0; i < 46; i++) {
-          const sx = (i * 71) % 320, sy = (i * 37) % 66;
-          star(p, sx, sy, (i + Math.floor(t / 600)) % 4 === 0);
+          p.rect((i * 71) % 320, (i * 37) % 66, 1, 1,
+            (i + Math.floor(t / 600)) % 4 === 0 ? '#ffffff' : '#9fb2c9');
         }
-        // Treeline, then snow.
         for (let i = 0; i < 11; i++) firTree(p, 14 + i * 30, 96 + (i % 3), 26 + (i % 4) * 5, '#16321c');
         p.rect(0, 92, 320, 12, '#dfe9f5');
         p.rect(0, 100, 320, 10, '#e6eef8');
         p.rect(0, 108, 320, 92, '#eef4fb');
-        p.dither(0, 130, 320, 70, '#eef4fb', '#dbe6f3', 4);
-        lampPost(p, 296, 138, t);
-        // Falling snow.
+        firTree(p, 312, 138, 42, '#1c3d22');
+        lampPost(p, 286, 128, t);
+        // Falling snow: independent columns, so it does not streak diagonally.
         for (let i = 0; i < 40; i++) {
-          const sx = (i * 97 + Math.floor(t / 90) * (1 + i % 3)) % 320;
-          const sy = (i * 53 + Math.floor(t / 40)) % 200;
-          p.rect(sx, sy, 1, 1, '#ffffff');
+          p.rect((i * 97 + (i % 7) * 13) % 320,
+            (i * 53 + Math.floor(t / (28 + (i % 5) * 9))) % 200, 1, 1, '#ffffff');
         }
       },
     },
 
     // -------------------------------------------------------------- GARDEN --
-    // The garden: an apple tree, and a serpent nowhere in sight.
     garden: {
       id: 'garden', name: 'THE GARDEN', world: 'garden',
-      floor: { x: 12, y: 128, w: 296, h: 58 },
-      spawn: { x: 32, y: 160 },
-      back: { to: 'hall', x: 16, y: 124, w: 30, h: 48, name: 'BACK' },
-      lamp: { x: 258, y: 152 },
-      lock: { kind: 'word', word: 'APPLE', showPicture: false },
+      floor: FLOOR, spawn: SPAWN, back: BACK,
+      lamps: [
+        { x: LAMP_X[0], y: LAMP_Y, lock: { kind: 'word', word: 'APPLE', showPicture: false } },
+        { x: LAMP_X[1], y: LAMP_Y, lock: { kind: 'word', word: 'FLOWER', showPicture: false } },
+      ],
       things: [
-        { id: 'apple',  sprite: 'apple',  word: 'APPLE',  x: 132, y: 152, scale: 2 },
-        { id: 'flower', sprite: 'flower', word: 'FLOWER', x: 186, y: 150, scale: 2 },
-        { id: 'fish',   sprite: 'fish',   word: 'FISH',   x: 96,  y: 148, scale: 2 },
+        { id: 'flower', sprite: 'flower', word: 'FLOWER', x: SLOT_X[0], y: SLOT_Y },
+        { id: 'fish',   sprite: 'fish',   word: 'FISH',   x: SLOT_X[1], y: SLOT_Y },
+        { id: 'apple',  sprite: 'apple',  word: 'APPLE',  x: SLOT_X[2], y: SLOT_Y },
+        { id: 'boat',   sprite: 'boat',   word: 'BOAT',   x: SLOT_X[3], y: SLOT_Y },
+      ],
+      props: [
+        { word: 'SUN',  x: 42,  y: 26, w: 28, h: 26 },
+        { word: 'TREE', x: 218, y: 54, w: 56, h: 54 },
+        { word: 'POND', x: 60,  y: 118, w: 52, h: 16 },
       ],
       paint(p, t) {
         p.rect(0, 0, 320, 96, '#8fd0f0');
-        p.dither(0, 60, 320, 36, '#8fd0f0', '#b6e3f7', 3);
-        // Sun
+        p.rect(0, 62, 320, 34, '#a2daf4');
         glow(p, 42, 26, 26, '#fff3b0');
         p.rect(36, 20, 13, 13, '#ffe9a8');
         p.rect(38, 18, 9, 17, '#ffe9a8');
-        // Rolling hills
         p.rect(0, 84, 320, 14, '#3f8a37');
-        p.dither(0, 90, 320, 10, '#3f8a37', '#4a9e3f', 2);
         p.rect(0, 96, 320, 104, '#4a9e3f');
-        p.dither(0, 120, 320, 80, '#4a9e3f', '#3f8a37', 4);
-        // Apple tree
-        p.rect(214, 60, 10, 74, '#5c3a1e');
-        p.rect(216, 60, 3, 74, '#7a4f2a');
-        for (const [cx, cy, r] of [[204, 54, 20], [232, 52, 19], [218, 40, 21], [206, 36, 14], [234, 38, 14]]) {
+        p.rect(0, 118, 320, 82, '#54ac48');
+        p.rect(214, 58, 10, 64, '#5c3a1e');
+        p.rect(216, 58, 3, 64, '#7a4f2a');
+        for (const [cx, cy, r] of [[204, 52, 20], [232, 50, 19], [218, 38, 21], [206, 34, 14], [234, 36, 14]]) {
           p.ctx.fillStyle = '#2f7a2c';
           p.ctx.beginPath(); p.ctx.ellipse(cx, cy, r, r * 0.8, 0, 0, Math.PI * 2); p.ctx.fill();
         }
-        for (const [cx, cy] of [[200, 48], [228, 44], [214, 32], [236, 54], [208, 60]]) {
+        for (const [cx, cy] of [[200, 46], [228, 42], [214, 30], [236, 52], [208, 58]]) {
           p.rect(cx, cy, 3, 3, '#d43d2f');
         }
-        // Pond
         p.ctx.fillStyle = '#3a6ea5';
-        p.ctx.beginPath(); p.ctx.ellipse(72, 172, 40, 14, 0, 0, Math.PI * 2); p.ctx.fill();
+        p.ctx.beginPath(); p.ctx.ellipse(60, 124, 34, 11, 0, 0, Math.PI * 2); p.ctx.fill();
         p.ctx.fillStyle = '#4f88c4';
-        p.ctx.beginPath(); p.ctx.ellipse(72, 170, 34, 10, 0, 0, Math.PI * 2); p.ctx.fill();
-        for (let i = 0; i < 4; i++) {
-          const w = 10 + ((Math.floor(t / 200) + i) % 4) * 4;
-          p.rect(72 - w / 2, 166 + i * 3, w, 1, '#8fd0f0');
+        p.ctx.beginPath(); p.ctx.ellipse(60, 122, 28, 8, 0, 0, Math.PI * 2); p.ctx.fill();
+        for (let i = 0; i < 3; i++) {
+          const w = 8 + ((Math.floor(t / 220) + i) % 4) * 4;
+          p.rect(60 - w / 2, 119 + i * 3, w, 1, '#8fd0f0');
         }
       },
     },
 
     // ----------------------------------------------------------------- ARK --
-    // Inside the ark: crates stencilled with names, rain at the porthole.
     ark: {
       id: 'ark', name: 'THE ARK', world: 'ark',
-      floor: { x: 14, y: 136, w: 292, h: 50 },
-      spawn: { x: 58, y: 162 },
-      back: { to: 'hall', x: 18, y: 132, w: 30, h: 46, name: 'BACK' },
-      lamp: { x: 262, y: 156 },
-      lock: { kind: 'word', word: 'LION', showPicture: false },
+      floor: FLOOR, spawn: SPAWN, back: BACK,
+      lamps: [
+        { x: LAMP_X[0], y: LAMP_Y, lock: { kind: 'word', word: 'LION', showPicture: false } },
+        { x: LAMP_X[1], y: LAMP_Y, lock: { kind: 'word', word: 'DOVE', showPicture: false } },
+      ],
       // No pictures at all: the word on the crate is the only clue.
       things: [
-        { id: 'c-lion', word: 'LION', x: 120, y: 158, render: 'crate' },
-        { id: 'c-bear', word: 'BEAR', x: 176, y: 158, render: 'crate' },
-        { id: 'c-dove', word: 'DOVE', x: 224, y: 158, render: 'crate' },
+        { id: 'c-bear', word: 'BEAR', x: SLOT_X[0], y: SLOT_Y, render: 'crate' },
+        { id: 'c-lion', word: 'LION', x: SLOT_X[1], y: SLOT_Y, render: 'crate' },
+        { id: 'c-dove', word: 'DOVE', x: SLOT_X[2], y: SLOT_Y, render: 'crate' },
+        { id: 'c-fish', word: 'FISH', x: SLOT_X[3], y: SLOT_Y, render: 'crate' },
       ],
-      paint(p, t) {
+      props: [
+        { word: 'RAIN', x: 90,  y: 52, w: 40, h: 40 },
+        { word: 'DOVE', x: 220, y: 28, w: 24, h: 20 },
+        { word: 'HAY',  x: 160, y: 132, w: 44, h: 14 },
+      ],
+      paint(p, t, ctx) {
         p.clear('#3a2717');
-        // Plank wall
-        for (let j = 0; j < 140; j += 10) {
-          const shade = j % 20 === 0 ? '#5c3a1e' : '#4d301a';
-          p.rect(0, j, 320, 9, shade);
+        for (let j = 0; j < 126; j += 10) {
+          p.rect(0, j, 320, 9, j % 20 === 0 ? '#5c3a1e' : '#4d301a');
           p.rect(0, j + 9, 320, 1, '#2b1a0e');
           for (let i = (j % 20) ? 24 : 60; i < 320; i += 72) p.rect(i, j, 1, 9, '#33200f');
         }
-        // Ribs
-        for (const x of [46, 150, 288]) { p.rect(x, 0, 6, 140, '#3f2713'); p.rect(x + 1, 0, 2, 140, '#59371c'); }
-        // Porthole with rain outside
+        for (const x of [46, 150, 288]) { p.rect(x, 0, 6, 126, '#3f2713'); p.rect(x + 1, 0, 2, 126, '#59371c'); }
         p.ctx.fillStyle = '#20242c';
         p.ctx.beginPath(); p.ctx.arc(90, 52, 25, 0, Math.PI * 2); p.ctx.fill();
         p.ctx.fillStyle = '#46536b';
@@ -288,86 +361,80 @@ export function buildRooms(puzzle) {
         p.ctx.save();
         p.ctx.beginPath(); p.ctx.arc(90, 52, 21, 0, Math.PI * 2); p.ctx.clip();
         for (let i = 0; i < 26; i++) {
-          const rx = 70 + ((i * 29) % 42);
-          const ry = 32 + ((i * 17 + Math.floor(t / 25)) % 42);
-          p.rect(rx, ry, 1, 4, '#9fb2c9');
+          p.rect(70 + ((i * 29) % 42), 32 + ((i * 17 + Math.floor(t / 25)) % 42), 1, 4, '#9fb2c9');
         }
         p.ctx.restore();
         for (let i = 0; i < 8; i++) {
           const a = (i / 8) * Math.PI * 2;
           p.rect(90 + Math.cos(a) * 24 - 1, 52 + Math.sin(a) * 24 - 1, 3, 3, '#7a4f2a');
         }
-        // A dove on the beam, watching.
         p.rect(180, 34, 120, 5, '#3f2713');
-        p.sprite(SPRITE_REFS.dove, 214, 22, { scale: 1 });
-        // Hay floor
-        p.rect(0, 136, 320, 64, '#8a6a35');
-        p.dither(0, 140, 320, 60, '#8a6a35', '#a5823f', 3);
-        for (let i = 0; i < 60; i++) {
-          const hx = (i * 113) % 320, hy = 140 + ((i * 71) % 56);
-          p.rect(hx, hy, 3, 1, '#c8a24f');
+        p.sprite(ctx.sprites.dove, 214, 22, { scale: 1 });
+        p.rect(0, 126, 320, 74, '#8a6a35');
+        p.rect(0, 132, 320, 68, '#96743a');
+        for (let i = 0; i < 70; i++) {
+          p.rect((i * 113) % 320, 130 + ((i * 71) % 66), 3, 1, '#c8a24f');
         }
       },
     },
 
     // ---------------------------------------------------------------- RAIL --
-    // The railway: a blue engine that will not go until the signal adds up.
     rail: {
       id: 'rail', name: 'THE RAILWAY', world: 'rail',
-      floor: { x: 12, y: 140, w: 296, h: 46 },
-      spawn: { x: 54, y: 164 },
-      back: { to: 'hall', x: 16, y: 136, w: 30, h: 46, name: 'BACK' },
-      lamp: { x: 266, y: 158 },
-      lock: { kind: 'math', prompt: puzzle.prompt, answer: puzzle.answer },
-      things: puzzle.choices.map((v, i) => ({
-        id: `num-${v}`, word: String(v), value: v, render: 'number',
-        x: 94 + i * 62, y: 160, hue: i,
-      })),
-      paint(p, t) {
-        p.rect(0, 0, 320, 108, '#7fd3ff');
-        p.dither(0, 66, 320, 42, '#7fd3ff', '#b6e8ff', 3);
+      floor: FLOOR, spawn: SPAWN, back: BACK,
+      lamps: [
+        { x: LAMP_X[0], y: LAMP_Y, lock: { kind: 'math', prompt: puzzle.prompt, answer: puzzle.answer } },
+        { x: LAMP_X[1], y: LAMP_Y, lock: { kind: 'word', word: 'TRAIN', showPicture: false } },
+      ],
+      things: [
+        ...puzzle.choices.map((v, i) => ({
+          id: `num-${v}`, word: String(v), value: v, render: 'number',
+          x: SLOT_X[i], y: SLOT_Y, hue: i,
+        })),
+        { id: 'train', sprite: 'train', word: 'TRAIN', x: SLOT_X[3], y: SLOT_Y },
+      ],
+      props: [
+        { word: 'SKY',   x: 160, y: 14,  w: 50, h: 22 },
+        { word: 'CLOUD', x: 54,  y: 26,  w: 48, h: 26 },
+        { word: 'HILL',  x: 240, y: 100, w: 62, h: 22 },
+      ],
+      paint(p, t, ctx) {
+        p.rect(0, 0, 320, 100, '#7fd3ff');
+        p.rect(0, 66, 320, 34, '#9adfff');
         for (const [cx, cy, s] of [[54, 26, 1], [150, 18, 0.8], [246, 30, 1.1]]) {
           for (const [ox, oy, r] of [[0, 0, 15], [-13, 4, 11], [14, 4, 10]]) {
             p.ctx.fillStyle = '#ffffff';
             p.ctx.beginPath(); p.ctx.ellipse(cx + ox * s, cy + oy * s, r * s, r * 0.7 * s, 0, 0, Math.PI * 2); p.ctx.fill();
           }
         }
-        // Distant hills
         for (const [cx, r] of [[40, 60], [130, 70], [240, 66], [310, 54]]) {
           p.ctx.fillStyle = '#4f8f4a';
-          p.ctx.beginPath(); p.ctx.ellipse(cx, 116, r, 26, 0, 0, Math.PI * 2); p.ctx.fill();
+          p.ctx.beginPath(); p.ctx.ellipse(cx, 108, r, 26, 0, 0, Math.PI * 2); p.ctx.fill();
         }
-        p.rect(0, 108, 320, 34, '#6aa35f');
-        p.dither(0, 116, 320, 26, '#6aa35f', '#7db870', 3);
-        // The engine, waiting at the platform.
-        const TX = 132, TY = 76;
-        p.sprite(SPRITE_REFS.train, TX, TY, { scale: 3 });
+        p.rect(0, 100, 320, 26, '#6aa35f');
+        p.rect(0, 112, 320, 14, '#75b069');
+        const TX = 128, TY = 60;
+        p.sprite(ctx.sprites.train, TX, TY, { scale: 3 });
         const puff = Math.floor(t / 260) % 3;
         for (let i = 0; i <= puff; i++) {
           p.ctx.fillStyle = 'rgba(255,255,255,0.85)';
           p.ctx.beginPath(); p.ctx.arc(TX + 18 + i * 12, TY - 8 - i * 9, 5 + i * 2, 0, Math.PI * 2); p.ctx.fill();
         }
-        // Platform and rails
-        p.rect(0, 138, 320, 6, '#9aa2ad');
-        p.dither(0, 140, 320, 4, '#9aa2ad', '#7d8a99', 2);
-        p.rect(0, 144, 320, 56, '#6b5a45');
-        p.dither(0, 150, 320, 50, '#6b5a45', '#7d6a52', 4);
-        // Kept above y=174, where the carrying strip begins.
-        for (let i = 0; i < 12; i++) p.rect(i * 28, 164, 20, 4, '#4a3a28'); // sleepers
-        p.rect(0, 161, 320, 3, '#b9c2cc');
-        p.rect(0, 169, 320, 3, '#b9c2cc');
+        p.rect(0, 124, 320, 5, '#9aa2ad');
+        p.rect(0, 129, 320, 71, '#6b5a45');
+        p.rect(0, 138, 320, 62, '#75634c');
+        // Track, kept above the carrying strip.
+        for (let i = 0; i < 12; i++) p.rect(i * 28, 152, 20, 4, '#4a3a28');
+        p.rect(0, 149, 320, 3, '#b9c2cc');
+        p.rect(0, 157, 320, 3, '#b9c2cc');
       },
     },
   };
 }
 
-// Sprite tables the painters reach for. Filled by the engine at boot so this
-// module does not have to know about the sprite sheet's shape.
-export const SPRITE_REFS = {};
-
 // ---- the arithmetic --------------------------------------------------------
 // Pitched at four operations, decimals and thousands. Distractors sit close to
-// the answer so it pays to actually work it out rather than pick the odd one.
+// the answer so it pays to work it out rather than pick the odd one.
 export const SUMS = [
   { prompt: '6 x 7',     answer: 42,  near: [24, 48] },
   { prompt: '8 x 8',     answer: 64,  near: [16, 46] },
@@ -386,7 +453,6 @@ export const SUMS = [
 export function pickSum(pick = Math.random) {
   const sum = SUMS[Math.floor(pick() * SUMS.length) % SUMS.length];
   const choices = [sum.answer, ...sum.near];
-  // Shuffle deterministically from the same source so tests can pin it.
   for (let i = choices.length - 1; i > 0; i--) {
     const j = Math.floor(pick() * (i + 1)) % (i + 1);
     [choices[i], choices[j]] = [choices[j], choices[i]];

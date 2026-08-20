@@ -52,6 +52,10 @@ export class Input {
   get jump() { return this.isDown('ArrowUp') || this.isDown('w') || this.isDown(' '); }
   get jumpPressed() { return this.wasPressed('ArrowUp') || this.wasPressed('w') || this.wasPressed(' '); }
   get jumpReleased() { return this.wasReleased('ArrowUp') || this.wasReleased('w') || this.wasReleased(' '); }
+  // Ladder climbing. 'i'/'k' exist so the touch pad can offer pure climb
+  // buttons — arrow-up doubles as jump, and a climb button must not.
+  get climbUp() { return this.isDown('ArrowUp') || this.isDown('w') || this.isDown('i'); }
+  get climbDown() { return this.isDown('ArrowDown') || this.isDown('s') || this.isDown('k'); }
   get sprint() { return this.isDown('Shift') || this.isDown('z'); }
   get actionPressed() { return this.wasPressed('ArrowDown') || this.wasPressed('s') || this.wasPressed('x'); }
   get transformPressed() { return this.wasPressed('c') || this.wasPressed('e'); }

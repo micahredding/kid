@@ -39,6 +39,9 @@ export const CONFIG = {
       velocity: -9,
     },
 
+    // Ladder climbing — pixels per frame up or down the rungs
+    climbSpeed: 2.2,
+
     // Coyote time — frames after leaving ground where jump still works
     coyoteFrames: 6,
 

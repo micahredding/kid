@@ -3,7 +3,7 @@
 // =============================================================================
 
 import { CONFIG } from './config.js';
-import { resolveEntityTileCollisions, aabbOverlap } from './physics.js';
+import { resolveEntityTileCollisions, aabbOverlap, isOnGround } from './physics.js';
 
 // =============================================================================
 // GOOMBA — Basic patrol enemy, killed by stomping
@@ -832,7 +832,7 @@ export class PushBlock {
 // MOVING PLATFORM
 // =============================================================================
 export class MovingPlatform {
-  constructor(x, y, width, rangeX = 0, rangeY = 0, speed = CONFIG.movingPlatform.defaultSpeed) {
+  constructor(x, y, width, rangeX = 0, rangeY = 0, speed = CONFIG.movingPlatform.defaultSpeed, style = 'metal') {
     this.x = x;
     this.y = y;
     this.startX = x;
@@ -845,6 +845,7 @@ export class MovingPlatform {
     this.vx = 0;
     this.vy = 0;
     this.timer = 0;
+    this.style = style;    // 'metal' | 'plank' | 'cloud'
     this.type = 'platform';
   }
 
@@ -865,7 +866,7 @@ export class MovingPlatform {
     return true;
   }
 
-  checkPlayerCollision(player) {
+  checkPlayerCollision(player, level) {
     // Only support from above
     const playerBottom = player.y + player.height;
     const onTop = (
@@ -882,16 +883,131 @@ export class MovingPlatform {
       player.onGround = true;
       player.hasDoubleJumped = false;
       player.isJumping = false;
-      // Carry the player
-      player.x += this.vx;
+      // Carry them along — but only when this platform is what is actually
+      // holding them up. A platform sliding past someone standing on the deck
+      // used to shove them sideways, and once nudged a pixel outside the
+      // pickup window it could never pick them up again.
+      if (!level || !isOnGround(player, level)) {
+        player.x += this.vx;
+      }
     }
   }
 
   draw(ctx) {
+    const x = Math.round(this.x);
+    const y = Math.round(this.y);
+    const w = this.width;
+
+    if (this.style === 'cloud') {
+      // A raft of the same stuff as the platforms it ferries between
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      for (let i = 0; i < w / 14; i++) {
+        ctx.arc(x + 8 + i * 14, y + 8 - (i % 2) * 3, 11, 0, Math.PI * 2);
+      }
+      ctx.fill();
+      ctx.fillStyle = '#f2f7ff';
+      ctx.fillRect(x + 2, y + 1, w - 4, 4);
+      ctx.fillStyle = 'rgba(150,178,214,0.30)';
+      ctx.fillRect(x + 4, y + 13, w - 8, 5);
+      return;
+    }
+
+    if (this.style === 'plank') {
+      ctx.fillStyle = '#8a6742';
+      ctx.fillRect(x, y, w, 10);
+      ctx.fillStyle = '#b0864f';
+      ctx.fillRect(x, y, w, 3);
+      ctx.fillStyle = '#5e462c';
+      ctx.fillRect(x, y + 10, w, 3);
+      for (let i = 1; i < w / 32; i++) ctx.fillRect(x + i * 32, y, 1, 10);
+      ctx.fillStyle = '#6b6f7d';
+      ctx.fillRect(x + 3, y - 3, 3, 4);
+      ctx.fillRect(x + w - 6, y - 3, 3, 4);
+      return;
+    }
+
     ctx.fillStyle = '#8B8B8B';
-    ctx.fillRect(Math.round(this.x), Math.round(this.y), this.width, this.height);
+    ctx.fillRect(x, y, w, this.height);
     ctx.fillStyle = '#AAAAAA';
-    ctx.fillRect(Math.round(this.x), Math.round(this.y), this.width, 3);
+    ctx.fillRect(x, y, w, 3);
+  }
+}
+
+// =============================================================================
+// ELEVATOR — A cab that cycles between two floors, pausing at each
+//
+// Different from MovingPlatform on purpose: constant speed with a dwell at
+// both ends, so a child can see it arrive, walk on, and be carried. Its stops
+// are exactly the floor rows of the decks it serves, and it draws its own
+// shaft rails and cable so the route it takes is legible before you ride it.
+// =============================================================================
+export class Elevator extends MovingPlatform {
+  constructor(x, topY, bottomY, width, speed = 1.8, dwell = 50) {
+    super(x, bottomY, width, 0, 0, speed);
+    this.topY = topY;
+    this.bottomY = bottomY;
+    this.y = bottomY;
+    this.dir = -1;          // start by rising
+    this.dwellLeft = dwell;
+    this.dwell = dwell;
+    this.type = 'elevator';
+  }
+
+  update() {
+    const prevY = this.y;
+
+    if (this.dwellLeft > 0) {
+      this.dwellLeft--;
+    } else {
+      this.y += this.dir * this.speed;
+      if (this.y <= this.topY) {
+        this.y = this.topY;
+        this.dir = 1;
+        this.dwellLeft = this.dwell;
+      } else if (this.y >= this.bottomY) {
+        this.y = this.bottomY;
+        this.dir = -1;
+        this.dwellLeft = this.dwell;
+      }
+    }
+
+    this.vx = 0;
+    this.vy = this.y - prevY;
+    return true;
+  }
+
+  draw(ctx) {
+    const x = Math.round(this.x);
+    const y = Math.round(this.y);
+    const w = this.width;
+
+    // Shaft rails, top stop to bottom stop
+    ctx.fillStyle = 'rgba(40,46,60,0.55)';
+    ctx.fillRect(x + 2, this.topY, 3, this.bottomY - this.topY + 10);
+    ctx.fillRect(x + w - 5, this.topY, 3, this.bottomY - this.topY + 10);
+
+    // Cable up to the head sheave
+    ctx.strokeStyle = 'rgba(30,34,44,0.7)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x + w / 2, this.topY - 6);
+    ctx.lineTo(x + w / 2, y);
+    ctx.stroke();
+    ctx.fillStyle = '#59606f';
+    ctx.fillRect(x, this.topY - 10, w, 5);
+
+    // Cab: deck plate, apron, and a low rail at each end
+    ctx.fillStyle = '#c8b18a';
+    ctx.fillRect(x, y, w, 8);
+    ctx.fillStyle = '#e8dcc2';
+    ctx.fillRect(x, y, w, 3);
+    ctx.fillStyle = '#7d6a4c';
+    ctx.fillRect(x, y + 8, w, 5);
+    ctx.fillStyle = '#8d99ad';
+    ctx.fillRect(x + 1, y - 12, 3, 12);
+    ctx.fillRect(x + w - 4, y - 12, 3, 12);
+    ctx.fillRect(x + 1, y - 14, w - 2, 3);
   }
 }
 

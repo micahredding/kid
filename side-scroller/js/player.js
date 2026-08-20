@@ -3,7 +3,7 @@
 // =============================================================================
 
 import { CONFIG } from './config.js';
-import { resolveEntityTileCollisions, getTouchingWall } from './physics.js';
+import { resolveEntityTileCollisions, getTouchingWall, ladderColumnAt, ladderColumnBelow } from './physics.js';
 
 const STATES = {
   IDLE: 'idle',
@@ -12,6 +12,7 @@ const STATES = {
   FALLING: 'falling',
   SKIDDING: 'skidding',
   WALL_SLIDING: 'wall_sliding',
+  CLIMBING: 'climbing',
 };
 
 export class Player {
@@ -38,6 +39,13 @@ export class Player {
     // Wall slide/jump state
     this.wallDir = 0;            // -1 left wall, 1 right wall, 0 none
     this.wallSlideTimer = 0;
+
+    // Ladder state
+    this.climbing = false;
+    this.climbCol = 0;
+    this.climbAnim = 0;
+    this.climbDir = 0;           // -1 climbing up, 1 climbing down
+    this.climbCooldown = 0;      // frames after letting go before re-grabbing
 
     // Carrying blocks
     this.carriedBlock = null;
@@ -182,6 +190,15 @@ export class Player {
       const levelHeight = level.tiles.length * CONFIG.tile.size;
       if (this.y > levelHeight + 100) this.die();
 
+      return;
+    }
+
+    // --- Ladders ---
+    // A ladder takes over from the whole normal pass: up/down climb, left and
+    // right do nothing (a child holding a direction can't sidestep off into
+    // the air), and gravity is off until they let go.
+    if (this.updateClimb(input, level)) {
+      this.updateUpkeep(input, level);
       return;
     }
 
@@ -347,6 +364,12 @@ export class Player {
       }
     }
 
+    this.updateUpkeep(input, level);
+  }
+
+  // Animation, character extras and per-frame bookkeeping that run whether
+  // the player is walking, jumping or hanging on a ladder.
+  updateUpkeep(input, level) {
     // --- Animation ---
     this.animTimer++;
     if (this.state === STATES.RUNNING) {
@@ -452,6 +475,100 @@ export class Player {
     if (this.y > levelHeight + 100) {
       this.die();
     }
+  }
+
+  // --- Ladder climbing -------------------------------------------------------
+  // Returns true when the ladder owns this frame (the caller then skips the
+  // normal walk/jump/gravity pass).
+  updateClimb(input, level) {
+    const p = CONFIG.player;
+    const ts = CONFIG.tile.size;
+
+    if (this.climbCooldown > 0) this.climbCooldown--;
+
+    if (!this.climbing) {
+      if (this.climbCooldown > 0) return false;
+      const onLadder = ladderColumnAt(this, level);
+      const below = ladderColumnBelow(this, level);
+      let col = null;
+      if (onLadder !== null && input.climbUp) col = onLadder;
+      else if (below !== null && input.climbDown && this.onGround) col = below;
+      if (col === null) return false;
+
+      this.climbing = true;
+      this.climbCol = col;
+      this.vx = 0;
+      this.vy = 0;
+      this.isJumping = false;
+      this.hasDoubleJumped = false;
+      this.wallDir = 0;
+      this.wallSlideTimer = 0;
+      // Stepping onto a ladder let into the floor: drop far enough that the
+      // one-way tile is no longer under the feet, or gravity re-lands on it.
+      if (onLadder === null) this.y += 5;
+    }
+
+    // Let go — a small hop clear of the rungs. Space only, so holding "up" to
+    // climb never doubles as a jump.
+    if (input.wasPressed(' ')) {
+      this.climbing = false;
+      this.climbCooldown = 14;
+      this.vy = p.jumpVelocity * 0.7;
+      this.vx = (input.left ? -1 : input.right ? 1 : this.facing) * 2.5;
+      this.isJumping = true;
+      this.jumpHeld = true;
+      this.onGround = false;
+      return false;   // the normal pass finishes this frame's motion
+    }
+
+    // Ease onto the ladder's centre line
+    const cx = this.climbCol * ts + ts / 2;
+    const dx = cx - (this.x + this.width / 2);
+    this.x += Math.max(-2, Math.min(2, dx));
+
+    this.vx = 0;
+    this.vy = input.climbUp ? -p.climbSpeed : (input.climbDown ? p.climbSpeed : 0);
+    if (this.vy !== 0) {
+      this.climbAnim += 0.16;
+      this.climbDir = Math.sign(this.vy);
+    }
+
+    // Last-rung assist: let go on the top rung after climbing up and you are
+    // set down on the deck the ladder serves, rather than left hanging one
+    // body-length below it with left and right doing nothing.
+    if (this.vy === 0 && this.climbDir < 0) {
+      const feetRow = Math.floor((this.y + this.height - 1) / ts);
+      if (ladderColumnAt({ ...this, y: this.y - ts, height: this.height }, level) === null) {
+        this.y = feetRow * ts - this.height;
+        this.climbing = false;
+        this.onGround = false;
+        this.state = STATES.IDLE;
+        return true;
+      }
+    }
+
+    const collisions = resolveEntityTileCollisions(this, level);
+    if (collisions.top) this.vy = 0;
+
+    if (collisions.bottom) {
+      // Reached the foot of the ladder — back to normal footing
+      this.climbing = false;
+      this.onGround = true;
+      this.state = STATES.IDLE;
+      return true;
+    }
+
+    if (ladderColumnAt(this, level) === null) {
+      // Climbed off the top: the topmost rung is level with the deck it
+      // serves, so the feet are already standing on it.
+      this.climbing = false;
+      this.onGround = false;
+      return true;
+    }
+
+    this.onGround = false;
+    this.state = STATES.CLIMBING;
+    return true;
   }
 
   takeDamage() {
@@ -713,6 +830,17 @@ export class Player {
     if (this.state === STATES.JUMPING || this.state === STATES.FALLING) {
       ctx.fillStyle = colors.bodyColor;
       ctx.fillRect(w - 4, h * 0.25, 4, 6); // arm up
+    }
+
+    // Climbing pose — both arms on the rungs, feet alternating
+    if (this.state === STATES.CLIMBING) {
+      const swap = Math.sin(this.climbAnim) > 0;
+      ctx.fillStyle = colors.bodyColor;
+      ctx.fillRect(-2, swap ? h * 0.18 : h * 0.34, 5, 5);   // near arm
+      ctx.fillRect(w - 3, swap ? h * 0.34 : h * 0.18, 5, 5); // far arm
+      ctx.fillStyle = colors.overallsColor;
+      ctx.fillRect(1, h - 6, 6, 6);
+      ctx.fillRect(w - 7, h - (swap ? 10 : 4), 6, 6);
     }
 
     // Wall slide pose — arms reaching toward wall

@@ -4,7 +4,7 @@
 
 import { CONFIG } from './config.js';
 import { THEMES } from './themes.js';
-import { Goomba, Coin, MovingPlatform, Flyguy, Spiker, PushBlock, Food, Key, Gem, Door } from './entities.js';
+import { Goomba, Coin, MovingPlatform, Elevator, Flyguy, Spiker, PushBlock, Food, Key, Gem, Door } from './entities.js';
 
 // =============================================================================
 // LEVEL DEFINITIONS
@@ -268,6 +268,86 @@ export const LEVELS = [
     goalCol: 170,
     goalRow: 20,        // flag in the last hall
   },
+
+{
+    name: 'World 1-7 The Cloud Elevators',
+    theme: 'skyheights',
+    playerStart: { col: 3, row: 43 },
+    // Legend additions for this world:
+    // M = mountain rock, W = catwalk, = = ladder, c = cloud platform
+    // I = one-way plank (also bridges each elevator's top landing)
+    //
+    // Every terrace is six rows above the last, and the cliff between them is
+    // five rows — taller than a jump — so the lifts are the only way up. Each
+    // terrace also sits over the one below it, so a fall costs one band and
+    // never a life.
+    tiles: [
+      'MM                                                                                                                                                                            MM',
+      'MM                                                                                                                                                                            MM',
+      'MM                                                                                                                                                                            MM',
+      'MM                                                                                                                                                                            MM',
+      'MM                                                                                                                                F                                           MM',
+      'MM                                                                                                                           C C           C C                        J   MMMMMM',
+      'MM                                                                                                    C C C C       C C     ccccc         ccccc                 C C MMMMMMMMMMMM',
+      'MM                                                                                                  ccccccccccc    ccccc                          C C C   C C MMMMMMMMMMMMMMMMMM',
+      'MM                                                                                                              cc       cc                     MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM',
+      'MM                                                                                                                                              MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM',
+      'MM                                                                                                                                              MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM',
+      'MM                                                                                                                                              MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM',
+      'MM                                                                                                      C C A C C C   C C C                     MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM',
+      'MM                                                                                                WWWWWWWWWWWWWWWWWWWWWWWWWWIIIMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM',
+      'MM                                                                                                                             MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM',
+      'MM                                                                                                                             MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM',
+      'MM                                                                                                                             MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM',
+      'MM                                                                                                                             MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM',
+      'MM                                                              j C C C   C C C     F             C C C   H     C C C C C C    MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM',
+      'MM                                                            WWWWWWWWWWWWWWWWWWWWWWWWW=         WWWWWWWWWWWWWMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM',
+      'MM                                                                                     =                      MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM',
+      'MM                                                                                     =                      MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM',
+      'MM                                                                                     =                      MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM',
+      'MM                                                                                     =                C C   MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM',
+      'MM                                                                                  C C=C     C C C           MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM',
+      'MM                                                          WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWIIIMMMMMMM=MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM',
+      'MM                                                                                           MMMMMMM=MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM',
+      'MM                                                                                           MMM           MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM',
+      'MM                                                      F                                    MMM           MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM',
+      'MM                                                                                           MMM    CCC    MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM',
+      'MM                                          C C C         N     C C C C   E     C C C C C    MMM  N     J  MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM',
+      'MM                                        =WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM',
+      'MM                                        =                                 MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM',
+      'MM                                        =                                 MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM',
+      'MM                                        =                                 MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM',
+      'MM                                        =                   C C C j       MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM',
+      'MM                                        =CC H C C C C                     MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM',
+      'MM     CC   CC                          WWWWWWWWWWWWWWWWIIIMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM',
+      'MM    IIII=III                                             MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM',
+      'MM        =                     C                          MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM',
+      'MM        =                   IIIII                        MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM',
+      'MM        =                                                MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM',
+      'MM   A    =     C C C     E   C C                 C C C    MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM',
+      'MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM',
+      'MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM',
+      'MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM',
+    ],
+    // Cabs cycle between two deck rows, pausing at each end. Their top stop is
+    // the deck's own floor row, bridged by a one-way plank: the cab lifts you
+    // up through it, but the walkway above stays walkable.
+    elevators: [
+      { col: 56, bottomRow: 43, topRow: 37, widthTiles: 3, speed: 1.5, dwell: 70 },  // valley -> A
+      { col: 90, bottomRow: 31, topRow: 25, widthTiles: 3, speed: 1.8, dwell: 55 },  // B -> C
+      { col: 124, bottomRow: 19, topRow: 13, widthTiles: 3, speed: 1.8, dwell: 55 }, // D -> E
+      { col: 100, bottomRow: 13, topRow: 7, widthTiles: 3, speed: 1.7, dwell: 60 },  // E -> the clouds
+    ],
+    // Two ferries, each across a gap too wide to jump
+    movingPlatforms: [
+      { col: 91, row: 19, widthTiles: 3, rangeX: 160, rangeY: 0, speed: 1.0, style: 'plank' }, // deck D (cols 86-98)
+      { col: 132, row: 6, widthTiles: 3, rangeX: 192, rangeY: 0, speed: 1.0, style: 'cloud' }, // the sky (cols 126-140)
+    ],
+    // The chamber inside the massif, so it doesn't read as a hole to the sky
+    hollows: [{ col: 96, row: 27, cols: 11, rows: 4 }],
+    goalCol: 172,
+    goalRow: 5,        // the flag stands on the summit step
+  },
 ];
 
 // =============================================================================
@@ -332,8 +412,21 @@ export function loadLevel(levelIndex) {
     return newRow;
   });
 
+  // Add elevators — cabs that cycle between two deck rows. The stops are
+  // given as rows so a level's decks and its lifts can't drift apart.
+  for (const el of def.elevators ?? []) {
+    entities.push(new Elevator(
+      el.col * ts,
+      el.topRow * ts,
+      el.bottomRow * ts,
+      (el.widthTiles || 3) * ts,
+      el.speed,
+      el.dwell,
+    ));
+  }
+
   // Add moving platforms
-  for (const mp of def.movingPlatforms) {
+  for (const mp of def.movingPlatforms ?? []) {
     entities.push(new MovingPlatform(
       mp.col * ts,
       mp.row * ts,
@@ -341,6 +434,7 @@ export function loadLevel(levelIndex) {
       mp.rangeX || 0,
       mp.rangeY || 0,
       mp.speed || CONFIG.movingPlatform.defaultSpeed,
+      mp.style,
     ));
   }
 
@@ -355,6 +449,7 @@ export function loadLevel(levelIndex) {
     entities,
     playerX,
     playerY,
+    hollows: def.hollows ?? [],
     goalCol: def.goalCol * ts,
     goalGroundY: (def.goalRow ?? tiles.length - 2) * ts,
     undergroundY: def.undergroundRow != null ? def.undergroundRow * ts : null,
@@ -381,6 +476,31 @@ function shade(hex, f) {
   const g = Math.min(255, Math.round(((n >> 8) & 255) * f));
   const b = Math.min(255, Math.round((n & 255) * f));
   return `rgb(${r},${g},${b})`;
+}
+
+// Chambers carved into rock read as sky without this: a dark rectangle behind
+// the tiles, so you can tell you are inside the mountain.
+export function drawHollows(ctx, hollows, theme) {
+  if (!hollows || !hollows.length) return;
+  const ts = CONFIG.tile.size;
+  for (const hl of hollows) {
+    const x = hl.col * ts;
+    const y = hl.row * ts;
+    const w = hl.cols * ts;
+    const h = hl.rows * ts;
+    const g = ctx.createLinearGradient(0, y, 0, y + h);
+    g.addColorStop(0, '#252b36');
+    g.addColorStop(1, '#39414f');
+    ctx.fillStyle = g;
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = 'rgba(0,0,0,0.28)';
+    ctx.fillRect(x, y, w, 8);
+    ctx.fillStyle = 'rgba(255,255,255,0.05)';
+    for (let i = 0; i < 14; i++) {
+      const hs = tileHash(hl.col + i, hl.row + i * 3);
+      ctx.fillRect(x + (hs % (w - 6)), y + 10 + ((hs >> 7) % Math.max(1, h - 16)), 3, 2);
+    }
+  }
 }
 
 export function drawTiles(ctx, tiles, theme, camera) {
@@ -618,6 +738,90 @@ export function drawTiles(ctx, tiles, theme, camera) {
           break;
         }
 
+        case 'M': {
+          // Mountain rock. The cap changes with altitude: turf at the foot,
+          // bare scree partway up, snow above the tree line. Rock also darkens
+          // with depth, so a hillside of it reads as mass and not a flat field.
+          const surface = empty(col, row - 1);
+          const depth = 1 - Math.min(0.3, (row / tiles.length) * 0.34);
+          ctx.fillStyle = shade(base, surface ? depth : depth * 0.92);
+          ctx.fillRect(x, y, ts, ts);
+          ctx.fillStyle = shade(base, depth * 0.82);
+          ctx.fillRect(x, y + 9 + (h % 9), ts, 2);
+          ctx.fillStyle = shade(base, depth * 1.16);
+          ctx.fillRect(x + (h % 14), y + 20 + ((h >> 3) % 7), 7, 2);
+          if (surface) {
+            const cap = row < 28 ? tileDef.topColor : (row < 34 ? '#9aa08a' : '#5aa03c');
+            ctx.fillStyle = cap;
+            ctx.fillRect(x, y, ts, 6);
+            for (let i = 0; i < 3; i++) {
+              ctx.fillRect(x + i * 11 + ((h >> i) % 3), y + 6, 6, 2 + ((h >> (i * 2)) % 4));
+            }
+          }
+          break;
+        }
+
+        case 'W': {
+          // Catwalk: planks over a braced under-frame, bolted to the cliff.
+          ctx.fillStyle = shade(base, 0.5);
+          ctx.fillRect(x, y, ts, ts);
+          ctx.fillStyle = base;
+          ctx.fillRect(x, y, ts, 11);
+          ctx.fillStyle = tileDef.topColor;
+          ctx.fillRect(x, y, ts, 3);
+          ctx.fillStyle = shade(base, 0.62);
+          ctx.fillRect(x, y + 11, ts, 3);
+          ctx.fillRect(x + ((h % 2) ? 11 : 21), y, 1, 11);
+          ctx.strokeStyle = shade(base, 0.72);
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(x, y + ts);
+          ctx.lineTo(x + ts, y + 15);
+          ctx.stroke();
+          ctx.fillStyle = shade(base, 0.85);
+          ctx.fillRect(x + 4, y + 4, 2, 2);
+          ctx.fillRect(x + ts - 6, y + 4, 2, 2);
+          break;
+        }
+
+        case '=': {
+          // Ladder: two rails and two rungs per tile.
+          const railL = x + 6;
+          const railR = x + ts - 10;
+          ctx.fillStyle = shade(base, 0.72);
+          ctx.fillRect(railL, y, 4, ts);
+          ctx.fillRect(railR, y, 4, ts);
+          ctx.fillStyle = tileDef.topColor;
+          ctx.fillRect(railL, y, 2, ts);
+          ctx.fillRect(railR, y, 2, ts);
+          ctx.fillStyle = base;
+          ctx.fillRect(railL, y + 7, railR - railL + 4, 4);
+          ctx.fillRect(railL, y + 21, railR - railL + 4, 4);
+          ctx.fillStyle = shade(base, 0.6);
+          ctx.fillRect(railL, y + 11, railR - railL + 4, 1);
+          ctx.fillRect(railL, y + 25, railR - railL + 4, 1);
+          break;
+        }
+
+        case 'c': {
+          // Cloud platform — soft on top, hazy underneath.
+          const leftEnd = at(col - 1, row) !== 'c';
+          const rightEnd = at(col + 1, row) !== 'c';
+          ctx.fillStyle = base;
+          ctx.beginPath();
+          for (let i = 0; i < 3; i++) {
+            ctx.arc(x + 6 + i * 10, y + 9 - ((h >> i) % 3), 9, 0, Math.PI * 2);
+          }
+          if (leftEnd) ctx.arc(x + 3, y + 12, 8, 0, Math.PI * 2);
+          if (rightEnd) ctx.arc(x + ts - 3, y + 12, 8, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = tileDef.topColor;
+          ctx.fillRect(x, y + 1, ts, 4);
+          ctx.fillStyle = 'rgba(150,178,214,0.30)';
+          ctx.fillRect(x, y + 13, ts, 5);
+          break;
+        }
+
         default: {
           ctx.fillStyle = base;
           ctx.fillRect(x, y, ts, ts);
@@ -779,20 +983,111 @@ export function drawTiles(ctx, tiles, theme, camera) {
 // =============================================================================
 // BACKGROUND RENDERER — layered parallax scenery per theme
 // =============================================================================
-export function drawBackground(ctx, theme, camera, levelWidth, undergroundY = null) {
+export function drawBackground(ctx, theme, camera, levelWidth, undergroundY = null, levelHeight = null) {
   const cw = CONFIG.canvas.width;
   const ch = CONFIG.canvas.height;
   const bg = theme.background;
   const style = theme.name;
 
   // Sky gradient (screen space — runs before the camera transform)
-  const skyTops = { Grassland: '#3f7fe8', Underground: '#000000', Castle: '#0d0d1f', Jungle: '#5aa84f', Numberland: '#6fa8f0', 'Crystal Cave': '#08081a' };
-  const skyBots = { Grassland: '#9fd4ff', Underground: '#14141f', Castle: '#33334f', Jungle: '#a9d98b', Numberland: '#e8f4ff', 'Crystal Cave': '#181834' };
+  const skyTops = { Grassland: '#3f7fe8', Underground: '#000000', Castle: '#0d0d1f', Jungle: '#5aa84f', Numberland: '#6fa8f0', 'Crystal Cave': '#08081a', 'Sky Heights': '#2f6ad8' };
+  const skyBots = { Grassland: '#9fd4ff', Underground: '#14141f', Castle: '#33334f', Jungle: '#a9d98b', Numberland: '#e8f4ff', 'Crystal Cave': '#181834', 'Sky Heights': '#cfe6ff' };
+  let skyTop = skyTops[style] || theme.sky;
+  let skyBot = skyBots[style] || theme.sky;
+
+  // How high the view has climbed, 0 at the bottom of the level, 1 at the top
+  const climbed = levelHeight != null && levelHeight > ch
+    ? Math.max(0, Math.min(1, 1 - camera.y / (levelHeight - ch)))
+    : 0;
+
+  if (style === 'Sky Heights') {
+    // Thin air: the sky deepens and the haze burns off as you climb
+    skyTop = mix('#7fb0e4', '#12439f', climbed);
+    skyBot = mix('#e6f2ff', '#79b7ee', climbed);
+  }
+
   const grad = ctx.createLinearGradient(0, 0, 0, ch);
-  grad.addColorStop(0, skyTops[style] || theme.sky);
-  grad.addColorStop(1, skyBots[style] || theme.sky);
+  grad.addColorStop(0, skyTop);
+  grad.addColorStop(1, skyBot);
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, cw, ch);
+
+  if (style === 'Sky Heights') {
+    // Sun, high and small
+    const sx = 150 - camera.x * 0.03, sy = 60 + camera.y * 0.05;
+    const glow = ctx.createRadialGradient(sx, sy, 6, sx, sy, 90);
+    glow.addColorStop(0, 'rgba(255,250,220,0.9)');
+    glow.addColorStop(0.35, 'rgba(255,244,190,0.35)');
+    glow.addColorStop(1, 'rgba(255,244,190,0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(sx - 90, sy - 90, 180, 180);
+    ctx.fillStyle = '#fffbe0';
+    ctx.beginPath(); ctx.arc(sx, sy, 17, 0, Math.PI * 2); ctx.fill();
+
+    // Three ranges of peaks. They are anchored in the world, so climbing
+    // sinks them down the screen and you end up looking out over the tops.
+    const drop = levelHeight != null ? (levelHeight - ch - camera.y) : 0;
+    const ranges = [
+      { par: 0.10, base: ch * 0.94, hgt: 230, step: 210, color: 'rgba(158,183,214,0.55)', snow: 'rgba(240,248,255,0.55)' },
+      { par: 0.20, base: ch * 0.97, hgt: 270, step: 275, color: 'rgba(106,135,175,0.8)', snow: 'rgba(246,251,255,0.75)' },
+      { par: 0.34, base: ch * 1.02, hgt: 320, step: 350, color: '#4a5d7c', snow: '#eaf3ff' },
+    ];
+    for (const R of ranges) {
+      const off = camera.x * R.par;
+      const baseY = R.base - drop * R.par;
+      const first = Math.floor(off / R.step) - 1;
+      const count = Math.ceil(cw / R.step) + 3;
+      const caps = [];
+      // One silhouette per range, filled once — overlapping translucent
+      // triangles double-darken and leave seams where their bases meet.
+      ctx.fillStyle = R.color;
+      ctx.beginPath();
+      ctx.moveTo(first * R.step - off, baseY);
+      for (let i = 0; i < count; i++) {
+        const idx = first + i;
+        const px = idx * R.step - off;
+        const hgt = R.hgt * (0.6 + ((tileHash(idx, 21) % 70) / 100));
+        const halfW = R.step * (0.55 + ((tileHash(idx, 37) % 40) / 100));
+        const tipX = px + halfW * 0.5;
+        const tipY = baseY - hgt;
+        ctx.lineTo(tipX, tipY);
+        ctx.lineTo(px + halfW, baseY);
+        caps.push({ tipX, tipY, hgt, halfW });
+      }
+      ctx.lineTo((first + count) * R.step - off, baseY + 40);
+      ctx.lineTo(first * R.step - off, baseY + 40);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = R.snow;
+      for (const c of caps) {
+        const capY = c.tipY + c.hgt * 0.22;
+        const capW = c.halfW * 0.22;
+        ctx.beginPath();
+        ctx.moveTo(c.tipX - capW, capY);
+        ctx.lineTo(c.tipX, c.tipY);
+        ctx.lineTo(c.tipX + capW, capY);
+        ctx.lineTo(c.tipX + capW * 0.35, capY - 4);
+        ctx.lineTo(c.tipX - capW * 0.45, capY + 3);
+        ctx.closePath();
+        ctx.fill();
+      }
+    }
+
+    // A pair of birds, circling well below the summit
+    ctx.strokeStyle = 'rgba(40,50,70,0.45)';
+    ctx.lineWidth = 2;
+    const t = (typeof performance !== 'undefined' ? performance.now() : 0) * 0.001;
+    for (let i = 0; i < 2; i++) {
+      const bx = cw * 0.55 + Math.cos(t * 0.35 + i * 2.1) * 130 - camera.x * 0.08;
+      const by = 210 + Math.sin(t * 0.5 + i * 2.1) * 26 + camera.y * 0.08;
+      const flap = Math.sin(t * 5 + i) * 4;
+      ctx.beginPath();
+      ctx.moveTo(bx - 9, by + flap);
+      ctx.quadraticCurveTo(bx, by - 5, bx + 9, by + flap);
+      ctx.stroke();
+    }
+  }
 
   if (style === 'Numberland') {
     // faint rainbow arcing across the sky
@@ -962,6 +1257,14 @@ export function drawBackground(ctx, theme, camera, levelWidth, undergroundY = nu
       ctx.fillRect(0, top, cw, ch - top);
     }
   }
+}
+
+// blend two #rrggbb colours, t = 0 gives a, t = 1 gives b
+function mix(a, b, t) {
+  const na = parseInt(a.slice(1), 16);
+  const nb = parseInt(b.slice(1), 16);
+  const ch = (sh) => Math.round((((na >> sh) & 255) * (1 - t)) + (((nb >> sh) & 255) * t));
+  return `rgb(${ch(16)},${ch(8)},${ch(0)})`;
 }
 
 // darken/lighten for background colors (accepts #rrggbb)

@@ -14,6 +14,9 @@ export function aabbOverlap(a, b) {
   );
 }
 
+// Markers that the level loader turns into entities — they leave no tile behind
+const ENTITY_CHARS = new Set(['C', 'E', 'K', 'F', 'X', 'D', 'A', 'H', 'N', 'Y', 'y', 'J', 'j', 'L', 'l']);
+
 // Get the tile at a world position
 export function getTileAt(level, worldX, worldY) {
   const ts = CONFIG.tile.size;
@@ -22,19 +25,29 @@ export function getTileAt(level, worldX, worldY) {
   if (row < 0 || row >= level.tiles.length) return null;
   if (col < 0 || col >= level.tiles[row].length) return null;
   const ch = level.tiles[row][col];
-  return ch && ch !== ' ' && ch !== 'C' && ch !== 'E' && ch !== 'K' && ch !== 'F' && ch !== 'X' && ch !== 'D' && ch !== 'A' && ch !== 'H' && ch !== 'N' && ch !== 'Y' && ch !== 'y' && ch !== 'J' && ch !== 'j' && ch !== 'L' && ch !== 'l' ? ch : null;
+  return ch && ch !== ' ' && !ENTITY_CHARS.has(ch) ? ch : null;
 }
 
 // Check if a tile character is solid
 export function isSolid(ch) {
-  if (!ch || ch === ' ' || ch === 'C' || ch === 'E' || ch === 'K' || ch === 'F' || ch === 'X' || ch === 'D' || ch === 'A' || ch === 'H' || ch === 'N' || ch === 'Y' || ch === 'y' || ch === 'J' || ch === 'j' || ch === 'L' || ch === 'l') return false;
-  if (ch === 'I') return false; // one-way platforms handled separately
+  if (!ch || ch === ' ' || ENTITY_CHARS.has(ch)) return false;
+  if (isOneWay(ch)) return false; // one-way platforms handled separately
   return true;
 }
 
-// Check if a tile is a one-way platform
+// Check if a tile is a one-way platform: you land on top of it, but you pass
+// up through it from below and never fall through it from above.
+//   I = plank / ledge   = = ladder   c = cloud
 export function isOneWay(ch) {
-  return ch === 'I';
+  return ch === 'I' || ch === '=' || ch === 'c';
+}
+
+// Ladders are one-way tiles you can also climb. Making them one-way is what
+// keeps a ladder hole in a walkway from being a trapdoor: you walk over it,
+// and only go down by deliberately pressing down (which sets entity.climbing,
+// and climbing entities ignore one-way tiles entirely).
+export function isLadder(ch) {
+  return ch === '=';
 }
 
 // Resolve collisions between an entity and the tile map
@@ -78,7 +91,12 @@ export function resolveEntityTileCollisions(entity, level, dt) {
   const left2 = Math.floor(entity.x / ts);
   const right2 = Math.floor((entity.x + entity.width - 1) / ts);
   const top2 = Math.floor(entity.y / ts);
-  const bottom2 = Math.floor((entity.y + entity.height - 1) / ts);
+  // Include the row the feet rest ON, not just the one they are inside. Solid
+  // tiles there can't overlap (the AABB test rules them out), but a one-way
+  // platform needs to be seen the frame the feet touch its top edge —
+  // otherwise footing on planks, clouds and ladders sinks a pixel and snaps
+  // back forever, flickering onGround at 30Hz.
+  const bottom2 = Math.floor((entity.y + entity.height) / ts);
 
   for (let row = top2; row <= bottom2; row++) {
     for (let col = left2; col <= right2; col++) {
@@ -86,7 +104,7 @@ export function resolveEntityTileCollisions(entity, level, dt) {
 
       // One-way platform: only collide when falling and feet were above platform
       if (isOneWay(ch)) {
-        if (entity.vy > 0) {
+        if (entity.vy > 0 && !entity.climbing) {
           const tileTop = row * ts;
           const entityBottom = entity.y + entity.height;
           const prevBottom = entityBottom - entity.vy;
@@ -167,4 +185,31 @@ export function isOnGround(entity, level) {
     if (isSolid(ch) || isOneWay(ch)) return true;
   }
   return false;
+}
+
+// --- Ladders ---------------------------------------------------------------
+// Which ladder column an entity is on, if any. Uses the entity's centre so a
+// wide character can't straddle two ladders, and returns the column so the
+// climber can be eased onto its centre line.
+export function ladderColumnAt(entity, level) {
+  const ts = CONFIG.tile.size;
+  const col = Math.floor((entity.x + entity.width / 2) / ts);
+  // Grip is measured at the feet, not over the whole body, so a tall
+  // character lets go of the top rung at the same height a short one does:
+  // the moment its feet clear the topmost ladder tile — which is laid in the
+  // floor of the deck the ladder serves, so clearing it means standing on it.
+  const feetRow = Math.floor((entity.y + entity.height - 1) / ts);
+  for (let row = feetRow - 1; row <= feetRow; row++) {
+    if (isLadder(getTileChar(level, col, row))) return col;
+  }
+  return null;
+}
+
+// A ladder directly under the entity's feet — how you start climbing down
+// from a walkway that has a ladder let into it.
+export function ladderColumnBelow(entity, level) {
+  const ts = CONFIG.tile.size;
+  const col = Math.floor((entity.x + entity.width / 2) / ts);
+  const row = Math.floor((entity.y + entity.height + 2) / ts);
+  return isLadder(getTileChar(level, col, row)) ? col : null;
 }

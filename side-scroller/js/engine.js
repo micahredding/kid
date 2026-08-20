@@ -7,7 +7,7 @@ import { Input } from './input.js';
 import { Camera } from './camera.js';
 import { Player } from './player.js';
 import { Particle, PushBlock } from './entities.js';
-import { loadLevel, drawTiles, drawBackground, drawGoalFlag, LEVELS } from './level.js';
+import { loadLevel, drawTiles, drawHollows, drawBackground, drawGoalFlag, LEVELS } from './level.js';
 
 const GAME_STATES = {
   TITLE: 'title',
@@ -150,6 +150,7 @@ export class Engine {
     this.player.vx = 0;
     this.player.vy = 0;
     this.player.invincibleTimer = CONFIG.player.invincibilityFrames;
+    this.player.climbing = false;
     this.player.resetFollowerPosition();
   }
 
@@ -248,7 +249,7 @@ export class Engine {
     this.entities = this.entities.filter(e => {
       const alive = e.update(this.level);
       if (e.checkPlayerCollision) {
-        e.checkPlayerCollision(this.player);
+        e.checkPlayerCollision(this.player, this.level);
       }
       return alive;
     });
@@ -325,13 +326,14 @@ export class Engine {
     const theme = this.level.theme;
 
     // Background (drawn in screen space with parallax)
-    drawBackground(ctx, theme, this.camera, this.level.width, this.level.undergroundY);
+    drawBackground(ctx, theme, this.camera, this.level.width, this.level.undergroundY, this.level.height);
 
     // World space
     ctx.save();
     this.camera.apply(ctx);
 
-    // Tiles
+    // Chambers behind the tiles, then the tiles
+    drawHollows(ctx, this.level.hollows, theme);
     drawTiles(ctx, this.level.tiles, theme, this.camera);
 
     // Goal flag
@@ -599,6 +601,7 @@ export class Engine {
     ctx.fillText('Space \u2014 Jump    Shift \u2014 Sprint', cx, 410);
     ctx.fillText('Down/S/X \u2014 Pick up & Place blocks', cx, 430);
     ctx.fillText('C/E \u2014 Transform (FOUR)    Q \u2014 Switch Character', cx, 450);
+    ctx.fillText('Up/Down \u2014 Climb ladders    Space \u2014 Let go', cx, 470);
   }
 
   drawGameOver() {

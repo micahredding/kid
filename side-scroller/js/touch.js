@@ -4,8 +4,9 @@
 // Writes into the same key map the keyboard uses, so the engine and player
 // never know the difference. Layout: slide-aware d-pad bottom-left, the whole
 // right half of the screen is jump, small localized buttons for the rest
-// (sprint toggle, grab, transform, character switch), and numbered level
-// chips that appear only on the title screen.
+// (sprint toggle, grab, transform, character switch), a climb pad above the
+// d-pad for ladders, and numbered level chips that appear only on the title
+// screen.
 // =============================================================================
 
 export function isTouchDevice() {
@@ -67,6 +68,19 @@ const CSS = `
   .t-half.pressed {
     background: rgba(255, 255, 255, 0.30);
   }
+
+  /* Climb pad: pure up/down, above the d-pad. Deliberately NOT wired to
+     ArrowUp/ArrowDown — those double as jump and grab, and a ladder button
+     that also jumps is worse than no button. */
+  #t-climb {
+    position: absolute;
+    left: max(16px, env(safe-area-inset-left));
+    bottom: calc(max(16px, env(safe-area-inset-bottom)) + 100px);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  #t-climb .t-btn { width: 66px; height: 66px; font-size: 26px; }
 
   #t-buttons {
     position: absolute;
@@ -136,6 +150,10 @@ export class TouchControls {
       <div id="t-dpad">
         <div class="t-half" data-dir="ArrowLeft">◀</div>
         <div class="t-half" data-dir="ArrowRight">▶</div>
+      </div>
+      <div id="t-climb">
+        <div class="t-btn" data-key="i" title="climb up">▲</div>
+        <div class="t-btn" data-key="k" title="climb down">▼</div>
       </div>
       <div id="t-buttons">
         <div class="t-btn" id="t-sprint" title="sprint">⚡</div>

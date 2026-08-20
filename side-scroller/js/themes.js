@@ -186,6 +186,42 @@ export const THEMES = {
     },
   },
 
+  skyheights: {
+    name: 'Sky Heights',
+    sky: '#7fb6ea',
+    tiles: {
+      M: { color: '#6d7488', topColor: '#f4f8ff', label: '' },   // mountain rock + snow cap
+      W: { color: '#8a6742', topColor: '#b0864f', label: '' },   // bolted-on catwalk
+      '=': { color: '#a97e3c', topColor: '#e2b264', label: '' }, // ladder
+      c: { color: '#ffffff', topColor: '#f2f7ff', label: '' },   // cloud platform
+      I: { color: '#9a7a52', topColor: '#c49a68', label: '' },   // plank / elevator landing
+      G: { color: '#6b5a41', topColor: '#5aa03c', label: '' },
+      B: { color: '#8b8f9c', topColor: '#a2a7b5', label: '' },
+      '?': { color: '#FFD700', topColor: '#FFC800', label: '?' },
+      S: { color: '#5d6474', topColor: '#6d7484', label: '' },
+      P: { color: '#7d8798', topColor: '#9aa4b5', label: '' },
+      p: { color: '#7d8798', topColor: '#7d8798', label: '' },
+      D: { color: '#a98a5c', topColor: '#c0a071', label: '' },
+    },
+    player: {
+      bodyColor: '#FF0000',
+      headColor: '#FFB366',
+      overallsColor: '#0000CC',
+    },
+    enemies: {
+      goomba: { bodyColor: '#8a6a4a', headColor: '#6f523a' },
+      koopa: { bodyColor: '#3f7a5a', shellColor: '#245240' },
+      flyguy: { bodyColor: '#d8564f', wingColor: '#FFFFFF' },
+      spiker: { bodyColor: '#6b7280', spikeColor: '#dbe3ef' },
+    },
+    coin: { color: '#FFD700', sparkle: '#FFF8DC' },
+    background: {
+      hillColor: null,
+      cloudColor: '#ffffff',
+      bushColor: null,
+    },
+  },
+
   castle: {
     name: 'Castle',
     sky: '#1a1a2e',

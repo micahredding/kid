@@ -1,0 +1,162 @@
+{
+  "note": "Derived from kid/prints by tools/extract_art.mjs — do not hand-edit except names.",
+  "fruits": [
+    {
+      "tier": 0,
+      "name": "cherry",
+      "file": "01-cherry.png",
+      "color": "#ff0000",
+      "palette": [
+        "#ff0000"
+      ],
+      "art": {
+        "w": 16,
+        "h": 20
+      },
+      "drawing": "drawing-asher-2026-08-21T02-30-09-855Z.png"
+    },
+    {
+      "tier": 1,
+      "name": "blueberry",
+      "file": "02-blueberry.png",
+      "color": "#0000ff",
+      "palette": [
+        "#0000ff"
+      ],
+      "art": {
+        "w": 16,
+        "h": 20
+      },
+      "drawing": "drawing-asher-2026-08-21T02-30-59-085Z.png"
+    },
+    {
+      "tier": 2,
+      "name": "lime",
+      "file": "03-lime.png",
+      "color": "#00a000",
+      "palette": [
+        "#00a000"
+      ],
+      "art": {
+        "w": 16,
+        "h": 20
+      },
+      "drawing": "drawing-asher-2026-08-21T02-31-25-410Z.png"
+    },
+    {
+      "tier": 3,
+      "name": "plum",
+      "file": "04-plum.png",
+      "color": "#800080",
+      "palette": [
+        "#800080",
+        "#00a000"
+      ],
+      "art": {
+        "w": 48,
+        "h": 80
+      },
+      "drawing": "drawing-asher-2026-08-21T02-43-09-173Z.png"
+    },
+    {
+      "tier": 4,
+      "name": "orange",
+      "file": "05-orange.png",
+      "color": "#ffa500",
+      "palette": [
+        "#ffa500"
+      ],
+      "art": {
+        "w": 48,
+        "h": 60
+      },
+      "drawing": "drawing-asher-2026-08-21T02-47-07-100Z.png"
+    },
+    {
+      "tier": 5,
+      "name": "green apple",
+      "file": "06-green-apple.png",
+      "color": "#00a000",
+      "palette": [
+        "#00a000"
+      ],
+      "art": {
+        "w": 48,
+        "h": 60
+      },
+      "drawing": "drawing-asher-2026-08-21T02-50-39-913Z.png"
+    },
+    {
+      "tier": 6,
+      "name": "peach",
+      "file": "07-peach.png",
+      "color": "#ffc0cb",
+      "palette": [
+        "#ffc0cb"
+      ],
+      "art": {
+        "w": 176,
+        "h": 160
+      },
+      "drawing": "drawing-asher-2026-08-21T02-56-48-975Z.png"
+    },
+    {
+      "tier": 7,
+      "name": "coconut",
+      "file": "08-coconut.png",
+      "color": "#808080",
+      "palette": [
+        "#808080"
+      ],
+      "art": {
+        "w": 432,
+        "h": 300
+      },
+      "drawing": "drawing-asher-2026-08-21T03-13-35-831Z.png"
+    },
+    {
+      "tier": 8,
+      "name": "strawberry",
+      "file": "09-strawberry.png",
+      "color": "#ffc0cb",
+      "palette": [
+        "#ffc0cb",
+        "#00a000"
+      ],
+      "art": {
+        "w": 304,
+        "h": 240
+      },
+      "drawing": "drawing-asher-2026-08-21T03-23-44-790Z.png"
+    },
+    {
+      "tier": 9,
+      "name": "pineapple",
+      "file": "10-pineapple.png",
+      "color": "#ffff00",
+      "palette": [
+        "#ffff00",
+        "#00a000"
+      ],
+      "art": {
+        "w": 208,
+        "h": 260
+      },
+      "drawing": "drawing-asher-2026-08-21T03-31-13-755Z.png"
+    },
+    {
+      "tier": 10,
+      "name": "watermelon",
+      "file": "11-watermelon.png",
+      "color": "#00a000",
+      "palette": [
+        "#00a000"
+      ],
+      "art": {
+        "w": 304,
+        "h": 320
+      },
+      "drawing": "drawing-asher-2026-08-21T09-13-42-436Z.png"
+    }
+  ]
+}

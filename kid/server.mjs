@@ -75,6 +75,7 @@ const GAMES = {
   'decimals':     join(__dirname, '..', 'decimals'),
   'animal':       join(__dirname, '..', 'animal'),
   'castle':       join(__dirname, '..', 'castle'),
+  'fruit-merge':  join(__dirname, '..', 'fruit-merge'),
 };
 
 // ---- ANIMAL's brain --------------------------------------------------------

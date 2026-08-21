@@ -36,6 +36,32 @@ here:
   plum's stem), so it is kept whole on a pale disc of its own colour, and it
   only ever wobbles — never tumbles crown-down.
 
+## Demo images
+
+`demo.html` is a showcase page, not the game — it puts every fruit on screen at
+once using the real renderer and the real solver, rendered at 3x for sharing:
+
+- **the sheet** — all eleven at a uniform size with their names, plus a strip
+  underneath at true relative scale, because the growth is the game
+- **the jar** — one of each tier, hand-placed and then genuinely settled. The
+  two biggest can't sit side by side (249 + 204 is wider than the 428 jar), so
+  they stack and the small fruit fills the crevices.
+
+Both are checked in at `../docs/fruit-merge-the-eleven.png` and
+`../docs/fruit-merge-full-jar.png` — outside the served game tree on purpose, so
+they don't land in every kid device's offline cache. To regenerate, open
+`/fruit-merge/demo.html` and use the save buttons, or render headless:
+
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
+      --headless=new --disable-gpu --force-device-scale-factor=1 \
+      --user-data-dir=/tmp/p1 --window-size=2700,2280 \
+      --screenshot=the-eleven.png \
+      "http://localhost:3131/fruit-merge/demo.html?raw=sheet"
+
+`?raw=sheet` / `?raw=jar` strips the page to one canvas at true pixel size, so a
+window-sized screenshot is exactly the image. Use a fresh `--user-data-dir` per
+render; reusing one makes the second Chrome attach to the first and hang.
+
 ## Playing
 
 | | |

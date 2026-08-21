@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>FRUIT MERGE — all eleven</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    html, body { margin: 0; padding: 0; background: #14100c; color: #c07b3c;
+      font-family: "SF Mono", Menlo, Consolas, monospace; }
+    #bar { padding: 12px 16px; font-size: 12px; letter-spacing: 0.08em;
+      display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+    button { font: inherit; font-size: 12px; background: #2a1f16; color: #ffc98a;
+      border: 1px solid #4a3020; border-radius: 5px; padding: 6px 11px; cursor: pointer; }
+    a { color: #ffc98a; }
+    .wrap { display: flex; gap: 26px; padding: 0 16px 30px; align-items: flex-start; flex-wrap: wrap; }
+    canvas { display: block; box-shadow: 0 0 0 1px #4a3020; }
+    h2 { font-size: 11px; letter-spacing: 0.16em; color: #7a5636; font-weight: normal; margin: 0 0 8px; }
+  </style>
+</head>
+<body>
+  <!-- Showcase page, not the game: every fruit Asher drew, on screen at once.
+       Both views use the real renderer and the real solver, so nothing here is
+       mocked up — the jar is a genuine settled pile. Rendered at 3x for a
+       shareable PNG. Reproduce with: /fruit-merge/demo.html -->
+  <div id="bar">
+    <span id="status">rendering…</span>
+    <button id="save-sheet" type="button">SAVE SHEET PNG</button>
+    <button id="save-jar" type="button">SAVE JAR PNG</button>
+    <a href="./">back to the game</a>
+  </div>
+  <div class="wrap">
+    <div><h2>THE ELEVEN</h2><canvas id="sheet"></canvas></div>
+    <div><h2>ALL OF THEM IN THE JAR</h2><canvas id="jar"></canvas></div>
+  </div>
+
+  <script type="module">
+    import { Game } from './js/game.js';
+    import { Renderer } from './js/render.js';
+    import { W, H, LAYOUT, radiusFor } from './js/config.js';
+    import { Body } from './js/physics.js';
+
+    const SCALE = 3;
+    const RAW = new URLSearchParams(location.search).get('raw');
+
+    const manifest = await fetch('./art/fruits.json').then((r) => r.json());
+    const FRUITS = manifest.fruits;
+    const images = await Promise.all(FRUITS.map((f) => new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => resolve(null);
+      img.src = `./art/${f.file}`;
+    })));
+
+    function setup(canvas, w, h) {
+      canvas.width = w * SCALE;
+      canvas.height = h * SCALE;
+      canvas.style.width = RAW ? `${w * SCALE}px` : `${Math.round(w * 0.62)}px`;
+      const ctx = canvas.getContext('2d');
+      ctx.setTransform(SCALE, 0, 0, SCALE, 0, 0);
+      return ctx;
+    }
+
+    // ---- the jar -----------------------------------------------------------
+
+    const jar = document.getElementById('jar');
+    const jarCtx = setup(jar, W, H);
+    const game = new Game(FRUITS, { seed: 20260821 });
+    const view = new Renderer(jarCtx, FRUITS, images);
+    view.bestEver = 1154;               // his real best, 2026-08-21
+    view.titleUp = false;
+
+    // The two biggest cannot sit side by side — 249 + 204 is wider than the
+    // 428 jar — so they stack rather than arch, and the smaller fruit fills the
+    // crevices. Positions are a starting guess; the solver arranges it.
+    const PLAN = [
+      [10, 170, 592],   // watermelon on the floor, against the left wall
+      [7, 388, 648],    // coconut on the floor beside it
+      [1, 300, 690],    // blueberry in the floor gap between them
+      [9, 330, 430],    // pineapple up on the coconut/watermelon shoulder
+      [8, 140, 380],    // strawberry on top of the watermelon
+      [6, 270, 300],    // peach in the saddle between them
+      [5, 60, 268],     // green apple
+      [4, 400, 268],    // orange
+      [3, 175, 240],    // plum
+      [2, 330, 250],    // lime
+      [0, 100, 250],    // cherry
+    ];
+    for (const [tier, x, y] of PLAN) game.world.add(new Body(x, y, radiusFor(tier), tier));
+
+    // Settle with the solver directly, not game.step(): no two fruits here share
+    // a tier so nothing can merge, and stepping the game would run the full-jar
+    // check and end a game nobody is playing.
+    for (let i = 0; i < 1800; i++) game.world.step(1 / 120);
+
+    game.score = 1154;
+    game.best = FRUITS.length - 1;      // light every rung of the bottom chart
+    game.held = 0;
+    game.next = 2;
+    game.aimAt(240);
+    view.draw(game, 1 / 60);
+
+    // ---- the sheet ---------------------------------------------------------
+    // Uniform balls so every drawing is legible at the same size, then a strip
+    // underneath at true relative scale, because the growth is the game.
+
+    const SW = 900, SH = 760;
+    const sheet = document.getElementById('sheet');
+    const sctx = setup(sheet, SW, SH);
+
+    const g = sctx.createLinearGradient(0, 0, 0, SH);
+    g.addColorStop(0, '#ffe8c2');
+    g.addColorStop(1, '#f7b878');
+    sctx.fillStyle = g;
+    sctx.fillRect(0, 0, SW, SH);
+
+    sctx.textAlign = 'center';
+    sctx.textBaseline = 'middle';
+    sctx.fillStyle = '#3c2a1e';
+    sctx.font = 'bold 52px "SF Mono", Menlo, monospace';
+    sctx.fillText('FRUIT MERGE', SW / 2, 66);
+    sctx.font = 'bold 19px "SF Mono", Menlo, monospace';
+    sctx.fillStyle = '#7a4a22';
+    sctx.fillText('all eleven fruits drawn by ASHER', SW / 2, 112);
+
+    const ROWS = [[0, 1, 2, 3, 4, 5], [6, 7, 8, 9, 10]];
+    const R = 58;
+    ROWS.forEach((row, ri) => {
+      const y = 216 + ri * 216;
+      const step = SW / row.length;
+      row.forEach((tier, i) => {
+        const x = step * (i + 0.5);
+        view.drawBall(sctx, x, y, R, tier);
+        sctx.fillStyle = '#5a3a1c';
+        sctx.font = 'bold 15px "SF Mono", Menlo, monospace';
+        sctx.fillText(FRUITS[tier].name.toUpperCase(), x, y + R + 26);
+        // Arrows read left to right, wrapping row to row.
+        if (i < row.length - 1) {
+          sctx.fillStyle = 'rgba(122,74,34,0.6)';
+          sctx.font = 'bold 26px "SF Mono", Menlo, monospace';
+          sctx.fillText('›', x + step / 2, y);
+        }
+      });
+    });
+
+    // True-scale strip: the whole ladder, in proportion, sitting on a line.
+    const stripY = 700, fit = 0.63;
+    let sx = 26;
+    sctx.strokeStyle = 'rgba(122,74,34,0.35)';
+    sctx.lineWidth = 2;
+    sctx.beginPath();
+    sctx.moveTo(14, stripY);
+    sctx.lineTo(SW - 14, stripY);
+    sctx.stroke();
+    for (let t = 0; t < FRUITS.length; t++) {
+      const r = radiusFor(t) * fit;
+      sx += r;
+      view.drawBall(sctx, sx, stripY - r, r, t);
+      sx += r + 6;
+    }
+    sctx.fillStyle = '#7a4a22';
+    sctx.font = 'bold 13px "SF Mono", Menlo, monospace';
+    sctx.textAlign = 'left';
+    sctx.fillText('actual sizes in the game', 16, 736);
+    sctx.textAlign = 'right';
+    sctx.fillText('drawn in the kid terminal, 21 August 2026', SW - 16, 736);
+
+    // ---- status + saving ---------------------------------------------------
+
+    const above = game.world.bodies.filter((b) => b.y - b.r < LAYOUT.dangerY).length;
+    const floating = game.world.bodies.filter((b) => b.stillFor < 0.2).length;
+    document.getElementById('status').textContent =
+      `${game.world.bodies.length} fruits, all ${FRUITS.length} tiers` +
+      ` — sheet ${SW * SCALE}×${SH * SCALE}, jar ${W * SCALE}×${H * SCALE}` +
+      (above ? ` — ${above} over the line` : '') +
+      (floating ? ` — ${floating} still moving` : ' — settled');
+
+    const save = (canvas, name) => {
+      const a = document.createElement('a');
+      a.download = name;
+      a.href = canvas.toDataURL('image/png');
+      a.click();
+    };
+    document.getElementById('save-sheet').addEventListener('click', () => save(sheet, 'fruit-merge-the-eleven.png'));
+    document.getElementById('save-jar').addEventListener('click', () => save(jar, 'fruit-merge-full-jar.png'));
+
+    if (RAW) {
+      // Strip the page down to the one canvas, flush to the corner, so a
+      // window-sized screenshot is exactly the image and nothing else.
+      document.getElementById('bar').remove();
+      for (const h of document.querySelectorAll('h2')) h.remove();
+      const keep = RAW === 'jar' ? jar : sheet;
+      for (const c of document.querySelectorAll('canvas')) if (c !== keep) c.remove();
+      const wrap = document.querySelector('.wrap');
+      wrap.style.cssText = 'padding:0;gap:0;display:block';
+      for (const d of wrap.children) d.style.cssText = 'margin:0';
+      keep.style.boxShadow = 'none';
+      document.body.style.cssText = 'margin:0;padding:0;background:#14100c;overflow:hidden';
+      document.title = `raw-${RAW}`;
+    }
+
+    // Handles for the screenshot pass.
+    globalThis.__demo = {
+      sheet, jar, game, view,
+      png: (which) => (which === 'jar' ? jar : sheet).toDataURL('image/png'),
+      report: () => ({
+        tiers: game.world.bodies.map((b) => b.tier).sort((a, b) => a - b),
+        bodies: game.world.bodies.map((b) => ({ t: b.tier, x: Math.round(b.x), y: Math.round(b.y), still: +b.stillFor.toFixed(2) })),
+      }),
+    };
+  </script>
+</body>
+</html>

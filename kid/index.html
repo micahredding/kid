@@ -428,34 +428,91 @@ const WHO = (new URLSearchParams(window.location.search).get('who') || '').trim(
 
 // Offline queue: log entries that can't reach the server wait in localStorage
 // and replay when the network comes back (or on the next visit).
+//
+// The one rule: an entry leaves the queue only after the server has taken it.
+// An earlier version cleared the whole queue before sending and trusted failed
+// POSTs to re-queue themselves — so any interruption mid-flush (tab closed,
+// network half-up, page torn down) destroyed the backlog. On 2026-08-21 that
+// lost seven of Asher's drawings; they were recovered out of localStorage by
+// hand. Everything below exists so that cannot happen again.
 const LOG_QUEUE_KEY = 'kid-log-queue';
+const QUEUE_MAX_ENTRIES = 1000;
+const QUEUE_MAX_CHARS = 4000000;
+
+let qidCounter = 0;
+function nextQid() { return `${Date.now().toString(36)}-${(qidCounter++).toString(36)}`; }
+
+function readQueue() {
+  try { return JSON.parse(localStorage.getItem(LOG_QUEUE_KEY) || '[]'); } catch { return []; }
+}
+
+// Trim oldest-first when over cap, but never drop a full-canvas snapshot while
+// a replaceable action batch is still there — the snapshot is the picture.
+function trimQueue(q) {
+  const isSnapshot = (e) => e.type === 'drawing';
+  let s = JSON.stringify(q);
+  while (q.length > QUEUE_MAX_ENTRIES || s.length > QUEUE_MAX_CHARS) {
+    let i = q.findIndex((e) => !isSnapshot(e));
+    if (i === -1) i = 0;
+    q.splice(i, 1);
+    s = JSON.stringify(q);
+  }
+  return s;
+}
 
 function queueLog(entry) {
   try {
-    const q = JSON.parse(localStorage.getItem(LOG_QUEUE_KEY) || '[]');
     entry.queuedAt = entry.queuedAt || new Date().toISOString();
+    if (!entry.qid) entry.qid = nextQid();
+    const q = readQueue();
+    if (q.some((e) => e.qid === entry.qid)) return; // already durable
     q.push(entry);
-    while (q.length > 300 || JSON.stringify(q).length > 2000000) q.shift();
-    localStorage.setItem(LOG_QUEUE_KEY, JSON.stringify(q));
+    localStorage.setItem(LOG_QUEUE_KEY, trimQueue(q));
   } catch { /* storage full or disabled — drop */ }
 }
 
-function flushLogQueue() {
-  let q;
-  try { q = JSON.parse(localStorage.getItem(LOG_QUEUE_KEY) || '[]'); } catch { q = []; }
-  if (!q.length) return;
-  localStorage.removeItem(LOG_QUEUE_KEY); // failures re-queue themselves
-  for (const entry of q) serverLog(entry);
+function dequeueLog(qid) {
+  try {
+    const q = readQueue();
+    const rest = q.filter((e) => e.qid !== qid);
+    if (rest.length !== q.length) localStorage.setItem(LOG_QUEUE_KEY, JSON.stringify(rest));
+  } catch { /* ignore */ }
+}
+
+let flushing = false;
+async function flushLogQueue() {
+  if (flushing) return;
+  flushing = true;
+  try {
+    // Re-read the queue after each pass: entries logged while we were awaiting
+    // would otherwise sit until the next visit.
+    let progressed = true;
+    while (progressed) {
+      progressed = false;
+      for (const entry of readQueue()) {
+        let ok = false;
+        try {
+          const res = await fetch(`${SERVER}/log`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(entry),
+          });
+          ok = res.ok || res.status === 501;
+        } catch { ok = false; }
+        if (!ok) return; // still unreachable — leave the whole backlog alone
+        dequeueLog(entry.qid);
+        progressed = true;
+      }
+    }
+  } finally { flushing = false; }
 }
 
 function serverLog(entry) {
   if (WHO) entry.who = WHO;
-  fetch(`${SERVER}/log`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(entry),
-  }).then((res) => { if (!res.ok && res.status !== 501) queueLog(entry); })
-    .catch(() => queueLog(entry));
+  // Durable before it is ever in flight, so no request, tab close, or crash can
+  // be the only thing standing between a drawing and the disk.
+  queueLog(entry);
+  flushLogQueue();
 }
 
 window.addEventListener('online', flushLogQueue);
@@ -1223,6 +1280,11 @@ function flushDrawActions(useBeacon = false) {
                   background: { ...drawBackground }, actions: history.slice(flushedActions) };
   if (WHO) entry.who = WHO;
   if (useBeacon && navigator.sendBeacon) {
+    // sendBeacon reports "handed to the browser", never "delivered", and it has
+    // no failure callback — so make the entry durable first and let it stay
+    // queued. The server drops repeats by qid, so a beacon that does land
+    // costs one duplicate POST instead of risking a lost batch.
+    queueLog(entry);
     navigator.sendBeacon(`${SERVER}/log`,
       new Blob([JSON.stringify(entry)], { type: 'application/json' }));
   } else {

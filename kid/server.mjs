@@ -19,6 +19,9 @@ mkdirSync(brainDir,  { recursive: true });
 
 const logFile = join(logsDir, `session-${sessionTimestamp}.jsonl`);
 
+// qids already written this session — see the /log handler.
+const seenQids = new Set();
+
 function log(entry) {
   entry.ts = new Date().toISOString();
   try { appendFileSync(logFile, JSON.stringify(entry) + '\n'); } catch { /* never crash */ }
@@ -296,6 +299,14 @@ const server = createServer(async (req, res) => {
     const body = await readBody(req);
     try {
       const entry = JSON.parse(body);
+      // The client keeps every entry queued until we acknowledge it, and the
+      // sendBeacon path may deliver a second copy of the same one. Idempotent
+      // by qid, the same way /animal-teach is idempotent by lesson id.
+      if (entry.qid) {
+        if (seenQids.has(entry.qid)) { res.writeHead(204); res.end(); return; }
+        seenQids.add(entry.qid);
+        if (seenQids.size > 50000) seenQids.clear();
+      }
       entry.ip = clientIp(req);
       entry.device = shortDevice(req.headers['user-agent']);
       log(entry);

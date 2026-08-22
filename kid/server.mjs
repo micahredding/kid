@@ -147,7 +147,10 @@ const MIME_TYPES = {
 
 // ---- Offline support: manifest of every cacheable file, for the service worker ----
 // The worker precaches this list, so the games keep working with no network.
-const SKIP_DIRS = new Set(['node_modules', 'tools', 'logs', 'prints']);
+// Directories a game never fetches at runtime, so the service worker must not
+// precache them. `source` is number-merge's checked-in original drawings: the
+// permanent record, ~106KB, and dead weight in every kid device's cache.
+const SKIP_DIRS = new Set(['node_modules', 'tools', 'logs', 'prints', 'source']);
 const SKIP_FILES = /^(test_|debug_|playtest|\.)/i;
 
 function walkManifest(dir, urlBase, files) {

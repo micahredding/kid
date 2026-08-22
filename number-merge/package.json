@@ -1,0 +1,12 @@
+{
+  "name": "number-merge",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "python3 -m http.server 8125",
+    "start": "python3 -m http.server 8125",
+    "test": "node test_number_merge.mjs",
+    "art": "node tools/extract_art.mjs"
+  }
+}

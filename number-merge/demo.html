@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>NUMBER MERGE — all thirteen</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    html, body { margin: 0; padding: 0; background: #0b1120; color: #7f9dd0;
+      font-family: "SF Mono", Menlo, Consolas, monospace; }
+    #bar { padding: 12px 16px; font-size: 12px; letter-spacing: 0.08em;
+      display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+    button { font: inherit; font-size: 12px; background: #17233d; color: #9fc0f0;
+      border: 1px solid #2b3a5c; border-radius: 5px; padding: 6px 11px; cursor: pointer; }
+    a { color: #9fc0f0; }
+    .wrap { display: flex; gap: 26px; padding: 0 16px 30px; align-items: flex-start; flex-wrap: wrap; }
+    canvas { display: block; box-shadow: 0 0 0 1px #2b3a5c; }
+    h2 { font-size: 11px; letter-spacing: 0.16em; color: #56709c; font-weight: normal; margin: 0 0 8px; }
+  </style>
+</head>
+<body>
+  <!-- Showcase page, not the game: every number Asher drew, on screen at once.
+       Both views use the real renderer and the real solver, so nothing here is
+       mocked up — the jar is a genuine settled pile. Rendered at 3x for a
+       shareable PNG. Reproduce with: /number-merge/demo.html -->
+  <div id="bar">
+    <span id="status">rendering…</span>
+    <button id="save-sheet" type="button">SAVE SHEET PNG</button>
+    <button id="save-jar" type="button">SAVE JAR PNG</button>
+    <a href="./">back to the game</a>
+  </div>
+  <div class="wrap">
+    <div><h2>THE THIRTEEN</h2><canvas id="sheet"></canvas></div>
+    <div><h2>ALL OF THEM IN THE JAR</h2><canvas id="jar"></canvas></div>
+  </div>
+
+  <script type="module">
+    import { Game } from './js/game.js';
+    import { Renderer } from './js/render.js';
+    import { W, H, LAYOUT, VALUES, radiusFor, valueOf } from './js/config.js';
+    import { Body } from './js/physics.js';
+
+    const SCALE = 3;
+    const RAW = new URLSearchParams(location.search).get('raw');
+    const MONO = '"SF Mono", Menlo, monospace';
+
+    const manifest = await fetch('./art/blocks.json').then((r) => r.json());
+    const BLOCKS = manifest.blocks;
+    const images = await Promise.all(BLOCKS.map((b) => new Promise((resolve) => {
+      if (!b.file) { resolve(null); return; }
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => resolve(null);
+      img.src = `./art/${b.file}`;
+    })));
+
+    function setup(canvas, w, h) {
+      canvas.width = w * SCALE;
+      canvas.height = h * SCALE;
+      canvas.style.width = RAW ? `${w * SCALE}px` : `${Math.round(w * 0.62)}px`;
+      const ctx = canvas.getContext('2d');
+      ctx.setTransform(SCALE, 0, 0, SCALE, 0, 0);
+      return ctx;
+    }
+
+    // ---- the jar -----------------------------------------------------------
+
+    const jar = document.getElementById('jar');
+    const jarCtx = setup(jar, W, H);
+    const game = new Game(BLOCKS, { seed: 20260821 });
+    const view = new Renderer(jarCtx, BLOCKS, images);
+    view.bestEver = 0;
+    view.titleUp = false;
+
+    // 2048 and 1024 cannot sit side by side — 248 + 210 is wider than the 428
+    // jar — so they stack, and the small numbers fill the crevices. Positions
+    // are a starting guess; the solver arranges it.
+    const PLAN = [
+      [12, 152, 590],   // 2048 on the floor, against the left wall
+      [11, 348, 610],   // 1024 on the floor beside it
+      [10, 250, 420],   // 512 in the saddle between them
+      [9,  110, 380],   // 256 on 2048's shoulder
+      [8,  386, 400],   // 128
+      [7,  272, 292],   // 64
+      [6,  186, 268],   // 32
+      [5,   64, 262],   // 16
+      [4,  420, 290],   // 8
+      [3,  350, 232],   // 4
+      [2,  128, 216],   // 2
+      [1,  240, 208],   // 1
+      [0,  300, 190],   // 0
+    ];
+    for (const [tier, x, y] of PLAN) game.world.add(new Body(x, y, radiusFor(tier), tier));
+
+    // Settle with the solver directly, not game.step(). Two reasons: this jar
+    // holds one of every rung so no equal pair could double anyway, and the
+    // Zero would otherwise be absorbed on contact — which is the rule working,
+    // but it would leave the showcase a rung short.
+    for (let i = 0; i < 1800; i++) game.world.step(1 / 120);
+
+    game.score = 4096;
+    game.best = BLOCKS.length - 1;      // light every rung of the bottom chart
+    game.held = 1;
+    game.next = 2;
+    game.aimAt(240);
+    view.draw(game, 1 / 60);
+
+    // ---- the sheet ---------------------------------------------------------
+    // Uniform balls so every drawing is legible at the same size, then a strip
+    // underneath at true relative scale, because the doubling is the game.
+
+    const SW = 900, SH = 940;
+    const sheet = document.getElementById('sheet');
+    const sctx = setup(sheet, SW, SH);
+
+    const g = sctx.createLinearGradient(0, 0, 0, SH);
+    g.addColorStop(0, '#dfe9ff');
+    g.addColorStop(1, '#a8bfe8');
+    sctx.fillStyle = g;
+    sctx.fillRect(0, 0, SW, SH);
+
+    sctx.textAlign = 'center';
+    sctx.textBaseline = 'middle';
+    sctx.fillStyle = '#1e2a44';
+    sctx.font = `bold 52px ${MONO}`;
+    sctx.fillText('NUMBER MERGE', SW / 2, 66);
+    sctx.font = `bold 19px ${MONO}`;
+    sctx.fillStyle = '#4a5b80';
+    sctx.fillText('all thirteen numbers drawn by ASHER', SW / 2, 112);
+
+    const ROWS = [[0, 1, 2, 3, 4], [5, 6, 7, 8, 9], [10, 11, 12]];
+    const R = 56;
+    ROWS.forEach((row, ri) => {
+      const y = 208 + ri * 182;
+      const step = SW / row.length;
+      row.forEach((tier, i) => {
+        const x = step * (i + 0.5);
+        view.drawBall(sctx, x, y, R, tier);
+        // The words have to be fitted, not just sized: ONE HUNDRED TWENTY-EIGHT
+        // is nearly twice as wide as its column at the size ZERO wants.
+        const word = BLOCKS[tier].word.toUpperCase();
+        view.fittedFont(sctx, word, 15, step - 16);
+        sctx.fillStyle = '#33445f';
+        sctx.fillText(word, x, y + R + 24);
+        if (i < row.length - 1) {
+          sctx.fillStyle = 'rgba(74,91,128,0.6)';
+          sctx.font = `bold 24px ${MONO}`;
+          sctx.fillText('›', x + step / 2, y);
+        }
+      });
+    });
+
+    // True-scale strip: the whole ladder, in proportion, sitting on a line.
+    const stripY = 882, fit = 0.56;
+    let sx = 22;
+    sctx.strokeStyle = 'rgba(74,91,128,0.35)';
+    sctx.lineWidth = 2;
+    sctx.beginPath();
+    sctx.moveTo(14, stripY);
+    sctx.lineTo(SW - 14, stripY);
+    sctx.stroke();
+    for (let t = 0; t < BLOCKS.length; t++) {
+      const r = radiusFor(t) * fit;
+      sx += r;
+      view.drawBall(sctx, sx, stripY - r, r, t);
+      sx += r + 5;
+    }
+    sctx.fillStyle = '#4a5b80';
+    sctx.font = `bold 13px ${MONO}`;
+    sctx.textAlign = 'left';
+    sctx.fillText('actual sizes in the game', 16, 918);
+    sctx.textAlign = 'right';
+    sctx.fillText('drawn in the kid terminal, 21 August 2026', SW - 16, 918);
+
+    // ---- status + saving ---------------------------------------------------
+
+    const above = game.world.bodies.filter((b) => b.y - b.r < LAYOUT.dangerY).length;
+    const floating = game.world.bodies.filter((b) => b.stillFor < 0.2).length;
+    document.getElementById('status').textContent =
+      `${game.world.bodies.length} blocks, all ${BLOCKS.length} rungs` +
+      ` — sheet ${SW * SCALE}×${SH * SCALE}, jar ${W * SCALE}×${H * SCALE}` +
+      (above ? ` — ${above} over the line` : '') +
+      (floating ? ` — ${floating} still moving` : ' — settled');
+
+    const save = (canvas, name) => {
+      const a = document.createElement('a');
+      a.download = name;
+      a.href = canvas.toDataURL('image/png');
+      a.click();
+    };
+    document.getElementById('save-sheet').addEventListener('click', () => save(sheet, 'number-merge-the-thirteen.png'));
+    document.getElementById('save-jar').addEventListener('click', () => save(jar, 'number-merge-full-jar.png'));
+
+    if (RAW) {
+      // Strip the page down to the one canvas, flush to the corner, so a
+      // window-sized screenshot is exactly the image and nothing else.
+      document.getElementById('bar').remove();
+      for (const h of document.querySelectorAll('h2')) h.remove();
+      const keep = RAW === 'jar' ? jar : sheet;
+      for (const c of document.querySelectorAll('canvas')) if (c !== keep) c.remove();
+      const wrap = document.querySelector('.wrap');
+      wrap.style.cssText = 'padding:0;gap:0;display:block';
+      for (const d of wrap.children) d.style.cssText = 'margin:0';
+      keep.style.boxShadow = 'none';
+      document.body.style.cssText = 'margin:0;padding:0;background:#0b1120;overflow:hidden';
+      document.title = `raw-${RAW}`;
+    }
+
+    globalThis.__demo = {
+      sheet, jar, game, view,
+      png: (which) => (which === 'jar' ? jar : sheet).toDataURL('image/png'),
+      report: () => ({
+        tiers: game.world.bodies.map((b) => valueOf(b.tier)).sort((a, b) => a - b),
+        above, floating,
+      }),
+    };
+  </script>
+</body>
+</html>

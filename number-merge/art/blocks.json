@@ -1,0 +1,222 @@
+{
+  "note": "Derived from source/ by tools/extract_art.mjs — rebuildable, not the record.",
+  "blocks": [
+    {
+      "tier": 0,
+      "value": 0,
+      "word": "zero",
+      "file": null,
+      "blank": true,
+      "color": "#ffffff",
+      "palette": [
+        "#ffffff"
+      ],
+      "art": null,
+      "drawing": "0000-drawing-asher-2026-08-21T15-37-38-857Z.png"
+    },
+    {
+      "tier": 1,
+      "value": 1,
+      "word": "one",
+      "file": "0001-1.png",
+      "blank": false,
+      "color": "#ff0000",
+      "palette": [
+        "#ff0000"
+      ],
+      "art": {
+        "w": 96,
+        "h": 100
+      },
+      "drawing": "0001-drawing-asher-2026-08-21T21-28-35-133Z.png"
+    },
+    {
+      "tier": 2,
+      "value": 2,
+      "word": "two",
+      "file": "0002-2.png",
+      "blank": false,
+      "color": "#ffa500",
+      "palette": [
+        "#ffa500"
+      ],
+      "art": {
+        "w": 112,
+        "h": 140
+      },
+      "drawing": "0002-drawing-asher-2026-08-21T21-30-00-054Z.png"
+    },
+    {
+      "tier": 3,
+      "value": 4,
+      "word": "four",
+      "file": "0004-4.png",
+      "blank": false,
+      "color": "#00a000",
+      "palette": [
+        "#00a000"
+      ],
+      "art": {
+        "w": 160,
+        "h": 200
+      },
+      "drawing": "0004-drawing-asher-2026-08-21T21-39-25-919Z.png"
+    },
+    {
+      "tier": 4,
+      "value": 8,
+      "word": "eight",
+      "file": "0008-8.png",
+      "blank": false,
+      "color": "#ffc0cb",
+      "palette": [
+        "#ffc0cb"
+      ],
+      "art": {
+        "w": 304,
+        "h": 220
+      },
+      "drawing": "0008-drawing-asher-2026-08-21T21-36-55-900Z.png"
+    },
+    {
+      "tier": 5,
+      "value": 16,
+      "word": "sixteen",
+      "file": "0016-16.png",
+      "blank": false,
+      "color": "#800080",
+      "palette": [
+        "#800080",
+        "#ff0000"
+      ],
+      "art": {
+        "w": 160,
+        "h": 220
+      },
+      "drawing": "0016-drawing-asher-2026-08-21T21-44-44-118Z.png"
+    },
+    {
+      "tier": 6,
+      "value": 32,
+      "word": "thirty-two",
+      "file": "0032-32.png",
+      "blank": false,
+      "color": "#ffff00",
+      "palette": [
+        "#ffff00",
+        "#ffa500"
+      ],
+      "art": {
+        "w": 208,
+        "h": 220
+      },
+      "drawing": "0032-drawing-asher-2026-08-21T22-50-10-397Z.png"
+    },
+    {
+      "tier": 7,
+      "value": 64,
+      "word": "sixty-four",
+      "file": "0064-64.png",
+      "blank": false,
+      "color": "#800080",
+      "palette": [
+        "#800080",
+        "#00a000"
+      ],
+      "art": {
+        "w": 224,
+        "h": 200
+      },
+      "drawing": "0064-drawing-asher-2026-08-21T21-53-16-168Z.png"
+    },
+    {
+      "tier": 8,
+      "value": 128,
+      "word": "one hundred twenty-eight",
+      "file": "0128-128.png",
+      "blank": false,
+      "color": "#ff0000",
+      "palette": [
+        "#ff0000",
+        "#ffa500",
+        "#ffc0cb"
+      ],
+      "art": {
+        "w": 256,
+        "h": 160
+      },
+      "drawing": "0128-drawing-asher-2026-08-21T21-58-09-416Z.png"
+    },
+    {
+      "tier": 9,
+      "value": 256,
+      "word": "two hundred fifty-six",
+      "file": "0256-256.png",
+      "blank": false,
+      "color": "#ffa500",
+      "palette": [
+        "#ffa500",
+        "#0000ff",
+        "#800080"
+      ],
+      "art": {
+        "w": 224,
+        "h": 380
+      },
+      "drawing": "0256-drawing-asher-2026-08-21T22-15-08-462Z.png"
+    },
+    {
+      "tier": 10,
+      "value": 512,
+      "word": "five hundred twelve",
+      "file": "0512-512.png",
+      "blank": false,
+      "color": "#0000ff",
+      "palette": [
+        "#0000ff",
+        "#ff0000",
+        "#ffa500"
+      ],
+      "art": {
+        "w": 160,
+        "h": 220
+      },
+      "drawing": "0512-drawing-asher-2026-08-21T23-23-24-688Z.png"
+    },
+    {
+      "tier": 11,
+      "value": 1024,
+      "word": "one thousand twenty-four",
+      "file": "1024-1024.png",
+      "blank": false,
+      "color": "#ff0000",
+      "palette": [
+        "#ff0000",
+        "#ffa500"
+      ],
+      "art": {
+        "w": 336,
+        "h": 280
+      },
+      "drawing": "1024-drawing-asher-2026-08-21T22-09-17-025Z.png"
+    },
+    {
+      "tier": 12,
+      "value": 2048,
+      "word": "two thousand forty-eight",
+      "file": "2048-2048.png",
+      "blank": false,
+      "color": "#00a000",
+      "palette": [
+        "#00a000",
+        "#ffa500",
+        "#ffc0cb"
+      ],
+      "art": {
+        "w": 240,
+        "h": 280
+      },
+      "drawing": "2048-drawing-asher-2026-08-21T22-36-26-170Z.png"
+    }
+  ]
+}

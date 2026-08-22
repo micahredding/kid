@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>NUMBER MERGE</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Number Merge">
+  <meta name="theme-color" content="#000000">
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0; height: 100%; overflow: hidden; background: #000;
+      -webkit-text-size-adjust: 100%;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-user-select: none; user-select: none;
+      touch-action: none;
+      font-family: "SF Mono", Menlo, Consolas, monospace;
+    }
+    body { position: fixed; inset: 0; }
+    #wrap {
+      position: fixed; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: radial-gradient(ellipse at center, #17233d 0%, #000 100%);
+    }
+    #game {
+      display: block;
+      border-radius: 10px;
+      box-shadow: 0 0 0 2px #2b3a5c, 0 0 50px rgba(120, 170, 255, 0.18);
+      cursor: pointer;
+    }
+    /* Parent-facing only: dim, tiny, and needs a second tap to actually fire. */
+    #reset {
+      position: fixed; top: max(6px, env(safe-area-inset-top)); right: max(6px, env(safe-area-inset-right));
+      background: rgba(255,255,255,0.06); color: #6d7484; border: 0; border-radius: 4px;
+      font: inherit; font-size: 11px; letter-spacing: 0.1em; padding: 6px 9px;
+      z-index: 5; cursor: pointer;
+    }
+    #reset.armed { color: #ffc21e; background: rgba(255,194,30,0.14); }
+    #mute {
+      position: fixed; top: max(6px, env(safe-area-inset-top)); left: max(6px, env(safe-area-inset-left));
+      background: rgba(255,255,255,0.06); color: #6d7484; border: 0; border-radius: 4px;
+      font: inherit; font-size: 11px; letter-spacing: 0.1em; padding: 6px 9px;
+      z-index: 5; cursor: pointer;
+    }
+    #loading {
+      position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+      color: #7f9dd0; font-size: 13px; letter-spacing: 0.2em; z-index: 6;
+    }
+  </style>
+</head>
+<body>
+  <div id="wrap"><canvas id="game"></canvas></div>
+  <button id="mute" type="button">SOUND ON</button>
+  <button id="reset" type="button">START OVER</button>
+  <div id="loading">LOADING ASHER'S NUMBERS…</div>
+
+  <script type="module">
+    import { Game } from './js/game.js';
+    import { Renderer } from './js/render.js';
+    import { Sfx } from './js/sfx.js';
+    import { W, H, LAYOUT } from './js/config.js';
+
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    const who = (new URLSearchParams(location.search).get('who') || '').replace(/[^a-z0-9_-]/gi, '').slice(0, 20);
+
+    // Fire-and-forget progress logging, same shape the other games use. The game
+    // itself never depends on it, so being offline changes nothing.
+    const SERVER = location.origin;
+    function log(entry) {
+      if (who) entry.who = who;
+      try {
+        fetch(`${SERVER}/log`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ game: 'number-merge', ...entry }),
+          keepalive: true,
+        }).catch(() => {});
+      } catch {}
+    }
+
+    // ---- the art -----------------------------------------------------------
+
+    const manifest = await fetch('./art/blocks.json').then((r) => r.json());
+    const BLOCKS = manifest.blocks;
+
+    // Zero has no sprite on purpose — his Zero is a blank page — so it resolves
+    // to null and the renderer draws an empty ball.
+    const images = await Promise.all(BLOCKS.map((b) => new Promise((resolve) => {
+      if (!b.file) { resolve(null); return; }
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => resolve(null);   // a missing sprite falls back to a disc
+      img.src = `./art/${b.file}`;
+    })));
+    document.getElementById('loading').remove();
+
+    // ---- fit the canvas ----------------------------------------------------
+
+    let scale = 1;
+    function fit() {
+      const pad = 8;
+      const s = Math.min((innerWidth - pad) / W, (innerHeight - pad) / H);
+      scale = Math.max(0.4, Math.min(s, 2)) * (window.devicePixelRatio || 1);
+      canvas.width = Math.round(W * scale);
+      canvas.height = Math.round(H * scale);
+      canvas.style.width = `${Math.round(W * scale / (window.devicePixelRatio || 1))}px`;
+      canvas.style.height = `${Math.round(H * scale / (window.devicePixelRatio || 1))}px`;
+      ctx.setTransform(scale, 0, 0, scale, 0, 0);
+    }
+    addEventListener('resize', fit);
+    fit();
+
+    // ---- game --------------------------------------------------------------
+
+    const sfx = new Sfx();
+    const game = new Game(BLOCKS, { seed: (Date.now() & 0x7fffffff) || 1 });
+    const view = new Renderer(ctx, BLOCKS, images);
+
+    const BEST_KEY = `number-merge-best${who ? ':' + who : ''}`;
+    view.bestEver = Number(localStorage.getItem(BEST_KEY) || 0);
+    view.titleUp = true;   // the first tap starts the game rather than dropping
+
+    function newGame() {
+      game.reset();
+      game.random = (() => { let a = (Date.now() & 0x7fffffff) >>> 0; return () => { a = (a + 0x6d2b79f5) >>> 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; })();
+      view.particles.length = 0;
+      view.flashes.length = 0;
+      view.banner = null;
+      view.titleUp = false;   // "play again" means play, not read the card again
+      log({ type: 'start' });
+    }
+
+    // ---- input -------------------------------------------------------------
+    // Point where you want it, tap to drop. Arrow keys and space do the same,
+    // because he plays on a laptop.
+
+    function pointerX(e) {
+      const rect = canvas.getBoundingClientRect();
+      const px = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+      return (px / rect.width) * W;
+    }
+
+    function aimFrom(e) { if (game.state === 'playing') game.aimAt(pointerX(e)); }
+
+    function act(e) {
+      sfx.wake();
+      if (view.titleUp) { view.titleUp = false; return; }
+      if (game.state === 'over') { newGame(); return; }
+      aimFrom(e);
+      game.drop();
+    }
+
+    canvas.addEventListener('pointermove', (e) => { if (e.pressure === 0 || e.pointerType === 'mouse') aimFrom(e); });
+    canvas.addEventListener('pointerdown', (e) => { e.preventDefault(); aimFrom(e); });
+    canvas.addEventListener('pointerup', (e) => { e.preventDefault(); act(e); });
+    canvas.addEventListener('touchmove', (e) => { e.preventDefault(); aimFrom(e); }, { passive: false });
+
+    const held = new Set();
+    addEventListener('keydown', (e) => {
+      sfx.wake();
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        // A tap steps; holding glides. Without the step, a quick tap only gets
+        // one frame of glide — about seven pixels, which feels like nothing.
+        held.add(e.key);
+        game.nudge(e.key === 'ArrowLeft' ? -20 : 20);
+        e.preventDefault();
+      }
+      else if (e.key === ' ' || e.key === 'Enter' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (view.titleUp) view.titleUp = false;
+        else if (game.state === 'over') newGame();
+        else game.drop();
+      } else if (e.key === 'm' || e.key === 'M') {
+        sfx.muted = !sfx.muted;
+        muteBtn.textContent = sfx.muted ? 'SOUND OFF' : 'SOUND ON';
+      } else if (e.key === 'r' || e.key === 'R') newGame();
+    });
+    addEventListener('keyup', (e) => held.delete(e.key));
+
+    const muteBtn = document.getElementById('mute');
+    muteBtn.addEventListener('click', () => {
+      sfx.wake();
+      sfx.muted = !sfx.muted;
+      muteBtn.textContent = sfx.muted ? 'SOUND OFF' : 'SOUND ON';
+    });
+
+    // Two taps to reset, so a stray elbow does not wipe a good jar.
+    const resetBtn = document.getElementById('reset');
+    let armed = 0;
+    resetBtn.addEventListener('click', () => {
+      if (Date.now() < armed) {
+        resetBtn.classList.remove('armed');
+        resetBtn.textContent = 'START OVER';
+        newGame();
+        return;
+      }
+      armed = Date.now() + 2500;
+      resetBtn.classList.add('armed');
+      resetBtn.textContent = 'SURE?';
+      setTimeout(() => {
+        if (Date.now() >= armed) { resetBtn.classList.remove('armed'); resetBtn.textContent = 'START OVER'; }
+      }, 2600);
+    });
+
+    // ---- loop --------------------------------------------------------------
+
+    let last = performance.now();
+    let reported = false;
+
+    function frame(now) {
+      const dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
+
+      if (held.has('ArrowLeft')) game.nudge(-460 * dt);
+      if (held.has('ArrowRight')) game.nudge(460 * dt);
+
+      const before = game.state;
+      if (!view.titleUp) game.step(dt);
+
+      for (const e of game.drainEvents()) {
+        if (e.type === 'drop') sfx.drop();
+        else if (e.type === 'merge') { sfx.merge(e.tier); if (e.chain > 1) sfx.chain(e.chain); }
+        else if (e.type === 'absorb') sfx.absorb();
+        else if (e.type === 'first') sfx.newBiggest();
+        else if (e.type === 'final') sfx.fanfare();
+        else if (e.type === 'gameover') sfx.gameover();
+        view.handle([e]);
+      }
+
+      // Landing thumps come straight off the physics.
+      for (const b of game.world.bodies) {
+        if (b.justLanded > 700) sfx.land(Math.min(1, b.justLanded / 2600));
+      }
+
+      if (before === 'playing' && game.state === 'over') {
+        if (game.score > view.bestEver) {
+          view.bestEver = game.score;
+          localStorage.setItem(BEST_KEY, String(game.score));
+        }
+        log({ type: 'gameover', ...game.summary() });
+        reported = true;
+      }
+      if (game.state === 'playing') reported = false;
+
+      view.draw(game, dt);
+      requestAnimationFrame(frame);
+    }
+
+    log({ type: 'start' });
+    requestAnimationFrame(frame);
+
+    // A convenient handle for the headless screenshot pass.
+    globalThis.__numberMerge = { game, view, drop: (x) => { game.aimAt(x); game.drop(); },
+      advanceTime: (seconds) => { for (let i = 0; i < Math.round(seconds * 60); i++) game.step(1 / 60); },
+      render_game_to_text: () => JSON.stringify(game.summary()) };
+  </script>
+</body>
+</html>

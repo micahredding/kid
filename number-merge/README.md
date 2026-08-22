@@ -1,0 +1,168 @@
+# NUMBER MERGE
+
+Drop numbers into a jar. Two of the same touch, they add up. Fill the jar past
+the line and it's over. Asher drew all thirteen numbers.
+
+Play: `http://localhost:3131/number-merge/` (registered in the kid hub as
+`number-merge`).
+
+    0  1  2  4  8  16  32  64  128  256  512  1024  2048
+
+## One rule, and it is real arithmetic
+
+**Two blocks merge when their sum is a number on the ladder.** That is the whole
+game, and everything follows from it:
+
+| | |
+|---|---|
+| `1 + 1 = 2` | merges |
+| `2 + 2 = 4` | merges — every pair of equals doubles, which is what a ladder of powers of two means |
+| `1 + 2 = 3` | no. Three is not on this ladder, so a One and a Two just sit next to each other |
+| `128 + 0 = 128` | merges, and nothing changes. Zero adds nothing, so it disappears into whatever it lands on |
+| `0 + 0 = 0` | merges. Two Zeros are still nothing |
+| `2048 + 2048` | 4096, past the top. Both leave, and that is the game you are playing for |
+
+Zero is the interesting one. It is not a hazard and it is not a wildcard — it is
+the additive identity, and it behaves like one. Dropping a Zero on a 128 leaves
+a 128, one Zero lighter. It scores nothing, breaks no chain, and never hurts
+you. It is also the smallest ball, and about one drop in fourteen.
+
+**The score is the exact total of every block you have ever assembled.** A merge
+pays what it made and nothing else — no chain multiplier, on purpose. Four Ones
+become an Eight and score `2 + 2 + 4 = 8`. Eight Ones score 24. That makes the
+number in the corner a fact rather than a videogame number, which for this
+player is the better toy. Chains still exist and still get celebrated; they just
+pay in bigger blocks rather than in bonus points.
+
+## The art is the point, and so is the label
+
+The blocks are Asher's drawings from the `draw` tool, not redrawn, not
+recoloured, not smoothed. He worked out his own notation without being asked:
+**each digit is painted in that digit's Numberblocks colour, and the digits are
+arranged inside each other.**
+
+    0 blank   1 red   2 orange   3 yellow   4 green   5 blue   6 purple   8 pink
+
+So Sixteen is a purple Six under a red One. Thirty-Two is an orange Two inside a
+yellow Three. Five Hundred Twelve is a blue Five holding a red One and an orange
+Two. Every digit of every power of two up to 2048 is covered by that palette,
+and he was consistent across all thirteen.
+
+It is a real system. It is also completely unreadable unless you already know
+it — which is why **the numeral goes on the ball**: white, outlined, upright
+whatever the ball is doing. The colours say *which* block this is at a glance;
+the numeral says what it is *worth*. Neither alone is enough.
+
+Zero is the exception it deserves to be. He drew a blank page for it, which is
+the correct picture, so it gets no sprite at all: an empty white ball with a
+dashed edge and a dark `0`.
+
+Two kinds of drawing are shown two ways, which is the one real art decision:
+
+- **one colour** (1, 2, 4, 8) — the block *is* the number, so it fills the circle
+  edge to edge and gets cropped round, and it may spin freely.
+- **more than one** (16 and up) — the arrangement *is* the number, so it is kept
+  whole on a pale wash of its own colour, and it only ever wobbles. Sixteen
+  never lands upside down.
+
+## Rebuilding the art
+
+`source/` holds his drawings, one per rung, named `<value>-<the original save>`.
+The value comes from the filename, not from the order he drew them: he made
+Eight before Four and Thirty-Two after Two Thousand Forty-Eight, so the ladder is
+the arithmetic, not the session.
+
+    node tools/extract_art.mjs
+
+It crops each drawing to its content, makes the paper transparent, throws away
+stray specks, and writes `art/blocks.json` — the ladder, with each rung's value,
+word, colour, and the drawing it came from. `art/` is derived and gets cleared on
+every run; `source/` is the permanent record and is checked in, so this game
+rebuilds from nothing but the repo.
+
+**Two of the drawings carry a single stray cell out at the right-hand edge** — a
+slip of the finger. Cropping to the bounding box of *all* the paint made 128
+three times too wide. The tool finds every connected blob and drops any smaller
+than 2% of the biggest, which fixed both without touching the pictures.
+
+## Demo images
+
+`demo.html` is a showcase page, not the game — it puts every number on screen at
+once using the real renderer and the real solver, rendered at 3x for sharing:
+
+- **the sheet** — all thirteen at a uniform size with their number words, plus a
+  strip underneath at true relative scale, because the doubling is the game
+- **the jar** — one of each rung, hand-placed and then genuinely settled. 2048
+  and 1024 can't sit side by side (248 + 210 is wider than the 428 jar), so they
+  stack and the small numbers fill the crevices
+
+Both are checked in at `../docs/number-merge-the-thirteen.png` and
+`../docs/number-merge-full-jar.png` — outside the served game tree on purpose, so
+they don't land in every kid device's offline cache. To regenerate, open
+`/number-merge/demo.html` and use the save buttons, or render headless:
+
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
+      --headless=new --disable-gpu --force-device-scale-factor=1 \
+      --user-data-dir=/tmp/p1 --window-size=2700,2820 \
+      --screenshot=the-thirteen.png \
+      "http://localhost:3131/number-merge/demo.html?raw=sheet"
+
+`?raw=sheet` / `?raw=jar` strips the page to one canvas at true pixel size, so a
+window-sized screenshot is exactly the image. Use a fresh `--user-data-dir` per
+render; reusing one makes the second Chrome attach to the first and hang.
+Headless Chrome may not exit after writing the file — wait for the PNG, then kill
+it.
+
+The showcase jar settles with `world.step()` rather than `game.step()`. Two
+reasons: no two blocks in it share a value so nothing could double anyway, and
+the Zero would otherwise be absorbed on contact — the rule working correctly,
+but it would leave the picture a rung short.
+
+## Playing
+
+| | |
+|---|---|
+| point / drag | aim |
+| tap / click | drop |
+| ← → | aim (tap steps, hold glides) |
+| space | drop |
+| M | mute |
+| R | new game |
+
+Touch, canvas fit and the loop are byte-for-byte the same as `fruit-merge`, which
+is already what he plays on the iPad and the phone.
+
+## How it fits together
+
+    js/config.js    every number worth arguing about — the ladder, the rule, sizes, scoring
+    js/physics.js   circles in a box: position-based, no DOM, no randomness
+    js/game.js      the rules: dropping, merging, chains, losing
+    js/render.js    everything you see, numerals included
+    js/sfx.js       small WebAudio noises
+    index.html      the shell: art loading, canvas fit, input, the loop
+
+`physics.js`, `game.js`, and `config.js` touch no browser API, so the test
+harness plays whole games in Node:
+
+    node test_number_merge.mjs
+
+101 checks. Beyond what the fruit harness covers, it pins down the arithmetic:
+that every pair of equals doubles and no unequal pair above Zero ever merges,
+that a Zero leaves the block it lands on exactly where it was and worth exactly
+what it was, that a column of nine Zeros collapses to one, that a Zero on a One
+leaves a One and not a Two, that four Ones score 8 and eight Ones score 24, and
+that two 2048s leave the jar for 4096.
+
+## What the harness caught
+
+**A column of Zeros only collapses if the Zeros actually touch.** The first
+version of that test spaced nine Zeros 40px apart with 34px diameters, expected
+one left, and got three. The game was right: Zeros resting in separate columns
+never contact each other, so nothing merges. The test was wrong, and the fix was
+to drop them all down one line — which is also the honest thing to tell a player
+about Zero. It cleans up what it lands on, not the whole jar.
+
+Inherited from `fruit-merge`, and still true here: fixed physics steps only (a
+leftover sliver of a frame underflows and freezes the pile), and per-block
+time-above-the-line rather than "is anything resting above the line" (a full jar
+is never quite still, so a rest requirement makes the game unloseable).

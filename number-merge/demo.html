@@ -26,11 +26,13 @@
     <span id="status">rendering…</span>
     <button id="save-sheet" type="button">SAVE SHEET PNG</button>
     <button id="save-jar" type="button">SAVE JAR PNG</button>
+    <button id="save-drawn" type="button">SAVE DRAWINGS PNG</button>
     <a href="./">back to the game</a>
   </div>
   <div class="wrap">
     <div><h2>THE THIRTEEN</h2><canvas id="sheet"></canvas></div>
     <div><h2>ALL OF THEM IN THE JAR</h2><canvas id="jar"></canvas></div>
+    <div><h2>AS HE DREW THEM</h2><canvas id="drawn"></canvas></div>
   </div>
 
   <script type="module">
@@ -171,6 +173,127 @@
     sctx.textAlign = 'right';
     sctx.fillText('drawn in the kid terminal, 21 August 2026', SW - 16, 918);
 
+    // ---- as he drew them ---------------------------------------------------
+    // The game wraps his drawings on balls and stamps the numeral over them.
+    // This view does neither: the cropped drawing, at its own aspect ratio, on
+    // paper. It is the only place you can see the notation he invented, so the
+    // key goes on it.
+
+    // His digit colours, taken from his own drawings rather than invented here.
+    // The single-digit numbers give theirs directly; 3 comes from Thirty-Two, 5
+    // from Five Hundred Twelve, 6 from Sixteen. Zero he left blank.
+    const byValue = Object.fromEntries(BLOCKS.map((b) => [b.value, b]));
+    const DIGITS = [
+      ['0', null,                     'blank'],
+      ['1', byValue[1].color,         '1'],
+      ['2', byValue[2].color,         '2'],
+      ['3', byValue[32].palette[0],   '32'],
+      ['4', byValue[4].color,         '4'],
+      ['5', byValue[512].palette[0],  '512'],
+      ['6', byValue[16].palette[0],   '16'],
+      ['8', byValue[8].color,         '8'],
+    ];
+
+    const DW = 900, DH = 860;
+    const drawn = document.getElementById('drawn');
+    const dctx = setup(drawn, DW, DH);
+    dctx.fillStyle = '#f4f6fb';
+    dctx.fillRect(0, 0, DW, DH);
+    dctx.textAlign = 'center';
+    dctx.textBaseline = 'middle';
+    dctx.fillStyle = '#1e2a44';
+    dctx.font = `bold 40px ${MONO}`;
+    dctx.fillText('THIRTEEN NUMBERS', DW / 2, 56);
+    dctx.font = `bold 22px ${MONO}`;
+    dctx.fillText('as Asher drew them', DW / 2, 96);
+
+    const DROWS = [[0, 1, 2, 3, 4], [5, 6, 7, 8, 9], [10, 11, 12]];
+    const CARD = 132;
+    DROWS.forEach((row, ri) => {
+      const y = 200 + ri * 208;
+      const step = DW / row.length;
+      row.forEach((tier, i) => {
+        const cx = step * (i + 0.5);
+        // A sheet of paper, because that is what he drew on.
+        dctx.fillStyle = 'rgba(30,42,68,0.13)';
+        view.roundRect(dctx, cx - CARD / 2 + 3, y - CARD / 2 + 4, CARD, CARD, 8);
+        dctx.fill();
+        dctx.fillStyle = '#ffffff';
+        view.roundRect(dctx, cx - CARD / 2, y - CARD / 2, CARD, CARD, 8);
+        dctx.fill();
+        dctx.strokeStyle = 'rgba(30,42,68,0.16)';
+        dctx.lineWidth = 1.5;
+        dctx.stroke();
+
+        const img = images[tier];
+        if (img && img.width) {
+          // His own aspect ratio, not squeezed into a circle.
+          const pad = 18;
+          const k = Math.min((CARD - pad * 2) / img.width, (CARD - pad * 2) / img.height);
+          const w = img.width * k, h = img.height * k;
+          dctx.imageSmoothingEnabled = false;
+          dctx.drawImage(img, cx - w / 2, y - h / 2, w, h);
+        } else {
+          dctx.strokeStyle = 'rgba(30,42,68,0.30)';
+          dctx.setLineDash([7, 6]);
+          dctx.lineWidth = 2;
+          view.roundRect(dctx, cx - 40, y - 40, 80, 80, 6);
+          dctx.stroke();
+          dctx.setLineDash([]);
+          dctx.fillStyle = 'rgba(30,42,68,0.45)';
+          dctx.font = `bold 12px ${MONO}`;
+          dctx.fillText('EMPTY', cx, y);
+        }
+
+        dctx.fillStyle = '#1e2a44';
+        dctx.font = `bold 26px ${MONO}`;
+        dctx.fillText(String(BLOCKS[tier].value), cx, y + CARD / 2 + 26);
+        const word = BLOCKS[tier].word.toUpperCase();
+        view.fittedFont(dctx, word, 13, step - 18);
+        dctx.fillStyle = '#5a6b8c';
+        dctx.fillText(word, cx, y + CARD / 2 + 50);
+      });
+    });
+
+    // The key. Every digit of every power of two up to 2048 is in this row.
+    const legendY = 800;
+    dctx.textAlign = 'left';
+    dctx.font = `bold 14px ${MONO}`;
+    dctx.fillStyle = '#4a5b80';
+    dctx.fillText('each digit gets that digit\u2019s Numberblocks colour:', 28, legendY - 34);
+    let lx = 28;
+    for (const [digit, colour] of DIGITS) {
+      const sz = 34;
+      dctx.fillStyle = colour ?? '#ffffff';
+      view.roundRect(dctx, lx, legendY - sz / 2, sz, sz, 5);
+      dctx.fill();
+      dctx.strokeStyle = colour ? 'rgba(30,42,68,0.28)' : 'rgba(30,42,68,0.35)';
+      dctx.lineWidth = colour ? 1.5 : 2;
+      if (!colour) dctx.setLineDash([5, 4]);
+      dctx.stroke();
+      dctx.setLineDash([]);
+      // Same ink rule the balls use: dark on the pale paints, white on the rest.
+      const pale = !colour || (() => {
+        const n = parseInt(colour.slice(1), 16);
+        return (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255 > 0.72;
+      })();
+      dctx.textAlign = 'center';
+      dctx.font = `bold 19px ${MONO}`;
+      dctx.lineJoin = 'round';
+      dctx.lineWidth = 3.5;
+      dctx.strokeStyle = pale ? 'rgba(255,255,255,0.92)' : 'rgba(46,24,10,0.85)';
+      dctx.strokeText(digit, lx + sz / 2, legendY + 1);
+      dctx.fillStyle = pale ? '#2e1c0c' : '#ffffff';
+      dctx.fillText(digit, lx + sz / 2, legendY + 1);
+      lx += sz + 10;
+      dctx.textAlign = 'left';
+    }
+    dctx.font = `bold 12px ${MONO}`;
+    dctx.fillStyle = '#7d8aa5';
+    dctx.fillText('(7 and 9 never appear \u2014 no power of two up to 2048 uses them)', lx + 12, legendY + 1);
+    dctx.textAlign = 'right';
+    dctx.fillText('drawn in the kid terminal, 21 August 2026', DW - 28, legendY + 38);
+
     // ---- status + saving ---------------------------------------------------
 
     const above = game.world.bodies.filter((b) => b.y - b.r < LAYOUT.dangerY).length;
@@ -189,13 +312,14 @@
     };
     document.getElementById('save-sheet').addEventListener('click', () => save(sheet, 'number-merge-the-thirteen.png'));
     document.getElementById('save-jar').addEventListener('click', () => save(jar, 'number-merge-full-jar.png'));
+    document.getElementById('save-drawn').addEventListener('click', () => save(drawn, 'number-merge-as-he-drew-them.png'));
 
     if (RAW) {
       // Strip the page down to the one canvas, flush to the corner, so a
       // window-sized screenshot is exactly the image and nothing else.
       document.getElementById('bar').remove();
       for (const h of document.querySelectorAll('h2')) h.remove();
-      const keep = RAW === 'jar' ? jar : sheet;
+      const keep = RAW === 'jar' ? jar : RAW === 'drawn' ? drawn : sheet;
       for (const c of document.querySelectorAll('canvas')) if (c !== keep) c.remove();
       const wrap = document.querySelector('.wrap');
       wrap.style.cssText = 'padding:0;gap:0;display:block';
@@ -207,7 +331,7 @@
 
     globalThis.__demo = {
       sheet, jar, game, view,
-      png: (which) => (which === 'jar' ? jar : sheet).toDataURL('image/png'),
+      png: (which) => (which === 'jar' ? jar : which === 'drawn' ? drawn : sheet).toDataURL('image/png'),
       report: () => ({
         tiers: game.world.bodies.map((b) => valueOf(b.tier)).sort((a, b) => a - b),
         above, floating,

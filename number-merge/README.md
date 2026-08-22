@@ -49,9 +49,15 @@ Two. Every digit of every power of two up to 2048 is covered by that palette,
 and he was consistent across all thirteen.
 
 It is a real system. It is also completely unreadable unless you already know
-it — which is why **the numeral goes on the ball**: white, outlined, upright
+it — which is why **the numeral goes on the ball**: outlined, and upright
 whatever the ball is doing. The colours say *which* block this is at a glance;
 the numeral says what it is *worth*. Neither alone is enough.
+
+The ink is picked by the paint's brightness, not fixed: white on his red, green,
+blue and purple, dark on the pale yellow of Thirty-Two and the pale pink of
+Eight, where a white numeral reads weakly even outlined. Orange sits at 0.68
+perceived brightness and stays white. Zero's ball is blank white, so it takes
+dark ink too.
 
 Zero is the exception it deserves to be. He drew a blank page for it, which is
 the correct picture, so it gets no sprite at all: an empty white ball with a
@@ -88,18 +94,25 @@ than 2% of the biggest, which fixed both without touching the pictures.
 ## Demo images
 
 `demo.html` is a showcase page, not the game — it puts every number on screen at
-once using the real renderer and the real solver, rendered at 3x for sharing:
+once using the real renderer and the real solver, rendered at 3x for sharing.
+Three views:
 
-- **the sheet** — all thirteen at a uniform size with their number words, plus a
-  strip underneath at true relative scale, because the doubling is the game
-- **the jar** — one of each rung, hand-placed and then genuinely settled. 2048
-  and 1024 can't sit side by side (248 + 210 is wider than the 428 jar), so they
-  stack and the small numbers fill the crevices
+- **the sheet** (`?raw=sheet`) — all thirteen at a uniform size with their number
+  words, plus a strip underneath at true relative scale, because the doubling is
+  the game
+- **the jar** (`?raw=jar`) — one of each rung, hand-placed and then genuinely
+  settled. 2048 and 1024 can't sit side by side (248 + 210 is wider than the 428
+  jar), so they stack and the small numbers fill the crevices
+- **as he drew them** (`?raw=drawn`) — the thirteen drawings on paper, at their
+  own aspect ratios, with no ball around them and no numeral over them. The only
+  view where you can actually see the notation, so **the colour key lives on this
+  one**
 
-Both are checked in at `../docs/number-merge-the-thirteen.png` and
-`../docs/number-merge-full-jar.png` — outside the served game tree on purpose, so
-they don't land in every kid device's offline cache. To regenerate, open
-`/number-merge/demo.html` and use the save buttons, or render headless:
+All three are checked in at `../docs/number-merge-the-thirteen.png`,
+`../docs/number-merge-full-jar.png` and
+`../docs/number-merge-as-he-drew-them.png` — outside the served game tree on
+purpose, so they don't land in every kid device's offline cache. To regenerate,
+open `/number-merge/demo.html` and use the save buttons, or render headless:
 
     "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
       --headless=new --disable-gpu --force-device-scale-factor=1 \
@@ -107,7 +120,7 @@ they don't land in every kid device's offline cache. To regenerate, open
       --screenshot=the-thirteen.png \
       "http://localhost:3131/number-merge/demo.html?raw=sheet"
 
-`?raw=sheet` / `?raw=jar` strips the page to one canvas at true pixel size, so a
+`?raw=` strips the page to one canvas at true pixel size, so a
 window-sized screenshot is exactly the image. Use a fresh `--user-data-dir` per
 render; reusing one makes the second Chrome attach to the first and hang.
 Headless Chrome may not exit after writing the file — wait for the PNG, then kill
@@ -146,7 +159,7 @@ harness plays whole games in Node:
 
     node test_number_merge.mjs
 
-114 checks. Beyond what the fruit harness covers, it pins down the arithmetic:
+115 checks. Beyond what the fruit harness covers, it pins down the arithmetic:
 that every pair of equals doubles and no unequal pair above Zero ever merges,
 that a Zero leaves the block it lands on exactly where it was and worth exactly
 what it was, that a column of nine Zeros collapses to one, that a Zero on a One

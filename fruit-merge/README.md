@@ -94,6 +94,39 @@ and aim clamping, a 40-fruit pile for escapes and overlap, the loss condition
 identically, that a bot's game ends on its own, and that 30fps, 60fps, and
 144fps all settle to the same place.
 
+## Losing, and the bounce that wasn't a loss
+
+You lose by *leaving* a fruit above the line. Each fruit carries its own clock,
+and the clock has three states:
+
+| where it is | the clock |
+|---|---|
+| below the line | cleared — falling past the line on the way down costs nothing |
+| above it, settled | counts |
+| above it, still flying | **held** — neither counted nor cleared |
+
+The hold was added later, after the same bug turned up in `number-merge`. The
+solver resolves a deep overlap in one step, which can squeeze a fruit clean out
+of the jar at thousands of pixels a second; it flies far above the rim, and the
+round trip easily takes longer than the 1.2s grace. Timing that flight as if the
+fruit had been *abandoned* up there ends the game on a bounce — and because the
+renderer clips above the rim, it just looks like a fruit popped up, vanished, and
+the jar was declared full.
+
+Both halves matter. "Settled" cannot mean "at rest" — that is the older bug
+below, where a full jar is never quite still and the game became unloseable. And
+the hold must not be a *reset*, or a fruit that pops up and settles back above
+the line restarts its clock whenever it is jostled and the jar can never fill.
+The gap is wide enough that the threshold is not delicate: a settled pile moves
+at a couple of px/s, a squeezed-out fruit at hundreds to thousands.
+`dangerSettleSpeed` is 260. The squeeze-out itself is capped too
+(`RULES.maxSpeed`, 2600px/s, applied after the bounce term so the cap holds); a
+full-height fall in this jar is worth about 1740px/s, so it never touches normal
+motion.
+
+Verified over 60 bot games: 60 of 60 losses were a genuinely settled fruit, none
+in flight, and none of the games became unloseable.
+
 ## Two things the harness caught
 
 **A leftover sliver of a frame froze the pile.** The loop stepped whatever time
@@ -107,3 +140,12 @@ line sounds right and isn't: a full jar is never quite still, so the condition
 never fired — a bot played 300 seconds, 858 drops, and never lost. Each fruit
 now carries its own time-above-the-line, which also means falling past the line
 costs nothing.
+
+**And a test was passing for the wrong reason.** The loss test used to stack nine
+equal fruits in a column and assert game over. It did end — but from the stack
+exploding, flying above the rim and timing out, not from a full jar; the pile it
+settles into is well below the line. It was the bounce bug asserted as correct
+behaviour, and it stayed green exactly as long as the bug lived. Fixing the bug
+turned it red, which is the only reason it surfaced. It now drops the six
+even-numbered tiers down one line — no two equal, so nothing merges it back
+down, and stacked they are taller than the jar.

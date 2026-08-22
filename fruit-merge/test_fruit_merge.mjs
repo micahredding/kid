@@ -192,21 +192,102 @@ section('a pile of fruit');
 section('losing');
 
 {
-  // Stack big fruit above the line and leave it there.
+  // A genuinely overfull jar: the six even-numbered tiers dropped down one line.
+  // No two are equal so nothing can merge it back down, and stacked they are
+  // taller than the jar, so the pile has to settle above the line.
+  //
+  // The obvious version of this test — a tall column of nine equal fruits — was
+  // passing for the wrong reason. Nine overlapping fruits explode apart, fly
+  // above the rim, and time out up there; the pile they eventually settle into
+  // sits well below the line. It was testing the bounce bug, not a full jar.
   const g = newGame();
-  let y = LAYOUT.floor - 40;
-  for (let i = 0; i < 9; i++) { g.world.add(new Body(240, y, radiusFor(6), 6)); y -= 78; }
-  check('not over the moment they appear', g.state === 'playing');
-  run(g, 1.0);
-  check('still playing while it all settles', g.state === 'playing');
-  run(g, 4);
-  check('a fruit left resting above the line ends the game', g.state === 'over');
-  check('the game over event fired once',
-    g.summary().state === 'over' && g.merges >= 0);
+  let playingEarly = null;
+  for (const tier of [10, 8, 6, 4, 2, 0]) {
+    g.world.add(new Body(240, 240, radiusFor(tier), tier));
+    run(g, 0.5);
+    if (tier === 6) playingEarly = g.state;   // three in, still room
+  }
+  check('not over while there is still room', playingEarly === 'playing', `was ${playingEarly}`);
+  run(g, 8);
+  const settledAbove = g.world.bodies.filter((b) =>
+    b.y - b.r < LAYOUT.dangerY && Math.abs(b.vx) + Math.abs(b.vy) <= RULES.dangerSettleSpeed);
+  check('the jar really is overfull', settledAbove.length > 0,
+    `highest top ${Math.min(...g.world.bodies.map((b) => b.y - b.r)).toFixed(0)}`);
+  check('a fruit left resting above the line ends the game', g.state === 'over',
+    `state=${g.state} worst aboveFor=${Math.max(...g.world.bodies.map((b) => b.aboveFor)).toFixed(2)}`);
+  check('nothing merged, so the jar filled honestly', g.merges === 0, `merges=${g.merges}`);
+  check('the game over event fired once', g.summary().state === 'over');
   const beforeScore = g.score;
   run(g, 2);
   check('a finished game stops simulating', g.score === beforeScore);
   check('a finished game refuses drops', g.drop() === null);
+}
+
+{
+  // A fruit squeezed out of the pile flies above the rim and takes longer than
+  // the grace period to come back down. That is a bounce, not an abandoned
+  // fruit, and it must not end the game.
+  const g = newGame();
+  const b = g.world.add(new Body(240, LAYOUT.floor - 30, radiusFor(3), 3));
+  run(g, 1);
+  b.vy = -2600;                     // fired straight up out of the jar
+  run(g, 0.5);
+  check('the pop-up really does leave the jar', b.y - b.r < 0, `top=${(b.y - b.r).toFixed(0)}`);
+  let aloft = 0;
+  for (let i = 0; i < 60 * 5; i++) {
+    g.step(1 / 60);
+    if (b.y - b.r < LAYOUT.dangerY) aloft += 1 / 60;
+  }
+  check('it was above the line for longer than the grace period', aloft > RULES.dangerGrace,
+    `aloft=${aloft.toFixed(2)}s grace=${RULES.dangerGrace}s`);
+  check('a bounce above the line does not end the game', g.state === 'playing', `state=${g.state}`);
+  check('it came back down and settled on the floor',
+    Math.abs(b.y + b.r - LAYOUT.floor) < 2, `y+r=${(b.y + b.r).toFixed(1)}`);
+  check('and its clock was cleared on the way back in', b.aboveFor === 0);
+}
+
+{
+  // The three states of a fruit's above-the-line clock, driven by hand: below
+  // the line clears it, above and settled counts, above and flying holds. The
+  // hold must not be a reset, or a fruit that pops up and settles back above the
+  // line would keep restarting its clock and the jar could never fill.
+  const g = newGame();
+  const b = g.world.add(new Body(240, LAYOUT.dangerY - 40, radiusFor(4), 4));
+  const pin = (y, vy, seconds) => {
+    for (let i = 0; i < Math.round(seconds * 60); i++) {
+      b.y = y; b.x = 240; b.vx = 0; b.vy = vy;
+      g.step(1 / 60);
+    }
+  };
+  pin(LAYOUT.dangerY - 40, -3000, 0.8);
+  check('flying above the line does not run the clock', b.aboveFor === 0,
+    `aboveFor=${b.aboveFor.toFixed(2)}`);
+  check('and flying does not end the game', g.state === 'playing');
+  pin(LAYOUT.dangerY - 40, 0, 0.6);
+  check('settled above the line runs the clock', b.aboveFor > 0.5, `aboveFor=${b.aboveFor.toFixed(2)}`);
+  const held = b.aboveFor;
+  pin(LAYOUT.dangerY - 40, -3000, 0.4);
+  check('a flight in the middle holds the clock rather than resetting it',
+    Math.abs(b.aboveFor - held) < 0.02, `${held.toFixed(2)} -> ${b.aboveFor.toFixed(2)}`);
+  pin(LAYOUT.floor - 60, 0, 0.2);
+  check('dropping below the line clears the clock', b.aboveFor === 0);
+  pin(LAYOUT.dangerY - 40, 0, RULES.dangerGrace + 0.3);
+  check('settled above the line long enough still ends the game', g.state === 'over');
+}
+
+{
+  // The clamp has to hold over whole games, not just one staged collision.
+  let worst = 0;
+  for (const seed of [3, 17, 41]) {
+    const g = newGame(seed);
+    while (g.state === 'playing') {
+      if (g.canDrop) { g.aimAt(LAYOUT.left + 40 + ((g.drops * 97) % 340)); g.drop(); }
+      g.step(1 / 60);
+      for (const b of g.world.bodies) worst = Math.max(worst, Math.hypot(b.vx, b.vy));
+    }
+  }
+  check('the speed cap holds across whole games', worst <= RULES.maxSpeed + 1,
+    `worst ${worst.toFixed(0)}px/s vs clamp ${RULES.maxSpeed}`);
 }
 
 {

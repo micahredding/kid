@@ -22,6 +22,14 @@ const mix = (hex, amount, towards = [255, 255, 255]) => {
   const c = rgb(hex);
   return `rgb(${c.map((v, i) => Math.round(v + (towards[i] - v) * amount)).join(',')})`;
 };
+// Perceived brightness, 0..1. Two of his colours — the yellow of Thirty-Two and
+// the pink of Eight — are pale enough that a white numeral on them reads weakly
+// even outlined, so the numeral flips to dark ink over those. His red, green,
+// blue and purple all want white. Orange sits at 0.68 and is fine white.
+const light = (hex) => {
+  const [r, g, b] = rgb(hex);
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.72;
+};
 
 export class Renderer {
   constructor(ctx, blocks, images) {
@@ -60,10 +68,11 @@ export class Renderer {
         ballDeep: blank ? 'rgb(232,232,236)' : solid ? mix(b.color, 0.0, [0, 0, 0]) : mix(b.color, 0.56),
         ring: blank ? 'rgb(168,168,176)' : mix(b.color, 0.30, [0, 0, 0]),
         dashed: blank,
-        // Numerals go on in white with a dark outline, which is legible on
-        // every colour he used. Zero's ball is white, so its numeral inverts.
-        ink: blank ? '#3c2a1e' : '#ffffff',
-        inkEdge: blank ? 'rgba(255,255,255,0.9)' : 'rgba(46,24,10,0.92)',
+        // Numerals go on outlined, so they read whatever they land on. White
+        // ink on his darker paints, dark ink on the pale ones — and Zero's ball
+        // is blank white, so it takes dark ink too.
+        ink: blank || light(b.color) ? '#2e1c0c' : '#ffffff',
+        inkEdge: blank || light(b.color) ? 'rgba(255,255,255,0.92)' : 'rgba(46,24,10,0.92)',
       };
     });
   }

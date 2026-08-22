@@ -27,6 +27,7 @@ export class Game {
       right: LAYOUT.right,
       floor: LAYOUT.floor,
       gravity: RULES.gravity,
+      maxSpeed: RULES.maxSpeed,
     });
     this.reset();
   }
@@ -160,16 +161,27 @@ export class Game {
     }
   }
 
-  // You lose by leaving a fruit above the line — but each fruit gets its own
-  // grace period, so falling past the line on the way down costs you nothing.
-  // Timing it per fruit rather than "is anything above the line, and has it
-  // stopped moving" matters: a full jar is never quite still, so a rest
-  // requirement makes the game unloseable.
+  // You lose by *leaving* a fruit above the line. Each fruit carries its own
+  // clock, and the clock has three states, because two different mistakes are
+  // easy to make here:
+  //
+  //   below the line          -> clear it. Falling past the line on the way
+  //                              down costs nothing.
+  //   above it, settled       -> count. Not "at rest" — a full jar is never
+  //                              quite still, and requiring rest makes the game
+  //                              unloseable. Just "not a projectile".
+  //   above it, still flying  -> hold. Neither count nor clear.
+  //
+  // The hold is the whole point. A fruit squeezed out of the pile can fly far
+  // above the rim and take well over the grace period to come back down; timing
+  // that flight as if the fruit had been abandoned up there ended the game on a
+  // bounce. And holding rather than clearing means a fruit that pops up and
+  // settles back above the line still runs out its clock, so the jar can fill.
   checkDanger(dt) {
     let over = false, worst = 0;
     for (const b of this.world.bodies) {
-      if (b.y - b.r < LAYOUT.dangerY) b.aboveFor += dt;
-      else b.aboveFor = 0;
+      if (b.y - b.r >= LAYOUT.dangerY) b.aboveFor = 0;
+      else if (Math.abs(b.vx) + Math.abs(b.vy) <= RULES.dangerSettleSpeed) b.aboveFor += dt;
       if (b.aboveFor > worst) worst = b.aboveFor;
       if (b.aboveFor >= RULES.dangerGrace) over = true;
     }

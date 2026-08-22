@@ -39,6 +39,7 @@ export class World {
     this.damping = opts.damping ?? 0.995;   // air, so nothing rolls forever
     this.restitution = opts.restitution ?? 0.14;
     this.friction = opts.friction ?? 0.28;
+    this.maxSpeed = opts.maxSpeed ?? Infinity;
     this.bodies = [];
     this.contacts = [];   // [a, b, impactSpeed] pairs from the last step
   }
@@ -143,11 +144,22 @@ export class World {
 
     // ---- read velocity back off the actual movement ----
     for (const b of bodies) {
-      const nvx = (b.x - b.px) / dt;
-      const nvy = (b.y - b.py) / dt;
+      let nvx = (b.x - b.px) / dt;
+      let nvy = (b.y - b.py) / dt;
       // A little bounce, but only against the direction the solver reversed.
+      // Read off b.vy before it is overwritten: that is the incoming speed.
+      nvy = nvy < 0 && b.vy > 0 ? nvy - b.vy * this.restitution : nvy;
+      // Reading velocity back off a single step's movement is what makes this
+      // solver stable, but a deep overlap relaxed in one step implies a speed
+      // nothing physical would reach and fires the body out of the box. Clamp
+      // the final magnitude — after the bounce, so the cap actually holds.
+      const implied = Math.hypot(nvx, nvy);
+      if (implied > this.maxSpeed) {
+        const k = this.maxSpeed / implied;
+        nvx *= k; nvy *= k;
+      }
       b.vx = nvx;
-      b.vy = nvy < 0 && b.vy > 0 ? nvy - b.vy * this.restitution : nvy;
+      b.vy = nvy;
 
       const speed = Math.abs(b.vx) + Math.abs(b.vy);
       b.stillFor = speed < 14 ? b.stillFor + dt : 0;

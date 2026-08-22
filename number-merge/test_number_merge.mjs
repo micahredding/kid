@@ -9,8 +9,8 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const { Game } = await import('./js/game.js');
 const { Body } = await import('./js/physics.js');
-const { LAYOUT, RULES, VALUES, TOP_TIER, BEYOND, radiusFor, valueOf, mergeTier, mergeScore, W } =
-  await import('./js/config.js');
+const { LAYOUT, RULES, VALUES, TOP_TIER, BEYOND, WORDS, DIGIT_COLOURS, fallbackBlocks,
+        radiusFor, valueOf, mergeTier, mergeScore, W } = await import('./js/config.js');
 
 const manifest = JSON.parse(readFileSync(join(__dirname, 'art', 'blocks.json'), 'utf8'));
 const BLOCKS = manifest.blocks;
@@ -53,6 +53,48 @@ check('every rung has a word to say', BLOCKS.every((b) => /^[a-z -]+$/.test(b.wo
 check('the specks are gone: no sprite is freakishly wide',
   BLOCKS.every((b) => b.blank || b.art.w / b.art.h < 2.5),
   BLOCKS.filter((b) => !b.blank && b.art.w / b.art.h >= 2.5).map((b) => `${b.value}:${b.art.w}x${b.art.h}`).join(' '));
+
+// --------------------------------------------------------------------------
+section('the game starts even with no art at all');
+
+// The ladder is arithmetic and the numeral is painted on the ball, so a missing
+// manifest must degrade to plain coloured discs rather than stop the game. If
+// this drifts from the real ladder the fallback silently becomes wrong.
+{
+  const fb = fallbackBlocks();
+  check('the fallback has every rung', fb.length === VALUES.length, `${fb.length} vs ${VALUES.length}`);
+  check('with the same values in the same order', fb.every((b, i) => b.value === VALUES[i] && b.tier === i));
+  check('and the same words the manifest carries',
+    fb.every((b, i) => b.word === BLOCKS[i].word),
+    fb.filter((b, i) => b.word !== BLOCKS[i].word).map((b) => b.value).join(','));
+  check('every rung has a usable colour', fb.every((b) => /^#[0-9a-f]{6}$/.test(b.color)));
+  check('no rung claims a sprite', fb.every((b) => b.file === null));
+  check('Zero is still the blank one', fb[0].blank && fb.filter((b) => b.blank).length === 1);
+  check('it is marked as the fallback', fb.every((b) => b.fallback === true));
+
+  // Colour comes from the first digit, which is the paint he actually used most
+  // on all but Sixteen and 2048 (where a later digit dominated the drawing).
+  const same = fb.filter((b, i) => b.color === BLOCKS[i].color).length;
+  check('at least 11 of 13 fallback colours match his own', same >= 11, `${same}/13`);
+  check('the digit palette covers every digit the ladder uses',
+    [...new Set(VALUES.join('').split(''))].every((d) => d in DIGIT_COLOURS),
+    [...new Set(VALUES.join('').split(''))].filter((d) => !(d in DIGIT_COLOURS)).join(','));
+  check('7 and 9 never appear, so they need no colour',
+    !VALUES.join('').includes('7') && !VALUES.join('').includes('9'));
+
+  // And a whole game is playable on it.
+  const g = new Game(fb, { seed: 5 });
+  let frames = 0;
+  while (g.state === 'playing' && frames < 60 * 300) {
+    if (g.canDrop) { g.aimAt(LAYOUT.left + 40 + ((g.drops * 97) % 340)); g.drop(); }
+    g.step(1 / 60); frames++;
+  }
+  check('a full game plays through on the fallback ladder', g.state === 'over' && g.score > 0,
+    `state=${g.state} score=${g.score}`);
+}
+
+check('the manifest words come from config, not a second copy',
+  BLOCKS.every((b) => b.word === WORDS[b.value]));
 
 // --------------------------------------------------------------------------
 section('the rule: two blocks merge when their sum is on the ladder');

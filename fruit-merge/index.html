@@ -56,6 +56,22 @@
   <button id="reset" type="button">START OVER</button>
   <div id="loading">LOADING ASHER'S FRUIT…</div>
 
+  <script>
+    // Boot watchdog, deliberately a classic script: it runs even if the module
+    // below fails to parse, which no listener inside the module could. There are
+    // no devtools on the iPad, so a stuck LOADING line has to explain itself
+    // rather than sit there looking like the game "won't load".
+    window.__bootWatchdog = setTimeout(function () {
+      var el = document.getElementById('loading');
+      if (!el) return;
+      el.innerHTML = '<div style="text-align:center;line-height:2">COULD NOT START'
+        + '<br>' + (navigator.onLine ? 'tap to reload' : 'no network \u2014 reconnect, then reload')
+        + '<br><span style="opacity:.55">' + location.pathname + '</span></div>';
+      el.style.cursor = 'pointer';
+      el.addEventListener('click', function () { location.reload(); });
+    }, 9000);
+  </script>
+
   <script type="module">
     import { Game } from './js/game.js';
     import { Renderer } from './js/render.js';
@@ -81,17 +97,50 @@
     }
 
     // ---- the art -----------------------------------------------------------
+    // Nothing in here may leave LOADING… on screen for ever. The first version
+    // awaited a bare fetch and an un-timed Image load: if the service worker
+    // hands back its plain-text "not saved yet" response, .json() throws and the
+    // module simply dies, and a request that neither loads nor errors never
+    // settles. Unlike number-merge there is no synthesisable fallback here — the
+    // fruit are only their drawings — so a failed manifest says so and offers a
+    // reload rather than pretending.
 
-    const manifest = await fetch('./art/fruits.json').then((r) => r.json());
-    const FRUITS = manifest.fruits;
+    const loading = document.getElementById('loading');
+    const say = (text) => { if (loading.isConnected) loading.textContent = text; };
+    addEventListener('unhandledrejection', (e) => say(`ERROR: ${e.reason?.message ?? e.reason ?? 'failed to start'}`));
 
+    async function loadLadder() {
+      for (const attempt of [1, 2, 3]) {
+        try {
+          const res = await fetch('./art/fruits.json', { cache: 'no-cache' });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const json = await res.json();
+          if (!Array.isArray(json.fruits) || !json.fruits.length) throw new Error('empty manifest');
+          return json.fruits;
+        } catch (err) {
+          if (attempt === 3) throw err;
+          say("LOADING ASHER'S FRUIT… RETRYING");
+          await new Promise((r) => setTimeout(r, 600));
+        }
+      }
+    }
+
+    const FRUITS = await loadLadder();
+
+    // Every sprite gets a deadline, because a stalled request must not hold up
+    // the game; a missing one falls back to a plain disc.
     const images = await Promise.all(FRUITS.map((f) => new Promise((resolve) => {
       const img = new Image();
-      img.onload = () => resolve(img);
-      img.onerror = () => resolve(null);   // a missing sprite falls back to a disc
+      let settled = false;
+      const finish = (value) => { if (!settled) { settled = true; resolve(value); } };
+      const deadline = setTimeout(() => finish(null), 6000);
+      img.onload = () => { clearTimeout(deadline); finish(img); };
+      img.onerror = () => { clearTimeout(deadline); finish(null); };
       img.src = `./art/${f.file}`;
     })));
-    document.getElementById('loading').remove();
+
+    clearTimeout(window.__bootWatchdog);
+    loading.remove();
 
     // ---- fit the canvas ----------------------------------------------------
 

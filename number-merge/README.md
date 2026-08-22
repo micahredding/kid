@@ -131,6 +131,33 @@ reasons: no two blocks in it share a value so nothing could double anyway, and
 the Zero would otherwise be absorbed on contact — the rule working correctly,
 but it would leave the picture a rung short.
 
+## It has to start
+
+The ladder is arithmetic and the numeral is painted on the ball, so a missing
+manifest and missing sprites degrade to plain coloured discs with the right
+numbers on them — entirely playable. `fallbackBlocks()` in `config.js` builds
+that ladder from nothing but `config.js` itself, colouring each rung with its
+first digit's paint, which is the colour he actually used most on eleven of the
+thirteen (Sixteen and 2048 are the two where a later digit dominated).
+
+This exists because the first version could hang on `LOADING…` for ever with no
+clue why, and the device he plays on has no console to check:
+
+- `await fetch('./art/blocks.json').then((r) => r.json())` had no catch. The
+  service worker answers a cache miss it cannot fetch with a **plain-text** 503
+  body, so `.json()` throws, the module dies mid-evaluation, and the LOADING line
+  never comes down.
+- `new Image()` with only `onload`/`onerror` never settles if a request stalls
+  rather than failing, so one hung sprite held up the whole game. Every sprite
+  now has a 6s deadline.
+- A syntax error in the module could not be reported by anything inside the
+  module. There is now a **boot watchdog in a classic script** that replaces the
+  LOADING line after 9s with `COULD NOT START`, the path, and tap-to-reload.
+
+`node test_number_merge.mjs` plays a whole game on the fallback ladder and
+asserts it has the same rungs, values and words as the real one, so it cannot
+quietly drift.
+
 ## Playing
 
 | | |
@@ -159,7 +186,7 @@ harness plays whole games in Node:
 
     node test_number_merge.mjs
 
-115 checks. Beyond what the fruit harness covers, it pins down the arithmetic:
+127 checks. Beyond what the fruit harness covers, it pins down the arithmetic:
 that every pair of equals doubles and no unequal pair above Zero ever merges,
 that a Zero leaves the block it lands on exactly where it was and worth exactly
 what it was, that a column of nine Zeros collapses to one, that a Zero on a One

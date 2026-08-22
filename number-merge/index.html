@@ -56,11 +56,29 @@
   <button id="reset" type="button">START OVER</button>
   <div id="loading">LOADING ASHER'S NUMBERS…</div>
 
+  <script>
+    // Boot watchdog, deliberately a classic script: it runs even if the module
+    // below fails to parse, which no listener inside the module could. There are
+    // no devtools on the iPad, so a stuck LOADING line has to explain itself
+    // rather than sit there looking like the game "won't load".
+    window.__bootWatchdog = setTimeout(function () {
+      var el = document.getElementById('loading');
+      if (!el) return;
+      // One wrapped block: #loading is a centring flex row, so loose text and
+      // <br>s become separate flex items and scatter sideways.
+      el.innerHTML = '<div style="text-align:center;line-height:2">COULD NOT START'
+        + '<br>' + (navigator.onLine ? 'tap to reload' : 'no network \u2014 reconnect, then reload')
+        + '<br><span style="opacity:.55">' + location.pathname + '</span></div>';
+      el.style.cursor = 'pointer';
+      el.addEventListener('click', function () { location.reload(); });
+    }, 9000);
+  </script>
+
   <script type="module">
     import { Game } from './js/game.js';
     import { Renderer } from './js/render.js';
     import { Sfx } from './js/sfx.js';
-    import { W, H, LAYOUT } from './js/config.js';
+    import { W, H, LAYOUT, fallbackBlocks } from './js/config.js';
 
     const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
@@ -81,20 +99,60 @@
     }
 
     // ---- the art -----------------------------------------------------------
+    // Nothing in here may stop the game from starting. The ladder is arithmetic
+    // and the numeral is painted on the ball, so the worst case — no manifest and
+    // no sprites — is plain coloured discs with the right numbers on them, which
+    // plays perfectly well.
+    //
+    // The first version of this awaited a bare fetch and an un-timed Image load.
+    // Either could leave LOADING… on screen for ever: if the service worker hands
+    // back its plain-text "not saved yet" response, .json() throws and the module
+    // simply dies, and a request that neither loads nor errors never settles.
 
-    const manifest = await fetch('./art/blocks.json').then((r) => r.json());
-    const BLOCKS = manifest.blocks;
+    const loading = document.getElementById('loading');
+    const say = (text) => { if (loading.isConnected) loading.textContent = text; };
+
+    // Say so on screen rather than dying quietly — there is no console to check
+    // on the device he actually plays on.
+    addEventListener('unhandledrejection', (e) => say(`ERROR: ${e.reason?.message ?? e.reason ?? 'failed to start'}`));
+
+    async function loadLadder() {
+      for (const attempt of [1, 2]) {
+        try {
+          const res = await fetch('./art/blocks.json', { cache: 'no-cache' });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const json = await res.json();
+          if (!Array.isArray(json.blocks) || !json.blocks.length) throw new Error('empty manifest');
+          return json.blocks;
+        } catch (err) {
+          if (attempt === 2) {
+            console.warn('number-merge: no art manifest, playing on plain discs —', err);
+            return fallbackBlocks();
+          }
+          say("LOADING ASHER'S NUMBERS… RETRYING");
+          await new Promise((r) => setTimeout(r, 600));
+        }
+      }
+    }
+
+    const BLOCKS = await loadLadder();
 
     // Zero has no sprite on purpose — his Zero is a blank page — so it resolves
-    // to null and the renderer draws an empty ball.
+    // to null and the renderer draws an empty ball. Every other sprite gets a
+    // deadline, because a stalled request must not hold up the game.
     const images = await Promise.all(BLOCKS.map((b) => new Promise((resolve) => {
       if (!b.file) { resolve(null); return; }
       const img = new Image();
-      img.onload = () => resolve(img);
-      img.onerror = () => resolve(null);   // a missing sprite falls back to a disc
+      let settled = false;
+      const finish = (value) => { if (!settled) { settled = true; resolve(value); } };
+      const deadline = setTimeout(() => finish(null), 6000);
+      img.onload = () => { clearTimeout(deadline); finish(img); };
+      img.onerror = () => { clearTimeout(deadline); finish(null); };  // missing sprite -> plain disc
       img.src = `./art/${b.file}`;
     })));
-    document.getElementById('loading').remove();
+
+    clearTimeout(window.__bootWatchdog);
+    loading.remove();
 
     // ---- fit the canvas ----------------------------------------------------
 

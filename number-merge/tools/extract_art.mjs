@@ -207,14 +207,9 @@ const hex = ([r, g, b]) =>
 
 // ---- the ladder -----------------------------------------------------------
 
-// What to call each rung out loud. Numbers he can read on the ball; words for
-// the banner, because reading is the newer skill.
-const WORDS = {
-  0: 'zero', 1: 'one', 2: 'two', 4: 'four', 8: 'eight', 16: 'sixteen',
-  32: 'thirty-two', 64: 'sixty-four', 128: 'one hundred twenty-eight',
-  256: 'two hundred fifty-six', 512: 'five hundred twelve',
-  1024: 'one thousand twenty-four', 2048: 'two thousand forty-eight',
-};
+// The words live in js/config.js, which the game also reads, so there is one
+// copy of them rather than two that can drift.
+const { WORDS } = await import('../js/config.js');
 
 const files = readdirSync(sourceDir)
   .filter((f) => /^\d{4}-.*\.png$/.test(f))

@@ -522,6 +522,25 @@ window.addEventListener('online', flushLogQueue);
 // everything keeps working with no wifi once it has loaded online once.
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js').catch(() => { /* http or old browser */ });
+
+  // The worker serves the hub cache-first, so a page already open keeps running
+  // the JS it loaded — including its hardcoded games list. That is why a newly
+  // added game used to need a second manual reload before it could be launched
+  // at all: the terminal was still the old build and simply did not know the
+  // name. When a new worker takes control the cache is already updated, so
+  // reload once and pick it up.
+  //
+  // Only when it costs nothing: not over an open game, not mid-typing, and
+  // never more than once.
+  let reloadedForUpdate = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (reloadedForUpdate) return;
+    if (document.getElementById('game-overlay')) return;
+    const typed = document.getElementById('input');
+    if (typed && typed.value.trim()) return;
+    reloadedForUpdate = true;
+    location.reload();
+  });
 }
 
 async function serverSaveDrawing(dataUrl, extra = {}) {

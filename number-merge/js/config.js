@@ -48,6 +48,51 @@ export const RULES = {
   radiusRatio: 1.18,
 };
 
+// What to call each rung out loud. Words for the banner and the showcase,
+// because reading is the newer skill. Canonical here rather than in the art
+// tool: the ladder is arithmetic, so it belongs with the arithmetic, and the
+// tool imports these to stamp them into art/blocks.json.
+export const WORDS = {
+  0: 'zero', 1: 'one', 2: 'two', 4: 'four', 8: 'eight', 16: 'sixteen',
+  32: 'thirty-two', 64: 'sixty-four', 128: 'one hundred twenty-eight',
+  256: 'two hundred fifty-six', 512: 'five hundred twelve',
+  1024: 'one thousand twenty-four', 2048: 'two thousand forty-eight',
+};
+
+// The colours Asher paints each digit, taken from his own drawings: the
+// single-digit rungs give theirs directly, 3 comes from Thirty-Two, 5 from Five
+// Hundred Twelve, 6 from Sixteen. He leaves Zero blank. No power of two up to
+// 2048 contains a 7 or a 9, so he never had to decide those.
+export const DIGIT_COLOURS = {
+  0: null, 1: '#ff0000', 2: '#ffa500', 3: '#ffff00', 4: '#00a000',
+  5: '#0000ff', 6: '#800080', 8: '#ffc0cb',
+};
+
+// A complete ladder built from nothing but this file — no manifest, no sprites.
+//
+// The game must not be unable to start because a fetch failed: the ladder is
+// arithmetic, and the numeral is painted on the ball, so plain coloured discs
+// with the right numbers on them are entirely playable. The colour is the first
+// digit's, which matches the paint he actually used most on eleven of the
+// thirteen (Sixteen and 2048 are the two where a later digit dominated).
+export function fallbackBlocks() {
+  return VALUES.map((value, tier) => {
+    const colour = DIGIT_COLOURS[Number(String(value)[0])];
+    return {
+      tier,
+      value,
+      word: WORDS[value] ?? String(value),
+      file: null,
+      blank: value === 0,
+      color: colour ?? '#ffffff',
+      palette: [colour ?? '#ffffff'],
+      art: null,
+      drawing: null,
+      fallback: true,
+    };
+  });
+}
+
 // Radii climb geometrically, so each rung reads as clearly bigger than the one
 // below it. Thirteen rungs at 1.18 lands 2048 at the same size the biggest
 // fruit was: just over half the jar wide.

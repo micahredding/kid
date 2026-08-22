@@ -146,14 +146,67 @@ harness plays whole games in Node:
 
     node test_number_merge.mjs
 
-101 checks. Beyond what the fruit harness covers, it pins down the arithmetic:
+114 checks. Beyond what the fruit harness covers, it pins down the arithmetic:
 that every pair of equals doubles and no unequal pair above Zero ever merges,
 that a Zero leaves the block it lands on exactly where it was and worth exactly
 what it was, that a column of nine Zeros collapses to one, that a Zero on a One
 leaves a One and not a Two, that four Ones score 8 and eight Ones score 24, and
 that two 2048s leave the jar for 4096.
 
+## Losing, and the bounce that wasn't a loss
+
+You lose by *leaving* a block above the line. Each block carries its own clock,
+and the clock has three states:
+
+| where it is | the clock |
+|---|---|
+| below the line | cleared — falling past the line on the way down costs nothing |
+| above it, settled | counts |
+| above it, still flying | **held** — neither counted nor cleared |
+
+The hold is the part that took a bug report. The solver resolves a deep overlap
+in one step, which can squeeze a block clean out of the jar at thousands of
+pixels a second; it flies far above the rim, and the round trip easily takes
+longer than the 1.2s grace. Timing that flight as if the block had been
+*abandoned* up there ended the game on a bounce — which is what it looked like,
+because the renderer clips above the rim, so the ball popped up, vanished, and
+the jar was declared full. Measured over 40 bot games before the fix: 38 of 40
+losses were a block that was not at rest, one of them 5764px above the canvas.
+
+Two things had to be true at once, and each one is easy to get wrong on its own:
+
+- **"Settled" cannot mean "at rest."** That is the trap `fruit-merge` fell into
+  and documented: a full jar is never quite still, so a rest requirement makes
+  the game unloseable. The measured gap is enormous, so the threshold is not
+  delicate — a settled full pile moves at 2px/s median and 16px/s at the 95th
+  centile, while a squeezed-out block leaves at hundreds to thousands.
+  `dangerSettleSpeed` is 260.
+- **The hold must not be a reset.** If flying *cleared* the clock, a block that
+  popped up and settled back above the line would restart every time it was
+  jostled, and the jar could never fill.
+
+After the fix, 60 bot games: 60 of 60 losses were a genuinely settled block, none
+were in flight, and none of the games became unloseable.
+
+The squeeze-out itself is also capped now (`RULES.maxSpeed`, 2600px/s, applied
+after the bounce term so the cap actually holds). Falling the full height of this
+jar is worth about 1740px/s, so the clamp never touches normal motion. It does
+not eliminate ejection — blocks still leave the jar on about 0.4% of frames and
+reach ~1100px above the canvas, down from 3500 — but they no longer cost you the
+game, and they come back.
+
 ## What the harness caught
+
+**A test that passed for the wrong reason.** The original loss test stacked nine
+equal blocks in a column and asserted the game ended. It did end — but not
+because the jar was full. Nine overlapping blocks explode apart, fly above the
+rim, and time out up there; the pile they actually settle into is three rows and
+sits well below the line. That test *was* the bounce bug, asserted as correct
+behaviour, and it went green for exactly as long as the bug existed. Fixing the
+bug turned it red, which is the only reason it was caught. It now builds a real
+overfull jar — one of every rung from One up, so nothing can merge it back down
+and the total area exceeds what the jar holds — and there are separate tests for
+a high pop-up not ending the game and for all three states of the clock.
 
 **A column of Zeros only collapses if the Zeros actually touch.** The first
 version of that test spaced nine Zeros 40px apart with 34px diameters, expected

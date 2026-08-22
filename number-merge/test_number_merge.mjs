@@ -317,19 +317,132 @@ section('a pile of blocks');
 section('losing');
 
 {
-  // Stack big blocks above the line and leave them there.
+  // A genuinely overfull jar. One of every rung from One up: no two are equal so
+  // nothing can merge it back down, Zero is left out because it merges with
+  // everything, and the total area is more than the jar holds — so the pile has
+  // to settle above the line.
+  //
+  // The obvious version of this test — a tall column of nine equal blocks — was
+  // passing for the wrong reason. Nine overlapping blocks explode apart, fly
+  // above the rim, and time out up there; the pile they eventually settle into
+  // is only three rows and sits well below the line. It was testing the bounce
+  // bug, not the full jar.
   const g = newGame();
-  let y = LAYOUT.floor - 46;
-  for (let i = 0; i < 9; i++) { g.world.add(new Body(240, y, radiusFor(7), 7)); y -= 90; }
-  check('not over the moment they appear', g.state === 'playing');
-  run(g, 1.0);
-  check('still playing while it all settles', g.state === 'playing');
-  run(g, 4);
-  check('a block left resting above the line ends the game', g.state === 'over');
+  let playingHalfway = null;
+  for (let t = 12; t >= 1; t--) {
+    g.world.add(new Body(LAYOUT.left + 30 + ((12 - t) * 71) % 360, 240, radiusFor(t), t));
+    run(g, 0.45);
+    if (t === 8) playingHalfway = g.state;   // five rungs in, still room
+  }
+  check('not over while there is still room', playingHalfway === 'playing', `was ${playingHalfway}`);
+  run(g, 6);
+  const above = g.world.bodies.filter((b) => b.y - b.r < LAYOUT.dangerY);
+  check('the jar really is overfull', above.length > 0,
+    `nothing above the line; highest top ${Math.min(...g.world.bodies.map((b) => b.y - b.r)).toFixed(0)}`);
+  check('a block left resting above the line ends the game', g.state === 'over',
+    `state=${g.state} worst aboveFor=${Math.max(...g.world.bodies.map((b) => b.aboveFor)).toFixed(2)}`);
   const beforeScore = g.score;
   run(g, 2);
   check('a finished game stops simulating', g.score === beforeScore);
   check('a finished game refuses drops', g.drop() === null);
+}
+
+{
+  // The reported bug: a block squeezed out of the pile flies above the rim and
+  // takes longer than the grace period to come back down. That is a bounce, not
+  // an abandoned block, and it must not end the game.
+  const g = newGame();
+  const b = g.world.add(new Body(240, LAYOUT.floor - 30, radiusFor(3), 3));
+  run(g, 1);
+  b.vy = -2600;                     // fired straight up out of the jar
+  run(g, 0.5);
+  check('the pop-up really does leave the jar', b.y - b.r < 0,
+    `top=${(b.y - b.r).toFixed(0)}`);
+  let maxAbove = 0, aloft = 0;
+  for (let i = 0; i < 60 * 5; i++) {
+    g.step(1 / 60);
+    if (b.y - b.r < LAYOUT.dangerY) aloft += 1 / 60;
+    maxAbove = Math.max(maxAbove, b.aboveFor);
+  }
+  check('it was above the line for longer than the grace period', aloft > RULES.dangerGrace,
+    `aloft=${aloft.toFixed(2)}s grace=${RULES.dangerGrace}s`);
+  check('a bounce above the line does not end the game', g.state === 'playing',
+    `state=${g.state} aboveFor peaked at ${maxAbove.toFixed(2)}`);
+  check('it came back down and settled on the floor',
+    Math.abs(b.y + b.r - LAYOUT.floor) < 2, `y+r=${(b.y + b.r).toFixed(1)}`);
+  check('and its clock was cleared on the way back in', b.aboveFor === 0);
+}
+
+{
+  // The three states of a block's above-the-line clock, driven by hand: below
+  // the line clears it, above and settled counts, above and flying holds. The
+  // hold must not be a reset, or a block that pops up and settles back above the
+  // line would keep restarting its clock and the jar could never fill.
+  const g = newGame();
+  const b = g.world.add(new Body(240, LAYOUT.dangerY - 40, radiusFor(4), 4));
+
+  const pin = (y, vx, vy, seconds) => {
+    for (let i = 0; i < Math.round(seconds * 60); i++) {
+      b.y = y; b.x = 240; b.vx = vx; b.vy = vy;
+      g.step(1 / 60);
+    }
+  };
+
+  pin(LAYOUT.dangerY - 40, 0, -3000, 0.8);   // above the line, flying
+  const afterFlying = b.aboveFor;
+  check('flying above the line does not run the clock', afterFlying === 0,
+    `aboveFor=${afterFlying.toFixed(2)}`);
+  check('and flying does not end the game', g.state === 'playing');
+
+  pin(LAYOUT.dangerY - 40, 0, 0, 0.6);       // above the line, settled
+  check('settled above the line runs the clock', b.aboveFor > 0.5,
+    `aboveFor=${b.aboveFor.toFixed(2)}`);
+  const held = b.aboveFor;
+
+  pin(LAYOUT.dangerY - 40, 0, -3000, 0.4);   // flying again: hold, do not reset
+  check('a flight in the middle holds the clock rather than resetting it',
+    Math.abs(b.aboveFor - held) < 0.02, `${held.toFixed(2)} -> ${b.aboveFor.toFixed(2)}`);
+
+  pin(LAYOUT.floor - 60, 0, 0, 0.2);         // back below the line: clear
+  check('dropping below the line clears the clock', b.aboveFor === 0,
+    `aboveFor=${b.aboveFor.toFixed(2)}`);
+
+  pin(LAYOUT.dangerY - 40, 0, 0, RULES.dangerGrace + 0.3);
+  check('settled above the line long enough still ends the game', g.state === 'over');
+}
+
+{
+  // The clamp: nothing may leave the box faster than a full-height fall.
+  const g = newGame();
+  // Two big blocks slammed into deep overlap — the classic squeeze-out.
+  const a = g.world.add(new Body(240, 600, radiusFor(9), 9));
+  const c = g.world.add(new Body(244, 604, radiusFor(10), 10));
+  let worst = 0;
+  for (let i = 0; i < 60 * 4; i++) {
+    g.step(1 / 60);
+    for (const b of g.world.bodies) worst = Math.max(worst, Math.hypot(b.vx, b.vy));
+  }
+  check('the solver cannot fire a block out at an impossible speed',
+    worst <= RULES.maxSpeed + 1, `worst ${worst.toFixed(0)}px/s vs clamp ${RULES.maxSpeed}`);
+  check('nothing escaped the jar', g.world.bodies.every((b) =>
+    b.x - b.r >= LAYOUT.left - 1 && b.x + b.r <= LAYOUT.right + 1 && b.y + b.r <= LAYOUT.floor + 1));
+}
+
+{
+  // And the cap has to hold over a whole game, not just one staged collision.
+  // Clamping the implied velocity *before* the bounce term let real games leak
+  // past it — 2664px/s against a 2600 cap.
+  let worst = 0;
+  for (const seed of [3, 17, 41]) {
+    const g = newGame(seed);
+    while (g.state === 'playing') {
+      if (g.canDrop) { g.aimAt(LAYOUT.left + 40 + ((g.drops * 97) % 340)); g.drop(); }
+      g.step(1 / 60);
+      for (const b of g.world.bodies) worst = Math.max(worst, Math.hypot(b.vx, b.vy));
+    }
+  }
+  check('the speed cap holds across whole games', worst <= RULES.maxSpeed + 1,
+    `worst ${worst.toFixed(0)}px/s vs clamp ${RULES.maxSpeed}`);
 }
 
 {
